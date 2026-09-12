@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: backend
+
+  datasource:
+    url: jdbc:h2:mem:travel-recorder
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+  h2:
+    console:
+      enabled: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:changeit}
+            client-secret: ${GOOGLE_CLIENT_SECRET:changeit}
+            scope:
+              - email
+              - profile
+          naver:
+            client-id: ${NAVER_CLIENT_ID:changeit}
+            client-secret: ${NAVER_CLIENT_SECRET:changeit}
+            client-name: Naver
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - name
+              - email
+        provider:
+          naver:
+            authorization-uri: https://nid.naver.com/oauth2.0/authorize
+            token-uri: https://nid.naver.com/oauth2.0/token
+            user-info-uri: https://openapi.naver.com/v1/nid/me
+            user-name-attribute: response
+
+logging:
+  level:
+    com.yong.travel: DEBUG
