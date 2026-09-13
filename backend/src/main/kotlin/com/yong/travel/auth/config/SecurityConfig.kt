@@ -20,7 +20,8 @@ class SecurityConfig(
                 sessionCreationPolicy = SessionCreationPolicy.IF_REQUIRED
             }
             authorizeHttpRequests {
-                authorize(anyRequest, authenticated)
+                // TODO: 기능 개발 완료 후 authenticated 로 되돌리기
+                authorize(anyRequest, permitAll)
             }
             oauth2Login {
                 userInfoEndpoint {

@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# 환경 변수 (Google Maps API 키 등 비밀 값 보관, 예시 파일은 커밋 대상)
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
