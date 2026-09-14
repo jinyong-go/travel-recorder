@@ -1,0 +1,30 @@
+.star-rating-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-btn {
+  border: none;
+  background: transparent;
+  color: var(--border);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.star-btn:hover {
+  color: var(--accent);
+}
+
+.star-btn.filled {
+  color: var(--accent-strong);
+}
+
+.star-rating-value {
+  margin-left: 6px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  font-size: 14px;
+}
