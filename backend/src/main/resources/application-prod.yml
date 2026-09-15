@@ -1,0 +1,35 @@
+# 운영용. 스키마 변경은 애플리케이션이 아니라 배포 절차에서 적용한다.
+spring:
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  sql:
+    init:
+      # 운영 DB 에 애플리케이션이 DDL 을 날리지 않도록 막는다. schema.sql 은 배포 시 수동 적용한다.
+      mode: never
+
+  h2:
+    console:
+      enabled: false
+
+app:
+  storage:
+    local:
+      # 재배포 시에도 유지되는 경로여야 한다 (S3 전환 전까지의 제약).
+      root-dir: ${PHOTO_STORAGE_DIR}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+logging:
+  level:
+    root: INFO
+    com.yong.travel: INFO

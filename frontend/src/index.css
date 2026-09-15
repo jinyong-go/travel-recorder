@@ -42,76 +42,22 @@
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* 하늘 파스텔 테마 */
-[data-theme='sky'] {
-  --bg: #f0f8fc;
-  --surface: #ffffff;
-  --surface-soft: #e2f1f9;
-  --text: #263a42;
-  --text-muted: #6c8894;
-  --text-faint: #9db3bd;
-  --border: #cfe9f4;
-  --accent: #6fbde0;
-  --accent-strong: #4c9fc4;
-  --accent-contrast: #ffffff;
-  --shadow: 0 6px 20px -8px rgba(52, 116, 145, 0.28);
-  --shadow-sm: 0 2px 8px -2px rgba(52, 116, 145, 0.18);
-  --thumb-grad-a: #e2f1f9;
-  --thumb-grad-b: #b3ddef;
-}
-
-/* 라벤더 파스텔 테마 */
-[data-theme='lavender'] {
-  --bg: #f6f2fb;
-  --surface: #ffffff;
-  --surface-soft: #ece2f7;
-  --text: #362f42;
-  --text-muted: #837690;
-  --text-faint: #ab9fba;
-  --border: #ded0ee;
-  --accent: #a98be0;
-  --accent-strong: #8c68cc;
-  --accent-contrast: #ffffff;
-  --shadow: 0 6px 20px -8px rgba(105, 66, 145, 0.28);
-  --shadow-sm: 0 2px 8px -2px rgba(105, 66, 145, 0.18);
-  --thumb-grad-a: #ece2f7;
-  --thumb-grad-b: #d3bcee;
-}
-
-/* 피치 파스텔 테마 */
-[data-theme='peach'] {
-  --bg: #fdf4ef;
-  --surface: #ffffff;
-  --surface-soft: #fbe6da;
-  --text: #402f28;
-  --text-muted: #927a6d;
-  --text-faint: #baa398;
-  --border: #f3d9c6;
-  --accent: #ef9d6f;
-  --accent-strong: #dd7f49;
-  --accent-contrast: #ffffff;
-  --shadow: 0 6px 20px -8px rgba(163, 91, 42, 0.28);
-  --shadow-sm: 0 2px 8px -2px rgba(163, 91, 42, 0.18);
-  --thumb-grad-a: #fbe6da;
-  --thumb-grad-b: #f3c19d;
-}
-
-/* 다크 테마 */
+/* 다크 테마 — 검은색 기반, 연두는 테두리/액센트로 유지 */
 [data-theme='dark'] {
-  --bg: #1a201a;
-  --surface: #232b23;
-  --surface-soft: #2b342b;
-  --text: #e7efe4;
-  --text-muted: #a3b39d;
-  --text-faint: #6f7e6a;
-  --border: #384238;
-  --accent: #6fbf5a;
-  --accent-strong: #86d271;
-  --accent-contrast: #12180f;
-  --shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.4);
-  --thumb-grad-a: #2b342b;
-  --thumb-grad-b: #3d4a3a;
+  --bg: #0b0b0b;
+  --surface: #141414;
+  --surface-soft: #1c1f1b;
+  --text: #edf3ea;
+  --text-muted: #a2aa9d;
+  --text-faint: #6d746a;
+  --border: #3c5c33;
+  --accent: #9bd689;
+  --accent-strong: #b9e3a8;
+  --accent-contrast: #0b0b0b;
+  --shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.75);
+  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
+  --thumb-grad-a: #161a14;
+  --thumb-grad-b: #22301e;
   color-scheme: dark;
 }
 

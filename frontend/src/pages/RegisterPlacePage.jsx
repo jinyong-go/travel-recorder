@@ -4,9 +4,15 @@ import { CATEGORIES, categoryIcon } from '../data/places.js'
 import { usePlaces } from '../context/PlacesContext.jsx'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import { haversineDistanceKm } from '../utils/geo.js'
+import {
+  ALLOWED_PHOTO_ACCEPT,
+  MAX_PHOTO_SIZE_MB,
+  MAX_PHOTO_TOTAL_MB,
+  validatePhotoFiles,
+} from '../config/uploadLimits.js'
 import PlaceSearchModal from '../components/PlaceSearchModal.jsx'
 import StarRatingInput from '../components/StarRatingInput.jsx'
-import { ArrowLeftIcon, CloseIcon, SearchIcon } from '../components/icons.jsx'
+import { ArrowLeftIcon, CloseIcon, PhotoIcon, SearchIcon } from '../components/icons.jsx'
 import './RegisterPlacePage.css'
 
 const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
@@ -30,6 +36,7 @@ export default function RegisterPlacePage() {
   const [photos, setPhotos] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
   const [manualLocationOpen, setManualLocationOpen] = useState(false)
+  const [photoErrors, setPhotoErrors] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -49,12 +56,16 @@ export default function RegisterPlacePage() {
 
   const handlePhotoChange = (e) => {
     const files = Array.from(e.target.files ?? [])
-    const next = files.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))
-    setPhotos((prev) => [...prev, ...next])
+    const selectedBytes = photos.reduce((sum, p) => sum + p.file.size, 0)
+    const { accepted, errors: rejected } = validatePhotoFiles(files, selectedBytes)
+    const next = accepted.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))
+    if (next.length > 0) setPhotos((prev) => [...prev, ...next])
+    setPhotoErrors(rejected)
     e.target.value = ''
   }
 
   const removePhoto = (idx) => {
+    setPhotoErrors([])
     setPhotos((prev) => {
       const target = prev[idx]
       if (target) URL.revokeObjectURL(target.previewUrl)
@@ -164,14 +175,31 @@ export default function RegisterPlacePage() {
           </div>
 
           <div className="form-field">
-            <label htmlFor="photos">사진</label>
-            <input
-              id="photos"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              multiple
-              onChange={handlePhotoChange}
-            />
+            <span className="field-label">사진</span>
+            <div className="photo-upload-row">
+              <input
+                id="photos"
+                className="photo-upload-input"
+                type="file"
+                accept={ALLOWED_PHOTO_ACCEPT}
+                multiple
+                onChange={handlePhotoChange}
+              />
+              <label htmlFor="photos" className="photo-upload-btn">
+                <PhotoIcon />
+                사진 선택
+              </label>
+              <span className="photo-upload-hint">
+                {photos.length > 0
+                  ? `${photos.length}장 선택됨`
+                  : `JPG · PNG · WEBP, 한 장당 ${MAX_PHOTO_SIZE_MB}MB · 합계 ${MAX_PHOTO_TOTAL_MB}MB 이하`}
+              </span>
+            </div>
+            {photoErrors.map((message) => (
+              <p className="field-error" key={message}>
+                {message}
+              </p>
+            ))}
             {photos.length > 0 && (
               <ul className="photo-preview-list">
                 {photos.map((p, idx) => (

@@ -1,29 +1,68 @@
 .star-rating-input {
   display: inline-flex;
   align-items: center;
+}
+
+.star-row {
+  display: inline-flex;
   gap: 4px;
 }
 
-.star-btn {
-  border: none;
-  background: transparent;
-  color: var(--border);
+.star-slot {
+  position: relative;
+  display: inline-block;
   font-size: 26px;
   line-height: 1;
-  cursor: pointer;
-  padding: 2px;
+  width: 1em;
+  height: 1em;
 }
 
-.star-btn:hover {
-  color: var(--accent);
+.star-base,
+.star-fill {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-.star-btn.filled {
+.star-base {
+  color: var(--border);
+}
+
+/* 채워지는 부분만 잘라서 덮어 그린다 (0.5점은 절반만 채워짐) */
+.star-fill {
+  overflow: hidden;
+  white-space: nowrap;
   color: var(--accent-strong);
 }
 
+/* 별 좌/우 절반을 덮는 투명 클릭 영역 */
+.star-half {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.star-half.left {
+  left: 0;
+}
+
+.star-half.right {
+  right: 0;
+}
+
+.star-half:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 .star-rating-value {
-  margin-left: 6px;
+  margin-left: 10px;
   font-weight: 700;
   color: var(--accent-strong);
   font-size: 14px;

@@ -1,26 +1,20 @@
+# 공통 설정. 환경별로 달라지는 값(데이터소스, 스키마 초기화, CORS, 로깅)은
+# application-{local,dev,prod}.yml 에 둔다.
 spring:
   application:
     name: backend
 
+  profiles:
+    default: local
+
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 30MB
-
-  datasource:
-    url: jdbc:h2:mem:travel-recorder
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+      # 사진 업로드 제한. 프론트엔드 VITE_MAX_PHOTO_SIZE_MB / VITE_MAX_PHOTO_TOTAL_MB 와 같은 값을 유지한다.
+      max-file-size: ${MAX_PHOTO_SIZE:5MB}
+      max-request-size: ${MAX_PHOTO_REQUEST_SIZE:30MB}
 
   jpa:
-    hibernate:
-      ddl-auto: create-drop
     open-in-view: false
-
-  h2:
-    console:
-      enabled: true
 
   security:
     oauth2:
@@ -50,13 +44,9 @@ naver:
     base-url: https://openapi.naver.com/v1/search/local.json
 
 app:
+  upload:
+    # 서비스 레벨 검증 값. spring.servlet.multipart.max-file-size 와 같은 값을 유지한다.
+    max-photo-size: ${MAX_PHOTO_SIZE:5MB}
+    allowed-content-types: ${ALLOWED_PHOTO_CONTENT_TYPES:image/jpeg,image/png,image/webp}
   storage:
     type: filesystem
-    local:
-      root-dir: ./uploads
-  cors:
-    allowed-origins: http://localhost:5173
-
-logging:
-  level:
-    com.yong.travel: DEBUG

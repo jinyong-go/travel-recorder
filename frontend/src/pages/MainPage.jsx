@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CATEGORIES, categoryIcon, categoryLabel } from '../data/places.js'
 import { usePlaces } from '../context/PlacesContext.jsx'
-import { applyTheme, getStoredTheme, storeTheme } from '../theme/themes.js'
+import { applyTheme, getInitialTheme, storeTheme } from '../theme/themes.js'
 import {
   buildMapsEmbedUrl,
   buildMapsSearchUrl,
@@ -10,7 +10,7 @@ import {
   hasGoogleMapsApiKey,
   storeMapMode,
 } from '../config/mapSettings.js'
-import ThemeSwitcher from '../components/ThemeSwitcher.jsx'
+import ThemeSelector from '../components/ThemeSelector.jsx'
 import SettingsMenu from '../components/SettingsMenu.jsx'
 import { CloseIcon, MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
 
@@ -40,7 +40,7 @@ export default function MainPage() {
   const [category, setCategory] = useState('all')
   const [sortKey, setSortKey] = useState('recent')
   const [page, setPage] = useState(1)
-  const [themeKey, setThemeKey] = useState(() => getStoredTheme() ?? 'green')
+  const [themeKey, setThemeKey] = useState(getInitialTheme)
   const [mapMode, setMapMode] = useState(() => {
     const stored = getStoredMapMode()
     return stored === 'embed' && hasGoogleMapsApiKey ? 'embed' : 'link'
@@ -101,7 +101,7 @@ export default function MainPage() {
         </h1>
         <div className="header-actions">
           <SettingsMenu mapMode={mapMode} onChangeMapMode={handleMapModeChange} />
-          <ThemeSwitcher themeKey={themeKey} onChange={handleThemeChange} />
+          <ThemeSelector themeKey={themeKey} onChange={handleThemeChange} />
         </div>
       </header>
 

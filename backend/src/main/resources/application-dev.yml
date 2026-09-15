@@ -1,0 +1,32 @@
+# 개발 서버용. PostgreSQL 을 사용하며 접속 정보는 환경 변수로 주입한다.
+spring:
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  sql:
+    init:
+      # schema.sql 은 IF NOT EXISTS 기반이라 재기동해도 안전하다.
+      mode: always
+      schema-locations: classpath:schema.sql
+
+  h2:
+    console:
+      enabled: false
+
+app:
+  storage:
+    local:
+      root-dir: ${PHOTO_STORAGE_DIR:./uploads}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+logging:
+  level:
+    com.yong.travel: DEBUG

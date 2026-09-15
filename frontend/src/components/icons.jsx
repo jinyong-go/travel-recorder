@@ -19,7 +19,28 @@ export function MapPinIcon(props) {
   )
 }
 
-export function PaletteIcon(props) {
+export function SunIcon(props) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function MoonIcon(props) {
   return (
     <svg
       width="18"
@@ -30,15 +51,42 @@ export function PaletteIcon(props) {
       {...props}
     >
       <path
-        d="M12 3a9 8 0 1 0 0 16c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16c2.2 0 4-1.7 4-4.2C20 5.6 16.4 3 12 3Z"
+        d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      <circle cx="7.5" cy="11" r="1.15" fill="currentColor" />
-      <circle cx="9.5" cy="7.2" r="1.15" fill="currentColor" />
-      <circle cx="14.2" cy="6.7" r="1.15" fill="currentColor" />
-      <circle cx="16.8" cy="10.2" r="1.15" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function PhotoIcon(props) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="14"
+        rx="2.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <circle cx="8.5" cy="10" r="1.6" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M4 16.5l4.3-4a1.6 1.6 0 0 1 2.2 0l3.4 3.2M14 14l1.6-1.5a1.6 1.6 0 0 1 2.2 0L20 14.4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }

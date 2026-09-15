@@ -3,6 +3,7 @@ package com.yong.travel.photo.service
 import com.yong.travel.auth.repository.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
+import com.yong.travel.photo.config.PhotoUploadProperties
 import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.dto.PhotoResponse
 import com.yong.travel.photo.repository.PhotoRepository
@@ -26,6 +27,7 @@ class PhotoServiceImpl(
     private val userRepository: UserRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorageService: PhotoStorageService,
+    private val uploadProperties: PhotoUploadProperties,
 ) : PhotoService {
 
     @Transactional
@@ -34,7 +36,9 @@ class PhotoServiceImpl(
         val uploader = userRepository.findById(uploaderId).orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
 
         return files.map { file ->
-            if (file.contentType !in ALLOWED_CONTENT_TYPES || file.size > MAX_FILE_SIZE_BYTES) {
+            if (file.contentType !in uploadProperties.allowedContentTypes ||
+                file.size > uploadProperties.maxPhotoSize.toBytes()
+            ) {
                 throw ApiException(ErrorCode.INVALID_FILE)
             }
             val stored = photoStorageService.store(file)
@@ -61,10 +65,5 @@ class PhotoServiceImpl(
         }
         photoStorageService.delete(photo.storageKey)
         photoRepository.delete(photo)
-    }
-
-    companion object {
-        private val ALLOWED_CONTENT_TYPES = setOf("image/jpeg", "image/png", "image/webp")
-        private const val MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024
     }
 }

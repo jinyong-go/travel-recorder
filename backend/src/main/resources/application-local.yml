@@ -1,0 +1,33 @@
+# 로컬 개발용. 인메모리 H2 를 PostgreSQL 호환 모드로 띄워 dev/prod 와 같은 schema.sql 을 쓴다.
+spring:
+  datasource:
+    # DB_CLOSE_DELAY=-1 이 없으면 커넥션이 모두 반납될 때 DB 가 통째로 사라진다.
+    url: jdbc:h2:mem:travel-recorder;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      # 스키마는 schema.sql 이 만든다. 엔티티와 어긋나면 기동 시점에 실패하도록 validate 를 건다.
+      ddl-auto: validate
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+  h2:
+    console:
+      enabled: true
+
+app:
+  storage:
+    local:
+      root-dir: ./uploads
+  cors:
+    allowed-origins: http://localhost:5173
+
+logging:
+  level:
+    com.yong.travel: DEBUG
