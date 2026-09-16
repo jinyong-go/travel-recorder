@@ -1,7 +1,7 @@
 package com.yong.travel.common.config
 
 import com.yong.travel.photo.storage.FileSystemPhotoStorageService
-import com.yong.travel.photo.storage.StorageProperties
+import com.yong.travel.photo.config.StorageProperties
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.servlet.config.annotation.CorsRegistry

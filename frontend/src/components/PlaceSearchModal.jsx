@@ -46,12 +46,13 @@ export default function PlaceSearchModal({ referenceLocation, onSelect, onClose,
 
   const handleSelect = (place) => {
     onSelect({
-      placeId: place.placeId,
       name: place.name,
       address: place.address,
       region: place.region,
       category: place.category,
       location: place.location,
+      // 네이버 지역 검색 결과의 원본 링크. 있을 때만 등록 요청의 externalLink 로 넘어간다.
+      link: place.link,
     })
   }
 
@@ -100,7 +101,7 @@ export default function PlaceSearchModal({ referenceLocation, onSelect, onClose,
               </p>
               <ul className="place-search-list">
                 {pageItems.map((p) => (
-                  <li key={p.placeId}>
+                  <li key={`${p.name}-${p.address}`}>
                     <button
                       type="button"
                       className="place-search-item"

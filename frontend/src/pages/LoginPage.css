@@ -1,0 +1,96 @@
+.login-home-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.login-page {
+  flex: 1;
+  padding: 8px clamp(16px, 4vw, 48px) 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-panel {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(28px, 5vw, 40px);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.login-title {
+  font-size: clamp(22px, 4vw, 26px);
+}
+
+.login-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.login-error {
+  width: 100%;
+  border: 1px solid #e0685f;
+  border-radius: var(--radius-sm);
+  background: rgba(224, 104, 95, 0.1);
+  color: #c0453c;
+  font-size: 13.5px;
+  line-height: 1.5;
+  padding: 10px 12px;
+}
+
+[data-theme='dark'] .login-error {
+  color: #ff9a92;
+}
+
+/* 네이버 로그인 버튼은 브랜드 가이드에 따라 고정 색(#03C75A)을 쓴다. */
+.naver-login-btn {
+  width: 100%;
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  background: #03c75a;
+  color: #ffffff;
+  padding: 14px 22px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.naver-login-btn:hover {
+  background: #02b351;
+  transform: translateY(-2px);
+}
+
+.login-note {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.login-browse-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.login-browse-link:hover {
+  text-decoration: underline;
+}

@@ -1,5 +1,6 @@
 package com.yong.travel.photo.storage
 
+import com.yong.travel.photo.config.StorageProperties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import org.springframework.web.multipart.MultipartFile

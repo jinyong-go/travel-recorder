@@ -77,7 +77,7 @@ export default function RegisterPlacePage() {
     const next = {}
     if (!selectedPlace) next.place = '장소를 검색해 선택해주세요.'
     if (!category) next.category = '카테고리를 선택해주세요.'
-    if (!rating) next.rating = '평점을 선택해주세요.'
+    if (!rating) next.rating = '별점을 선택해주세요.'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -92,8 +92,8 @@ export default function RegisterPlacePage() {
       const distanceKm = haversineDistanceKm(referenceLocation, selectedPlace.location)
       addPlace({
         id: `local-${Date.now()}`,
-        placeId: selectedPlace.placeId,
         name: selectedPlace.name,
+        externalLink: selectedPlace.link,
         category,
         region: selectedPlace.region ?? selectedPlace.address,
         rating,
@@ -104,7 +104,7 @@ export default function RegisterPlacePage() {
         photos: photos.map((p) => p.previewUrl),
         location: selectedPlace.location,
       })
-      navigate('/')
+      navigate('/places')
     }, 500)
   }
 
@@ -112,7 +112,7 @@ export default function RegisterPlacePage() {
     <div className="register-page">
       <div className="register-page-inner">
         <div className="register-page-header">
-          <button type="button" className="back-link" onClick={() => navigate('/')}>
+          <button type="button" className="back-link" onClick={() => navigate('/places')}>
             <ArrowLeftIcon /> 목록으로
           </button>
           <h1>여행지 등록</h1>
@@ -169,7 +169,7 @@ export default function RegisterPlacePage() {
           </div>
 
           <div className="form-field">
-            <span className="field-label">평점</span>
+            <span className="field-label">별점</span>
             <StarRatingInput value={rating} onChange={setRating} />
             {errors.rating && <p className="field-error">{errors.rating}</p>}
           </div>
@@ -237,7 +237,7 @@ export default function RegisterPlacePage() {
           </div>
 
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => navigate('/')}>
+            <button type="button" className="btn-secondary" onClick={() => navigate('/places')}>
               취소
             </button>
             <button type="submit" className="btn-primary" disabled={submitting}>

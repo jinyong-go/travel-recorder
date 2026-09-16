@@ -1,0 +1,16 @@
+.star-rating-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 입력 UI 와 달리 별 크기를 인라인 font-size 로 받으므로 슬롯 크기도 따라간다. */
+.star-rating-display .star-slot {
+  font-size: inherit;
+}
+
+.star-rating-display-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}

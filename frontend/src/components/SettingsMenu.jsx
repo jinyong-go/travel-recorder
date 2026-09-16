@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MAP_MODES, hasGoogleMapsApiKey } from '../config/mapSettings.js'
+import { MAP_MODES, hasNaverMapClientId } from '../config/mapSettings.js'
 import { ChevronDownIcon, GearIcon } from './icons.jsx'
 
 export default function SettingsMenu({ mapMode, onChangeMapMode }) {
@@ -35,7 +35,7 @@ export default function SettingsMenu({ mapMode, onChangeMapMode }) {
           <p className="settings-panel-title">지도 표시 방식</p>
           <ul className="settings-option-list">
             {MAP_MODES.map((mode) => {
-              const disabled = mode.key === 'embed' && !hasGoogleMapsApiKey
+              const disabled = mode.key === 'embed' && !hasNaverMapClientId
               return (
                 <li key={mode.key}>
                   <button
@@ -47,7 +47,7 @@ export default function SettingsMenu({ mapMode, onChangeMapMode }) {
                     <span className="settings-option-label">{mode.label}</span>
                     <span className="settings-option-desc">
                       {disabled
-                        ? 'Google Maps API 키가 설정되지 않아 사용할 수 없어요. (.env의 VITE_GOOGLE_MAPS_API_KEY)'
+                        ? '네이버 지도 Client ID 가 설정되지 않아 사용할 수 없어요. (.env의 VITE_NAVER_MAP_CLIENT_ID)'
                         : mode.description}
                     </span>
                   </button>

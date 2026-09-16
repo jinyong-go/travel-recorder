@@ -58,9 +58,12 @@ class PhotoServiceImpl(
 
     @Transactional
     override fun delete(placeId: Long, photoId: Long, requesterId: Long) {
+        // 여행지를 먼저 조회해 soft delete 된 여행지의 사진은 404 로 막는다.
+        // (Photo 는 soft delete 대상이 아니라 삭제된 여행지의 사진 행이 그대로 남아 있다.)
+        val place = placeRepository.findById(placeId).orElseThrow { ApiException(ErrorCode.PLACE_NOT_FOUND) }
         val photo = photoRepository.findByIdAndPlaceId(photoId, placeId)
             ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
-        if (photo.uploader.id != requesterId && photo.place.owner.id != requesterId) {
+        if (photo.uploader.id != requesterId && place.owner.id != requesterId) {
             throw ApiException(ErrorCode.FORBIDDEN)
         }
         photoStorageService.delete(photo.storageKey)

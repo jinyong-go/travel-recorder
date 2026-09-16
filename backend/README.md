@@ -1,8 +1,8 @@
 # 여행 지도 (travel-recorder) — Backend
 
 여행 장소를 기록하고 공유하는 웹 애플리케이션의 백엔드 API 서버입니다.
-네이버 계정으로 로그인한 사용자가 여행지를 등록하고, 등록된 여행지에 평점·댓글·사진을
-남길 수 있습니다. 여행지 등록 시 사용하는 장소 검색은 네이버 지역 검색 오픈API를
+네이버 계정으로 로그인한 사용자가 여행지를 등록하고, 등록된 여행지에 리뷰(별점+코멘트)와
+사진을 남길 수 있습니다. 여행지 등록 시 사용하는 장소 검색은 네이버 지역 검색 오픈API를
 백엔드가 프록시·집계해 제공합니다.
 
 상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md)를 참고하세요.
@@ -29,7 +29,7 @@
 
 ## 디렉터리 구조
 
-도메인별 패키지 안에 `domain` / `repository` / `service` / `web` / `dto` 계층을 두는 구조입니다.
+도메인별 패키지 안에 `domain` / `repository` / `service` / `controller` / `dto` 계층을 두는 구조입니다.
 
 ```
 backend/
@@ -39,23 +39,23 @@ backend/
 │  │  ├─ config/SecurityConfig.kt  # 시큐리티 필터체인, CSRF, oauth2Login
 │  │  ├─ service/UserService.kt    # 네이버 프로필(response 래핑) 평탄화 + 사용자 Upsert
 │  │  ├─ security/CustomOAuth2User.kt
-│  │  └─ domain·repository·web·dto
+│  │  └─ domain·repository·controller·dto
 │  ├─ place/                       # 여행지 CRUD 및 목록 조회
 │  │  ├─ domain/Place.kt, Category.kt
 │  │  ├─ repository/PlaceSpecifications.kt  # 카테고리·태그·키워드 동적 조건
-│  │  └─ service·web·dto
+│  │  └─ service·controller·dto
 │  ├─ search/                      # 네이버 지역 검색 오픈API 연동
 │  │  ├─ client/NaverLocalSearchClient.kt
 │  │  └─ service/PlaceSearchService.kt      # 중복 제거·거리순 정렬·페이징
 │  ├─ tag/                         # 태그 조회
-│  ├─ rating/                      # 여행지별 사용자 평점 (사용자당 1건)
-│  ├─ comment/                     # 여행지별 댓글
+│  ├─ review/                      # 여행지별 리뷰 = 별점 + 코멘트 (사용자당 1건)
 │  ├─ photo/                       # 사진 업로드·삭제
+│  │  ├─ config/                   # 업로드 제한·저장소 설정 (@ConfigurationProperties)
 │  │  └─ storage/                  # PhotoStorageService 추상화 + 파일시스템 구현체
 │  └─ common/
 │     ├─ config/WebConfig.kt       # CORS, 사진 정적 리소스 핸들러
 │     ├─ error/                    # ErrorCode, ApiException, GlobalExceptionHandler
-│     ├─ web/AuthSupport.kt        # 인증 주체 → User 변환 헬퍼
+│     ├─ web/AuthSupport.kt        # 인증 주체 → User 변환 헬퍼 (컨트롤러가 아니라 web 유지)
 │     ├─ util/GeoUtils.kt          # 하버사인 거리 계산
 │     └─ dto/PageResponse.kt       # 공통 페이지 응답
 ├─ src/main/resources/
@@ -178,6 +178,8 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 - `local`은 H2를 `MODE=PostgreSQL`로 띄워 dev/prod와 같은 스크립트를 그대로 사용합니다.
 - `prod`는 `spring.sql.init.mode: never`라 애플리케이션이 DDL을 실행하지 않습니다. 스키마 적용은 배포 절차에서 별도로 수행해야 합니다.
 - PostgreSQL은 외래키에 인덱스를 자동 생성하지 않으므로, 조회·삭제에 쓰이는 FK 컬럼에 인덱스를 명시해 두었습니다.
+- `places` / `reviews`는 **soft delete**를 사용합니다. `deleted_at`이 `NULL`인 행만 살아 있는 행이며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동으로 제외합니다. 정책과 근거(별도 `is_deleted` 플래그를 두지 않는 이유, 리뷰 재등록 처리)는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2를 참고하세요.
+- `CREATE TABLE IF NOT EXISTS`는 **이미 존재하는 테이블에 컬럼을 추가하지 못합니다.** 아직 테이블을 만들기 전이라 `schema.sql`을 직접 고쳐 나가고 있지만, 실제 데이터가 쌓이기 시작하면 변경 이력을 남길 마이그레이션 도구가 필요합니다.
 
 ## 설정 값
 
@@ -210,18 +212,22 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 | `PUT` | `/api/places/{placeId}` | 여행지 수정 (등록자 본인) |
 | `DELETE` | `/api/places/{placeId}` | 여행지 삭제 (등록자 본인) |
 | `GET` | `/api/tags` | 태그 검색 (`keyword`) |
-| `GET` | `/api/places/{placeId}/ratings/me` | 내 평점 조회 |
-| `PUT` | `/api/places/{placeId}/ratings` | 내 평점 등록/수정 |
-| `DELETE` | `/api/places/{placeId}/ratings` | 내 평점 삭제 |
-| `GET` | `/api/places/{placeId}/comments` | 댓글 목록 |
-| `POST` | `/api/places/{placeId}/comments` | 댓글 작성 |
-| `DELETE` | `/api/places/{placeId}/comments/{commentId}` | 댓글 삭제 (작성자 본인) |
+| `GET` | `/api/places/{placeId}/reviews` | 리뷰 목록 (별점 + 코멘트, 최신순) |
+| `GET` | `/api/places/{placeId}/reviews/me` | 내 리뷰 조회 (없으면 `204`) |
+| `PUT` | `/api/places/{placeId}/reviews` | 내 리뷰 등록/수정 (upsert) |
+| `DELETE` | `/api/places/{placeId}/reviews` | 내 리뷰 삭제 |
 | `POST` | `/api/places/{placeId}/photos` | 사진 업로드 (`multipart/form-data`) |
 | `DELETE` | `/api/places/{placeId}/photos/{photoId}` | 사진 삭제 |
 
-오류 응답은 `common/error`의 `ErrorResponse` 형식으로 통일되어 있으며,
-`ErrorCode`에 정의된 코드(`UNAUTHENTICATED`, `FORBIDDEN`, `PLACE_NOT_FOUND`,
+오류 응답은 `common/error`의 `ErrorResponse`(`code`/`message`/`status`) 형식으로 통일되어 있으며,
+`ErrorCode`에 정의된 코드(`UNAUTHENTICATED`, `FORBIDDEN`, `PLACE_NOT_FOUND`, `REVIEW_NOT_FOUND`,
 `VALIDATION_ERROR`, `PLACE_SEARCH_UNAVAILABLE` 등)를 함께 내려줍니다.
+
+`GlobalExceptionHandler`는 컨트롤러가 던지는 `ApiException`뿐 아니라 **컨트롤러에 도달하기 전에 발생하는
+실패도 모두 같은 형식으로 변환**합니다 — 매핑되지 않은 주소(404), 메서드 불일치(405), `Content-Type` 불일치(415),
+본문 파싱 실패·파라미터 타입 불일치(400), 업로드 용량 초과(400), DB 제약 위반(409), 그리고 마지막
+`Exception` 캐치올(500)입니다. 500과 409는 내부 정보가 새지 않도록 고정 문구로 응답하고 스택은 로그에만 남깁니다.
+전체 목록은 [SPECIFICATION.md](./SPECIFICATION.md) 6장을 참고하세요.
 
 ## 프론트엔드 연동
 
@@ -233,7 +239,7 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 ## 현재 구현 상태
 
 구현 완료
-- 도메인 모델 및 API 뼈대 (여행지, 태그, 평점, 댓글, 사진)
+- 도메인 모델 및 API 뼈대 (여행지, 태그, 리뷰, 사진)
 - 네이버 OAuth2 로그인 연동 및 사용자 Upsert
 - 네이버 지역 검색 오픈API 프록시 (중복 제거, 거리순 정렬, 페이징)
 - 파일시스템 사진 저장소 및 정적 서빙, 공통 예외 처리

@@ -1,0 +1,77 @@
+.notfound-page {
+  flex: 1;
+  padding: 24px clamp(16px, 4vw, 48px) 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notfound-panel {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(28px, 5vw, 44px);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.notfound-icon {
+  color: var(--accent);
+}
+
+.notfound-code {
+  font-size: clamp(40px, 8vw, 56px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  color: var(--accent-strong);
+}
+
+.notfound-title {
+  font-size: clamp(18px, 3vw, 22px);
+}
+
+.notfound-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.notfound-home-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  padding: 12px 22px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.notfound-home-btn:hover {
+  background: var(--accent-strong);
+  transform: translateY(-2px);
+}
+
+.notfound-places-link {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+.notfound-places-link:hover {
+  text-decoration: underline;
+}

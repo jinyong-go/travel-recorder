@@ -16,10 +16,12 @@ import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 
 @Entity
 @Table(name = "places")
+@SQLRestriction("deleted_at is null")
 class Place(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
@@ -70,8 +72,16 @@ class Place(
     var updatedAt: Instant = Instant.now()
         protected set
 
+    /** soft delete 시각. null 이면 살아 있는 행이다 (@SQLRestriction 으로 조회에서 자동 제외). */
+    var deletedAt: Instant? = null
+        protected set
+
     @PreUpdate
     fun onUpdate() {
         updatedAt = Instant.now()
+    }
+
+    fun softDelete() {
+        if (deletedAt == null) deletedAt = Instant.now()
     }
 }

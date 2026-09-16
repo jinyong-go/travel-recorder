@@ -1,3 +1,5 @@
+import { PLACE_SEARCH_RESULTS } from './placeSearchResults.js'
+
 export const CATEGORIES = [
   { key: 'all', label: '전체' },
   { key: 'food', label: '맛집' },
@@ -17,7 +19,7 @@ export const categoryLabel = (key) =>
   CATEGORIES.find((c) => c.key === key)?.label ?? key
 
 // 목업 데이터 (백엔드 연동 전까지 화면 구성을 위한 임시 데이터)
-export const MOCK_PLACES = [
+const MOCK_PLACE_ROWS = [
   { id: 1, name: '제주 흑돼지 본가', category: 'food', region: '제주 제주시', rating: 4.8, distanceKm: 1.2, registeredAt: '2026-09-10', memo: '숙소 근처 흑돼지 맛집, 웨이팅 있음' },
   { id: 2, name: '함덕 해수욕장 편집샵', category: 'shopping', region: '제주 조천읍', rating: 4.2, distanceKm: 3.5, registeredAt: '2026-09-09', memo: '감성 소품샵, 엽서 구매' },
   { id: 3, name: '성산일출봉', category: 'sight', region: '제주 성산읍', rating: 4.9, distanceKm: 12.4, registeredAt: '2026-09-08', memo: '일출 명소, 아침 일찍 방문 추천' },
@@ -42,3 +44,15 @@ export const MOCK_PLACES = [
   { id: 22, name: '섭지코지', category: 'sight', region: '제주 성산읍', rating: 4.8, distanceKm: 13.0, registeredAt: '2026-08-27', memo: '유채꽃, 드라마 촬영지' },
   { id: 23, name: '표선 민속촌 기념품점', category: 'shopping', region: '제주 표선면', rating: 3.7, distanceKm: 16.2, registeredAt: '2026-08-26', memo: '전통 공예품' },
 ]
+
+// 좌표·주소는 같은 장소의 검색 결과 목업에서 가져온다. 값을 두 군데 적어 두면 어긋나기 때문이다.
+const SEARCH_RESULT_BY_NAME = new Map(PLACE_SEARCH_RESULTS.map((r) => [r.name, r]))
+
+export const MOCK_PLACES = MOCK_PLACE_ROWS.map((place) => {
+  const found = SEARCH_RESULT_BY_NAME.get(place.name)
+  if (!found) return place
+  return {
+    ...place,
+    location: { ...found.location, address: found.address },
+  }
+})

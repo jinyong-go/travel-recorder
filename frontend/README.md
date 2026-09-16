@@ -33,17 +33,29 @@ frontend/
 │  ├─ App.jsx                  # 라우트 정의 + PlacesProvider
 │  ├─ index.css / App.css      # 전역 스타일, 테마 변수
 │  ├─ pages/
-│  │  ├─ MainPage.jsx          # 메인 목록 화면 (카테고리 탭·정렬·페이지네이션·지도 모달)
-│  │  └─ RegisterPlacePage.jsx # 여행지 등록 페이지 (/places/register)
+│  │  ├─ LandingPage.jsx       # 인덱스/랜딩 (/)
+│  │  ├─ LoginPage.jsx         # 로그인 (/login, 네이버 OAuth 진입점)
+│  │  ├─ MainPage.jsx          # 메인 목록 화면 (/places, 카테고리 탭·정렬·페이지네이션)
+│  │  ├─ PlaceDetailPage.jsx   # 여행지 상세 (/places/:placeId, 사진·별점 분포·리뷰)
+│  │  ├─ RegisterPlacePage.jsx # 여행지 등록 페이지 (/places/register)
+│  │  └─ NotFoundPage.jsx      # 404 (그 외 모든 경로)
 │  ├─ components/
 │  │  ├─ PlaceSearchModal.jsx  # 장소 검색 모달 (10건 페이징, 거리순 정렬)
-│  │  ├─ StarRatingInput.jsx   # 별점 입력
+│  │  ├─ PlaceMapModal.jsx     # 지도 모달 (목록·상세 공용)
+│  │  ├─ NaverMapView.jsx      # 네이버 지도 SDK v3 렌더링 + 마커
+│  │  ├─ StarRatingInput.jsx   # 별점 입력 (0.5점 단위)
+│  │  ├─ StarRatingDisplay.jsx # 별점 표시 (읽기 전용)
 │  │  ├─ SettingsMenu.jsx      # 지도 표시 방식 설정
 │  │  ├─ ThemeSelector.jsx     # 라이트/다크 테마 토글
 │  │  └─ icons.jsx             # 아이콘 컴포넌트
 │  ├─ context/PlacesContext.jsx        # 여행지 목록 전역 상태
-│  ├─ hooks/useReferenceLocation.js    # 기준 위치(Geolocation/수동/기본값) 훅
+│  ├─ hooks/
+│  │  ├─ useReferenceLocation.js       # 기준 위치(Geolocation/수동/기본값) 훅
+│  │  ├─ useTheme.js                   # 라이트/다크 테마 상태 (테마 토글이 있는 화면 공용)
+│  │  ├─ useNaverMapsSdk.js            # 네이버 지도 SDK 스크립트 로드 상태
+│  │  └─ useMapMode.js                 # 지도 표시 방식 상태 (지도 버튼이 있는 화면 공용)
 │  ├─ config/
+│  │  ├─ api.js                        # 백엔드 오리진·네이버 로그인 진입 URL
 │  │  ├─ mapSettings.js                # 지도 표시 방식·지도 URL 생성
 │  │  ├─ uploadLimits.js               # 사진 용량·형식 제한 및 검증
 │  │  └─ referenceLocation.js          # 기준 위치 저장/조회, 기본값(서울역)
@@ -75,7 +87,8 @@ cp .env.example .env
 
 | 변수 | 필수 | 설명 |
 |---|---|---|
-| `VITE_GOOGLE_MAPS_API_KEY` | 선택 | 지도를 페이지 내에 임베드할 때 필요합니다. 값이 없으면 설정 메뉴에서 "새 창으로 열기" 방식만 사용할 수 있습니다. |
+| `VITE_API_BASE_URL` | 선택 | 백엔드 오리진. 기본 `http://localhost:8080`. 네이버 로그인 진입 URL(`/oauth2/authorization/naver`)도 이 값을 기준으로 만듭니다. |
+| `VITE_NAVER_MAP_CLIENT_ID` | 선택 | 네이버 지도 SDK Client ID. 지도를 페이지 내에 표시할 때 필요합니다. 값이 없으면 설정 메뉴에서 "새 창으로 열기"(네이버 지도 검색) 방식만 사용할 수 있습니다. |
 | `VITE_MAX_PHOTO_SIZE_MB` | 선택 | 사진 1장당 최대 용량(MB). 기본 `5`. |
 | `VITE_MAX_PHOTO_TOTAL_MB` | 선택 | 한 번에 첨부할 수 있는 전체 용량(MB). 기본 `30`. |
 
@@ -116,19 +129,21 @@ SPA 라우팅(`/places/register` 등)을 사용하므로, 서버에서 **알 수
 ## 백엔드 연동
 
 - 백엔드는 같은 저장소의 `backend/` (Spring Boot + Kotlin)이며 기본 포트는 **8080**입니다.
-- API 기본 경로는 `/api` 이하입니다. (`/api/auth`, `/api/places`, `/api/places/{placeId}/photos`, `/api/places/{placeId}/ratings`, `/api/places/{placeId}/comments`, `/api/tags`)
+- API 기본 경로는 `/api` 이하입니다. (`/api/auth`, `/api/places`, `/api/places/{placeId}/photos`, `/api/places/{placeId}/reviews`, `/api/tags`)
 - 백엔드는 CORS 허용 오리진으로 `http://localhost:5173`을 설정해 두었으므로, 개발 시 프론트엔드를 기본 포트로 실행하면 별도 프록시 설정 없이 호출할 수 있습니다.
 - 현재 프론트엔드는 **아직 API를 호출하지 않고 `src/data/`의 목업 데이터로 화면을 구성**합니다. 실제 연동 시 API 응답 스키마에 맞춘 매핑 레이어를 추가합니다.
 
 ## 현재 구현 상태
 
 구현 완료
-- 메인 목록 화면 (카테고리 탭, 정렬, 페이지네이션, 지도 모달, 등록 FAB)
+- 랜딩 페이지 (`/`), 404 페이지 (정의되지 않은 모든 경로)
+- 메인 목록 화면 (`/places`) — 카테고리 탭, 정렬, 페이지네이션, 지도 모달, 등록 FAB. 필터/정렬/페이지는 쿼리 파라미터(`?category=&sort=&page=`)로 유지
+- 여행지 상세 화면 (`/places/:placeId`) — 사진 갤러리, 평균 별점·별점 분포, 리뷰 작성/수정/삭제 (별점+코멘트 한 폼)
 - 여행지 등록 페이지 (`/places/register`) 및 장소 검색 모달, 별점 입력
-- 라이트/다크 테마 토글(시스템 설정 기본값, 선택 시 로컬 저장), 지도 표시 방식 설정, 기준 위치(Geolocation → 수동 지정 → 서울역) 처리
+- 로그인 페이지 (`/login`) — 네이버 OAuth 진입점(백엔드 `/oauth2/authorization/naver`로 전체 페이지 이동)
+- 지도 연동 — 네이버 지도. 설정 메뉴에서 "새 창으로 열기"(지도 검색)와 "페이지 내 지도 보기"(SDK v3 + 마커, Client ID 필요) 중 선택
+- 라이트/다크 테마 토글(시스템 설정 기본값, 선택 시 로컬 저장), 기준 위치(Geolocation → 수동 지정 → 서울역) 처리
 
 미구현 / 예정 (상세는 SPECIFICATION.md 9장)
-- 네이버 로그인(OAuth) 연동 및 로그인 상태 UI
+- 네이버 로그인 이후 처리 — 세션 유지, 로그인 상태 UI(프로필·로그아웃), 로그인 사용자 판별. 상세 화면의 "내 리뷰"는 현재 목업 사용자 기준입니다
 - 백엔드 API 연동 (현재 목업 데이터 사용)
-- 지도 연동의 네이버 지도 SDK 전환 (현재 Google Maps 기반, 환경 변수도 `VITE_NAVER_MAP_CLIENT_ID`로 교체 예정)
-- 여행지 상세 화면(사진 갤러리, 평점 분포, 댓글)

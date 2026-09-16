@@ -1,24 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CATEGORIES, categoryIcon, categoryLabel } from '../data/places.js'
 import { usePlaces } from '../context/PlacesContext.jsx'
-import { applyTheme, getInitialTheme, storeTheme } from '../theme/themes.js'
-import {
-  buildMapsEmbedUrl,
-  buildMapsSearchUrl,
-  getStoredMapMode,
-  hasGoogleMapsApiKey,
-  storeMapMode,
-} from '../config/mapSettings.js'
+import useTheme from '../hooks/useTheme.js'
+import useMapMode from '../hooks/useMapMode.js'
+import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import SettingsMenu from '../components/SettingsMenu.jsx'
-import { CloseIcon, MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
+import PlaceMapModal from '../components/PlaceMapModal.jsx'
+import { MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
 
 const PAGE_SIZE = 10
 
 const SORT_OPTIONS = [
   { key: 'recent', label: '최근 등록순' },
-  { key: 'rating', label: '평점순' },
+  { key: 'rating', label: '별점순' },
   { key: 'distance', label: '거리순' },
 ]
 
@@ -37,42 +33,45 @@ const sortPlaces = (places, sortKey) => {
 
 export default function MainPage() {
   const { places } = usePlaces()
-  const [category, setCategory] = useState('all')
-  const [sortKey, setSortKey] = useState('recent')
-  const [page, setPage] = useState(1)
-  const [themeKey, setThemeKey] = useState(getInitialTheme)
-  const [mapMode, setMapMode] = useState(() => {
-    const stored = getStoredMapMode()
-    return stored === 'embed' && hasGoogleMapsApiKey ? 'embed' : 'link'
-  })
+  const { themeKey, changeTheme } = useTheme()
+  const { mapMode, changeMapMode, isEmbed } = useMapMode()
   const [mapModalPlace, setMapModalPlace] = useState(null)
 
-  useEffect(() => {
-    applyTheme(themeKey)
-  }, [themeKey])
+  // 필터/정렬/페이지는 URL 쿼리에 둔다. 상세 화면에 다녀와도 목록 상태가 유지되고,
+  // 필터링된 목록 자체를 링크로 공유할 수 있다.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const categoryParam = searchParams.get('category')
+  const sortParam = searchParams.get('sort')
+  const pageParam = searchParams.get('page')
 
-  const handleThemeChange = (key) => {
-    setThemeKey(key)
-    storeTheme(key)
-  }
+  // 알 수 없는 값이 들어오면 기본값으로 떨어뜨린다.
+  const category = CATEGORIES.some((c) => c.key === categoryParam) ? categoryParam : 'all'
+  const sortKey = SORT_OPTIONS.some((o) => o.key === sortParam) ? sortParam : 'recent'
+  const page = Math.max(1, Number(pageParam) || 1)
 
-  const handleMapModeChange = (key) => {
-    setMapMode(key)
-    storeMapMode(key)
+  // 기본값인 항목은 URL 에서 빼서 주소를 짧게 유지한다.
+  const updateParams = (next) => {
+    const merged = { category, sort: sortKey, page, ...next }
+    const params = {}
+    if (merged.category !== 'all') params.category = merged.category
+    if (merged.sort !== 'recent') params.sort = merged.sort
+    if (merged.page !== 1) params.page = String(merged.page)
+    setSearchParams(params, { replace: true })
   }
 
   const handleMapButtonClick = (place) => {
-    if (mapMode === 'embed' && hasGoogleMapsApiKey) {
+    if (isEmbed) {
       setMapModalPlace(place)
     } else {
       window.open(buildMapsSearchUrl(place), '_blank', 'noopener,noreferrer')
     }
   }
 
-  const filtered = useMemo(() => {
-    const byCategory = category === 'all' ? places : places.filter((p) => p.category === category)
-    return sortPlaces(byCategory, sortKey)
-  }, [places, category, sortKey])
+  // 메모이제이션은 React Compiler 에 맡긴다. (쿼리 파라미터 기반 값이라 수동 deps 가 유지되지 않음)
+  const filtered = sortPlaces(
+    category === 'all' ? places : places.filter((p) => p.category === category),
+    sortKey,
+  )
 
   const totalCount = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
@@ -83,25 +82,26 @@ export default function MainPage() {
   )
 
   const handleCategoryChange = (key) => {
-    setCategory(key)
-    setPage(1)
+    updateParams({ category: key, page: 1 })
   }
 
   const handleSortChange = (e) => {
-    setSortKey(e.target.value)
-    setPage(1)
+    updateParams({ sort: e.target.value, page: 1 })
   }
 
   return (
     <>
       <header className="app-header">
-        <h1 className="app-title">
+        <Link to="/" className="app-title app-title-link">
           <MapPinIcon className="app-title-icon" />
           여행 지도 <span className="by-yong">by YONG</span>
-        </h1>
+        </Link>
         <div className="header-actions">
-          <SettingsMenu mapMode={mapMode} onChangeMapMode={handleMapModeChange} />
-          <ThemeSelector themeKey={themeKey} onChange={handleThemeChange} />
+          <SettingsMenu mapMode={mapMode} onChangeMapMode={changeMapMode} />
+          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <Link to="/login" className="header-login-link">
+            로그인
+          </Link>
         </div>
       </header>
 
@@ -151,7 +151,12 @@ export default function MainPage() {
                     <span className="place-category-badge">{categoryLabel(place.category)}</span>
                   </div>
                   <div className="place-body">
-                    <h3 className="place-name">{place.name}</h3>
+                    <h3 className="place-name">
+                      {/* 카드 전체가 눌리도록 링크를 카드 위에 덮는다 (.place-card-link::after) */}
+                      <Link to={`/places/${place.id}`} className="place-card-link">
+                        {place.name}
+                      </Link>
+                    </h3>
                     <p className="place-region">{place.region}</p>
                     <div className="place-meta">
                       <span className="place-rating">★ {place.rating.toFixed(1)}</span>
@@ -179,7 +184,7 @@ export default function MainPage() {
                 type="button"
                 className="page-btn"
                 disabled={currentPage === 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => updateParams({ page: Math.max(1, currentPage - 1) })}
               >
                 이전
               </button>
@@ -188,7 +193,7 @@ export default function MainPage() {
                   key={n}
                   type="button"
                   className={`page-btn${n === currentPage ? ' active' : ''}`}
-                  onClick={() => setPage(n)}
+                  onClick={() => updateParams({ page: n })}
                 >
                   {n}
                 </button>
@@ -197,7 +202,7 @@ export default function MainPage() {
                 type="button"
                 className="page-btn"
                 disabled={currentPage === totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => updateParams({ page: Math.min(totalPages, currentPage + 1) })}
               >
                 다음
               </button>
@@ -212,43 +217,9 @@ export default function MainPage() {
       </main>
 
       {mapModalPlace && (
-        <div className="modal-overlay" onClick={() => setMapModalPlace(null)}>
-          <div
-            className="modal-panel map-modal-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${mapModalPlace.name} 지도`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setMapModalPlace(null)}
-              aria-label="닫기"
-            >
-              <CloseIcon />
-            </button>
-            <h2>{mapModalPlace.name}</h2>
-            <p className="modal-desc">{mapModalPlace.region}</p>
-            <iframe
-              className="map-embed-frame"
-              title={`${mapModalPlace.name} 지도`}
-              src={buildMapsEmbedUrl(mapModalPlace)}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-            />
-            <a
-              className="map-embed-link"
-              href={buildMapsSearchUrl(mapModalPlace)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              새 창에서 구글 지도로 열기
-            </a>
-          </div>
-        </div>
+        <PlaceMapModal place={mapModalPlace} onClose={() => setMapModalPlace(null)} />
       )}
+
     </>
   )
 }

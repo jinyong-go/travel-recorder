@@ -20,13 +20,14 @@ import com.yong.travel.place.dto.PlaceUpdateRequest
 import com.yong.travel.place.dto.RatingSummary
 import com.yong.travel.place.repository.PlaceRepository
 import com.yong.travel.place.repository.PlaceSpecifications
-import com.yong.travel.rating.repository.RatingRepository
+import com.yong.travel.review.repository.ReviewRepository
 import com.yong.travel.tag.service.TagService
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Service
 @Transactional(readOnly = true)
@@ -34,7 +35,7 @@ class PlaceServiceImpl(
     private val placeRepository: PlaceRepository,
     private val userRepository: UserRepository,
     private val tagService: TagService,
-    private val ratingRepository: RatingRepository,
+    private val reviewRepository: ReviewRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorageService: PhotoStorageService,
 ) : PlaceService {
@@ -47,8 +48,8 @@ class PlaceServiceImpl(
         )
 
         val summaries = page.content.map { it.toSummaryResponse(query.lat, query.lng) }
-        // 평점순/거리순은 조회된 페이지 안에서만 재정렬한다. 전체 정렬이 필요해지면
-        // 평점 집계·거리 계산을 DB 쿼리로 내려야 한다.
+        // 별점순/거리순은 조회된 페이지 안에서만 재정렬한다. 전체 정렬이 필요해지면
+        // 별점 집계·거리 계산을 DB 쿼리로 내려야 한다.
         val sorted = when (query.sort) {
             PlaceSort.RECENT -> summaries
             PlaceSort.RATING -> summaries.sortedByDescending { it.rating.average }
@@ -93,14 +94,22 @@ class PlaceServiceImpl(
         place.memo = request.memo
         place.tags = tagService.findOrCreateAll(request.tags).toMutableSet()
 
-        return place.toResponse()
+        // updatedAt 을 채우는 @PreUpdate 는 flush 시점에 돈다.
+        return placeRepository.saveAndFlush(place).toResponse()
     }
 
+    /**
+     * soft delete. 여행지를 숨기면서 종속 리뷰도 함께 숨긴다.
+     * 사진은 soft delete 대상이 아니므로 파일과 메타데이터를 그대로 두며,
+     * 여행지가 보이지 않는 동안에는 어차피 조회 경로가 없다.
+     */
     @Transactional
     override fun delete(placeId: Long, ownerId: Long) {
         val place = findPlace(placeId)
         requireOwner(place, ownerId)
-        placeRepository.delete(place)
+
+        reviewRepository.softDeleteByPlaceId(placeId, Instant.now())
+        place.softDelete()
     }
 
     private fun findPlace(placeId: Long): Place =
@@ -110,10 +119,11 @@ class PlaceServiceImpl(
         if (place.owner.id != userId) throw ApiException(ErrorCode.FORBIDDEN)
     }
 
+    /** 여행지의 평균 별점과 리뷰 수. 별점은 리뷰의 일부라 리뷰 수가 곧 별점 수다. */
     private fun ratingSummaryOf(placeId: Long) =
         RatingSummary(
-            average = ratingRepository.averageScore(placeId).roundTo2Decimals(),
-            count = ratingRepository.countByPlaceId(placeId),
+            average = reviewRepository.averageScore(placeId).roundTo2Decimals(),
+            count = reviewRepository.countByPlaceId(placeId),
         )
 
     private fun Place.toResponse(): PlaceResponse {

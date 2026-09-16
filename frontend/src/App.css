@@ -15,6 +15,13 @@
   letter-spacing: -0.4px;
 }
 
+/* 헤더 타이틀을 홈 링크로 쓸 때 (h1 과 같은 모양을 유지한다) */
+.app-title-link {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 700;
+}
+
 .app-title-icon {
   align-self: center;
   flex-shrink: 0;
@@ -253,6 +260,7 @@
 }
 
 .place-card {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -305,6 +313,30 @@
   color: var(--text);
 }
 
+/* 장소명 링크가 카드 전체를 덮어 어디를 눌러도 상세로 이동한다.
+   카드 안의 다른 버튼(지도)은 z-index 로 링크 위에 올린다. */
+.place-card-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.place-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.place-card-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.place-card:hover .place-card-link {
+  color: var(--accent-strong);
+}
+
 .place-region {
   font-size: 13px;
   color: var(--text-muted);
@@ -336,6 +368,8 @@
 }
 
 .place-map-btn {
+  position: relative;
+  z-index: 1;
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
@@ -418,7 +452,19 @@
   font-size: 15px;
   box-shadow: var(--shadow);
   z-index: 20;
+  text-decoration: none;
   transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+/* 인라인 svg 는 baseline 에 놓여 아래에 여백이 생기므로 block 으로 바꿔 라벨과 높이를 맞춘다. */
+.register-fab svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* 기본 line-height(1.5) 의 위아래 여백 때문에 글자가 아이콘보다 내려가 보인다. */
+.register-fab-label {
+  line-height: 1;
 }
 
 .register-fab:hover {
@@ -516,4 +562,44 @@
     align-items: flex-start;
   }
 
+}
+
+/* 헤더 로그인 링크 */
+.header-login-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.header-login-link:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+/* 목록으로 돌아가는 링크 — 등록/상세 화면에서 공용으로 쓴다. */
+.back-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--accent-strong);
 }
