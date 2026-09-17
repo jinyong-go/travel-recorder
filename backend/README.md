@@ -1,9 +1,9 @@
 # 여행 지도 (travel-recorder) — Backend
 
-여행 장소를 기록하고 공유하는 웹 애플리케이션의 백엔드 API 서버입니다.
-네이버 계정으로 로그인한 사용자가 여행지를 등록하고, 등록된 여행지에 리뷰(별점+코멘트)와
-사진을 남길 수 있습니다. 여행지 등록 시 사용하는 장소 검색은 네이버 지역 검색 오픈API를
-백엔드가 프록시·집계해 제공합니다.
+방문한 장소를 개인 기록으로 남기고 원하는 상대에게만 공유하는 웹 애플리케이션의 백엔드 API 서버입니다.
+네이버 계정으로 로그인한 사용자가 방문 기록(사진·메모·평점)을 남기고, 각 기록의 공개 범위를
+`PRIVATE` / `GROUP` / `PUBLIC` 중에서 직접 정합니다. 기록 등록 시 사용하는 장소 검색은
+네이버 지역 검색 오픈API를 백엔드가 프록시·집계해 제공합니다.
 
 상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md)를 참고하세요.
 
@@ -40,15 +40,18 @@ backend/
 │  │  ├─ service/UserService.kt    # 네이버 프로필(response 래핑) 평탄화 + 사용자 Upsert
 │  │  ├─ security/CustomOAuth2User.kt
 │  │  └─ domain·repository·controller·dto
-│  ├─ place/                       # 여행지 CRUD 및 목록 조회
-│  │  ├─ domain/Place.kt, Category.kt
-│  │  ├─ repository/PlaceSpecifications.kt  # 카테고리·태그·키워드 동적 조건
+│  ├─ record/                      # 방문 기록 CRUD 및 목록 조회 (유일한 저장 단위)
+│  │  ├─ domain/VisitRecord.kt, Category.kt, Visibility.kt
+│  │  ├─ repository/VisitRecordSpecifications.kt  # 공개 범위 판정 + 카테고리·태그·키워드 조건
 │  │  └─ service·controller·dto
+│  ├─ group/                       # 공유 그룹 (조회 전용 대상 목록) 과 초대 링크
+│  │  ├─ domain/Group.kt, GroupMember.kt, GroupInvite.kt, VisitRecordShare.kt
+│  │  └─ service·controller·dto·repository
 │  ├─ search/                      # 네이버 지역 검색 오픈API 연동
 │  │  ├─ client/NaverLocalSearchClient.kt
-│  │  └─ service/PlaceSearchService.kt      # 중복 제거·거리순 정렬·페이징
-│  ├─ tag/                         # 태그 조회
-│  ├─ review/                      # 여행지별 리뷰 = 별점 + 코멘트 (사용자당 1건)
+│  │  ├─ service/PlaceSearchService.kt      # 중복 제거·거리순 정렬·페이징
+│  │  └─ controller/PlaceSearchController.kt  # GET /api/places/search (저장 단위가 아니라 외부 조회)
+│  ├─ tag/                         # 태그 조회 (볼 수 있는 기록에 쓰인 태그로 제한)
 │  ├─ photo/                       # 사진 업로드·삭제
 │  │  ├─ config/                   # 업로드 제한·저장소 설정 (@ConfigurationProperties)
 │  │  └─ storage/                  # PhotoStorageService 추상화 + 파일시스템 구현체
@@ -174,11 +177,11 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 `src/main/resources/schema.sql`이 스키마의 기준이며, 엔티티(`com.yong.travel.*.domain`)로부터 Hibernate가 생성하는 DDL에 맞춰 작성되어 있습니다.
 
 - 모든 프로파일이 `ddl-auto: validate`이므로, **엔티티와 `schema.sql`이 어긋나면 기동 시점에 실패합니다.** 엔티티를 바꿀 때는 `schema.sql`도 함께 고쳐야 합니다.
-- 스크립트는 `CREATE TABLE IF NOT EXISTS` 기반이고 외래키를 `CREATE TABLE` 안에 인라인으로 선언해 **재실행해도 안전**합니다. 이 때문에 테이블은 참조 순서(`users` → `tags` → `places` → 나머지)로 정의되어 있습니다.
+- 스크립트는 `CREATE TABLE IF NOT EXISTS` 기반이고 외래키를 `CREATE TABLE` 안에 인라인으로 선언해 **재실행해도 안전**합니다. 이 때문에 테이블은 참조 순서(`users` → `tags` → `share_group` → `visit_records` → 나머지)로 정의되어 있습니다.
 - `local`은 H2를 `MODE=PostgreSQL`로 띄워 dev/prod와 같은 스크립트를 그대로 사용합니다.
 - `prod`는 `spring.sql.init.mode: never`라 애플리케이션이 DDL을 실행하지 않습니다. 스키마 적용은 배포 절차에서 별도로 수행해야 합니다.
 - PostgreSQL은 외래키에 인덱스를 자동 생성하지 않으므로, 조회·삭제에 쓰이는 FK 컬럼에 인덱스를 명시해 두었습니다.
-- `places` / `reviews`는 **soft delete**를 사용합니다. `deleted_at`이 `NULL`인 행만 살아 있는 행이며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동으로 제외합니다. 정책과 근거(별도 `is_deleted` 플래그를 두지 않는 이유, 리뷰 재등록 처리)는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2를 참고하세요.
+- `visit_records`는 **soft delete**를 사용합니다. `deleted_at`이 `NULL`인 행만 살아 있는 행이며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동으로 제외합니다. 그룹·멤버·초대·공유 관계는 반대로 물리 삭제합니다 — 탈퇴와 공유 해제는 즉시 조회 권한을 없애야 하기 때문입니다. 정책과 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2를 참고하세요.
 - `CREATE TABLE IF NOT EXISTS`는 **이미 존재하는 테이블에 컬럼을 추가하지 못합니다.** 아직 테이블을 만들기 전이라 `schema.sql`을 직접 고쳐 나가고 있지만, 실제 데이터가 쌓이기 시작하면 변경 이력을 남길 마이그레이션 도구가 필요합니다.
 
 ## 설정 값
@@ -205,19 +208,25 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 | `GET` | `/oauth2/authorization/naver` | 네이버 로그인 시작 (Spring Security 기본 처리) |
 | `GET` | `/api/auth/me` | 현재 로그인 사용자 조회 |
 | `POST` | `/api/auth/logout` | 로그아웃 (세션 무효화) |
-| `GET` | `/api/places` | 여행지 목록 (`category`, `tag`, `keyword`, `sort`, `lat`, `lng`, 페이징) |
+| `GET` | `/api/records` | 기록 목록. `scope`(`MINE`\|`SHARED`\|`PUBLIC`) **필수**, `category`, `tag`, `keyword`, `sort`, `lat`, `lng`, 페이징 |
 | `GET` | `/api/places/search` | 등록 폼용 장소 검색 (네이버 지역 검색 프록시·집계) |
-| `GET` | `/api/places/{placeId}` | 여행지 상세 |
-| `POST` | `/api/places` | 여행지 등록 |
-| `PUT` | `/api/places/{placeId}` | 여행지 수정 (등록자 본인) |
-| `DELETE` | `/api/places/{placeId}` | 여행지 삭제 (등록자 본인) |
+| `GET` | `/api/records/{recordId}` | 기록 상세. 볼 권한이 없으면 `404` |
+| `POST` | `/api/records` | 기록 등록 (공개 범위·공유 그룹 포함) |
+| `PUT` | `/api/records/{recordId}` | 기록 수정 (작성자 본인) |
+| `PATCH` | `/api/records/{recordId}/visibility` | 공개 범위·공유 그룹만 변경 (작성자 본인) |
+| `DELETE` | `/api/records/{recordId}` | 기록 삭제 (작성자 본인) |
 | `GET` | `/api/tags` | 태그 검색 (`keyword`) |
-| `GET` | `/api/places/{placeId}/reviews` | 리뷰 목록 (별점 + 코멘트, 최신순) |
-| `GET` | `/api/places/{placeId}/reviews/me` | 내 리뷰 조회 (없으면 `204`) |
-| `PUT` | `/api/places/{placeId}/reviews` | 내 리뷰 등록/수정 (upsert) |
-| `DELETE` | `/api/places/{placeId}/reviews` | 내 리뷰 삭제 |
-| `POST` | `/api/places/{placeId}/photos` | 사진 업로드 (`multipart/form-data`) |
-| `DELETE` | `/api/places/{placeId}/photos/{photoId}` | 사진 삭제 |
+| `GET` | `/api/groups` | 내가 소유하거나 참여한 그룹 목록 |
+| `POST` | `/api/groups` | 그룹 생성 (소유자도 멤버로 입력) |
+| `GET` | `/api/groups/{groupId}` | 그룹 상세 (멤버 목록). 멤버가 아니면 `404` |
+| `PUT` \| `DELETE` | `/api/groups/{groupId}` | 그룹 이름 변경 / 삭제 (소유자) |
+| `DELETE` | `/api/groups/{groupId}/members/me` | 그룹 탈퇴 (소유자는 `403`) |
+| `DELETE` | `/api/groups/{groupId}/members/{userId}` | 멤버 제외 (소유자) |
+| `POST` \| `GET` \| `DELETE` | `/api/groups/{groupId}/invite` | 초대 링크 발급(재발급 시 이전 무효) / 조회 / 폐기 |
+| `GET` | `/api/invites/{token}` | 초대 미리보기 (비로그인 가능) |
+| `POST` | `/api/invites/{token}/accept` | 초대 수락 |
+| `POST` | `/api/records/{recordId}/photos` | 사진 업로드 (`multipart/form-data`, 작성자 본인) |
+| `DELETE` | `/api/records/{recordId}/photos/{photoId}` | 사진 삭제 (작성자 본인) |
 
 오류 응답은 `common/error`의 `ErrorResponse`(`code`/`message`/`status`) 형식으로 통일되어 있으며,
 `ErrorCode`에 정의된 코드(`UNAUTHENTICATED`, `FORBIDDEN`, `PLACE_NOT_FOUND`, `REVIEW_NOT_FOUND`,
@@ -239,7 +248,7 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 ## 현재 구현 상태
 
 구현 완료
-- 도메인 모델 및 API 뼈대 (여행지, 태그, 리뷰, 사진)
+- 도메인 모델 및 API (방문 기록, 공개 범위, 공유 그룹, 초대, 태그, 사진)
 - 네이버 OAuth2 로그인 연동 및 사용자 Upsert
 - 네이버 지역 검색 오픈API 프록시 (중복 제거, 거리순 정렬, 페이징)
 - 파일시스템 사진 저장소 및 정적 서빙, 공통 예외 처리

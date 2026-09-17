@@ -1,0 +1,125 @@
+.visibility-select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px 16px;
+  margin: 0;
+  background: var(--surface);
+}
+
+.visibility-select-legend {
+  padding: 0 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.visibility-options {
+  display: grid;
+  gap: 8px;
+}
+
+.visibility-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--surface);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.visibility-option:hover {
+  border-color: var(--accent);
+}
+
+.visibility-option.active {
+  border-color: var(--accent-strong);
+  background: var(--surface-soft);
+}
+
+.visibility-option input {
+  margin-top: 3px;
+  accent-color: var(--accent-strong);
+}
+
+.visibility-option-icon {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--accent-strong);
+  flex-shrink: 0;
+}
+
+.visibility-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.visibility-option-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.visibility-option-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.visibility-groups {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.visibility-group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.visibility-group-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.visibility-group-item:hover {
+  background: var(--surface-soft);
+}
+
+.visibility-group-item input {
+  accent-color: var(--accent-strong);
+}
+
+.visibility-group-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.visibility-group-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.visibility-groups-empty,
+.visibility-groups-warning {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* 사실상 비공개라는 점을 그 자리에서 알린다. 저장을 막지는 않는다. */
+.visibility-groups-warning {
+  margin-top: 8px;
+  color: var(--accent-strong);
+  font-weight: 600;
+}

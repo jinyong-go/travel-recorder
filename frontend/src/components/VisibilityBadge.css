@@ -1,0 +1,41 @@
+.visibility-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.visibility-badge-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.visibility-badge-sm {
+  padding: 2px 7px;
+  font-size: 0.7rem;
+}
+
+/* 세 상태를 색으로만 구분하지 않도록 아이콘·텍스트를 항상 함께 넣는다. */
+.visibility-private {
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+.visibility-group {
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+  border-color: var(--accent);
+}
+
+.visibility-public {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent-strong);
+}

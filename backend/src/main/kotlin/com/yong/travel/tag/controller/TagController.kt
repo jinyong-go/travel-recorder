@@ -1,7 +1,9 @@
 package com.yong.travel.tag.controller
 
+import com.yong.travel.auth.security.CustomOAuth2User
 import com.yong.travel.tag.dto.TagResponse
 import com.yong.travel.tag.service.TagService
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -14,5 +16,8 @@ class TagController(
 ) {
 
     @GetMapping
-    fun search(@RequestParam(required = false) keyword: String?): List<TagResponse> = tagService.search(keyword)
+    fun search(
+        @RequestParam(required = false) keyword: String?,
+        @AuthenticationPrincipal principal: CustomOAuth2User?,
+    ): List<TagResponse> = tagService.search(keyword, principal?.userId)
 }

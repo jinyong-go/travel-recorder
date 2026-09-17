@@ -16,25 +16,25 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 
 @RestController
-@RequestMapping("/api/places/{placeId}/photos")
+@RequestMapping("/api/records/{recordId}/photos")
 class PhotoController(
     private val photoService: PhotoService,
 ) {
 
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun upload(
-        @PathVariable placeId: Long,
+        @PathVariable recordId: Long,
         @RequestParam("files") files: List<MultipartFile>,
         @AuthenticationPrincipal principal: CustomOAuth2User?,
-    ): List<PhotoResponse> = photoService.upload(placeId, requireLogin(principal), files)
+    ): List<PhotoResponse> = photoService.upload(recordId, requireLogin(principal), files)
 
     @DeleteMapping("/{photoId}")
     fun delete(
-        @PathVariable placeId: Long,
+        @PathVariable recordId: Long,
         @PathVariable photoId: Long,
         @AuthenticationPrincipal principal: CustomOAuth2User?,
     ): ResponseEntity<Void> {
-        photoService.delete(placeId, photoId, requireLogin(principal))
+        photoService.delete(recordId, photoId, requireLogin(principal))
         return ResponseEntity.noContent().build()
     }
 }

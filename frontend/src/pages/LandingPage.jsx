@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { CATEGORIES, categoryIcon } from '../data/places.js'
-import { usePlaces } from '../context/PlacesContext.jsx'
+import { CATEGORIES, categoryIcon } from '../data/records.js'
+import { useRecords } from '../context/RecordsContext.jsx'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import { MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
@@ -31,7 +31,9 @@ const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 
 export default function LandingPage() {
   const { themeKey, changeTheme } = useTheme()
-  const { places } = usePlaces()
+  const { listByScope } = useRecords()
+  // 랜딩은 비로그인도 보는 화면이므로 공개된 기록만 센다.
+  const publicRecords = listByScope('public')
 
   return (
     <>
@@ -62,7 +64,7 @@ export default function LandingPage() {
           </p>
 
           <div className="landing-cta">
-            <Link to="/places" className="landing-cta-primary">
+            <Link to="/records?scope=public" className="landing-cta-primary">
               여행지 둘러보기
             </Link>
             <Link to="/login" className="landing-cta-secondary">
@@ -71,7 +73,7 @@ export default function LandingPage() {
           </div>
 
           <p className="landing-stat">
-            지금까지 <strong>{places.length}</strong>건의 여행지가 기록되어 있어요.
+            지금까지 <strong>{publicRecords.length}</strong>건의 기록이 공개되어 있어요.
           </p>
 
           <ul className="landing-category-chips">

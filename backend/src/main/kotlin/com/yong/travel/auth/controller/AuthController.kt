@@ -1,6 +1,6 @@
 package com.yong.travel.auth.controller
 
-import com.yong.travel.auth.dto.UserResponse
+import com.yong.travel.auth.dto.MeResponse
 import com.yong.travel.auth.security.CustomOAuth2User
 import com.yong.travel.auth.service.AuthService
 import com.yong.travel.common.web.requireLogin
@@ -21,7 +21,7 @@ class AuthController(
 
     /** 로그인 시작은 Spring Security 가 제공하는 GET /oauth2/authorization/naver 를 사용한다. */
     @GetMapping("/me")
-    fun me(@AuthenticationPrincipal principal: CustomOAuth2User?): UserResponse =
+    fun me(@AuthenticationPrincipal principal: CustomOAuth2User?): MeResponse =
         authService.getCurrentUser(requireLogin(principal))
 
     @PostMapping("/logout")

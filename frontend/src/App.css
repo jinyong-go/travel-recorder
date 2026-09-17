@@ -603,3 +603,124 @@
 .back-link:hover {
   color: var(--accent-strong);
 }
+
+/* 버튼·폼 공통 — 등록 폼 외에 그룹·상세 화면에서도 쓰므로 여기에 둔다. */
+.field-error {
+  color: #c9483a;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.btn-secondary,
+.btn-primary {
+  border-radius: var(--radius-pill);
+  padding: 11px 24px;
+  font-weight: 700;
+  font-size: 14.5px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.btn-primary {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 범위 탭 — 내 기록 / 공유받은 기록 / 둘러보기. 카테고리 탭보다 상위 구분이라 위에 둔다. */
+.scope-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.scope-tab {
+  border: none;
+  background: transparent;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.scope-tab:hover {
+  color: var(--text);
+}
+
+.scope-tab.active {
+  color: var(--accent-strong);
+  border-bottom-color: var(--accent-strong);
+}
+
+/* 남의 기록 카드에는 공개 범위 대신 작성자를 보여준다. */
+.place-author {
+  display: inline-block;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.header-groups-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.header-groups-link:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.header-groups-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 480px) {
+  .header-groups-label {
+    display: none;
+  }
+}
+

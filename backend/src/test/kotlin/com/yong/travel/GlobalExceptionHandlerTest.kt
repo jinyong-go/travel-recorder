@@ -33,16 +33,16 @@ class GlobalExceptionHandlerTest {
 
     @Test
     fun `경로 변수 타입이 맞지 않으면 400 VALIDATION_ERROR 를 반환한다`() {
-        mockMvc.perform(get("/api/places/not-a-number"))
+        mockMvc.perform(get("/api/records/not-a-number"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
-            .andExpect(jsonPath("$.message").value("placeId: 값의 형식이 올바르지 않습니다."))
+            .andExpect(jsonPath("$.message").value("recordId: 값의 형식이 올바르지 않습니다."))
     }
 
     @Test
     fun `읽을 수 없는 본문은 400 VALIDATION_ERROR 를 반환한다`() {
         mockMvc.perform(
-            put("/api/places/1/reviews").with(csrf())
+            put("/api/records/1").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{ this is not json"),
         )
@@ -53,7 +53,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     fun `지원하지 않는 메서드는 405 를 반환한다`() {
-        mockMvc.perform(post("/api/places/1/reviews").with(csrf()))
+        mockMvc.perform(post("/api/records/1").with(csrf()))
             .andExpect(status().isMethodNotAllowed)
             .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"))
     }
@@ -61,9 +61,9 @@ class GlobalExceptionHandlerTest {
     @Test
     fun `지원하지 않는 Content-Type 은 415 를 반환한다`() {
         mockMvc.perform(
-            put("/api/places/1/reviews").with(csrf())
+            put("/api/records/1").with(csrf())
                 .contentType(MediaType.TEXT_PLAIN)
-                .content("score=5"),
+                .content("rating=5"),
         )
             .andExpect(status().isUnsupportedMediaType)
             .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"))
@@ -72,18 +72,18 @@ class GlobalExceptionHandlerTest {
     @Test
     fun `비로그인 상태의 쓰기 요청은 401 UNAUTHENTICATED 를 반환한다`() {
         mockMvc.perform(
-            put("/api/places/1/reviews").with(csrf())
+            put("/api/records/1").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"score":4.5}"""),
+                .content("""{"name":"a","category":"FOOD","address":"b","latitude":1.0,"longitude":2.0,"rating":4.5}"""),
         )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
     }
 
     @Test
-    fun `존재하지 않는 여행지 조회는 404 PLACE_NOT_FOUND 를 반환한다`() {
-        mockMvc.perform(get("/api/places/99999999"))
+    fun `존재하지 않는 기록 조회는 404 RECORD_NOT_FOUND 를 반환한다`() {
+        mockMvc.perform(get("/api/records/99999999"))
             .andExpect(status().isNotFound)
-            .andExpect(jsonPath("$.code").value("PLACE_NOT_FOUND"))
+            .andExpect(jsonPath("$.code").value("RECORD_NOT_FOUND"))
     }
 }
