@@ -1,6 +1,7 @@
 package com.yong.travel.group.dto
 
 import com.yong.travel.auth.dto.UserResponse
+import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import java.time.Instant
@@ -37,18 +38,34 @@ data class GroupResponse(
     val isOwner: Boolean,
 )
 
-/** 초대 링크. 토큰만 내려주고 URL 조립은 프론트엔드가 한다. */
-data class InviteResponse(
-    val token: String,
-    val expiresAt: Instant,
+/** 받은 초대에 담기는 그룹 정보. 수락 전에는 멤버 목록도 공유된 기록도 보이지 않는다 (공통 명세 §3.7). */
+data class GroupBriefResponse(
+    val id: Long,
+    val name: String,
+)
+
+data class InviteRequest(
+    @field:NotBlank
+    @field:Email
+    val email: String,
 )
 
 /**
- * 초대 미리보기. 로그인 전에도 "무슨 그룹 초대인지" 는 보여줘야 해서 비로그인도 조회할 수 있다.
- * 그래서 그룹명·초대자 이름·만료 시각만 담고 멤버 목록이나 기록은 포함하지 않는다.
+ * 소유자가 보는 대기 중인 초대.
+ *
+ * 소유자가 직접 입력한 이메일이라도 응답으로 되돌려주지 않는다. 누구에게 보냈는지는 이름과
+ * 프로필 사진으로 구분되며, 이메일은 본인 조회 외의 어떤 응답에도 담지 않는다 (공통 명세 §3.1, §3.7).
  */
-data class InvitePreviewResponse(
-    val groupName: String,
-    val invitedBy: String,
-    val expiresAt: Instant,
+data class PendingInviteResponse(
+    val id: Long,
+    val invitee: UserResponse,
+    val createdAt: Instant,
+)
+
+/** 받은 초대. 그룹명·초대자·보낸 시각까지가 수락 전에 보여 줄 수 있는 전부다 (공통 명세 §3.7). */
+data class ReceivedInviteResponse(
+    val id: Long,
+    val group: GroupBriefResponse,
+    val invitedBy: UserResponse,
+    val createdAt: Instant,
 )

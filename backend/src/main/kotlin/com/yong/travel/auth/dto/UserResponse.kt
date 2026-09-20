@@ -12,11 +12,11 @@ data class UserResponse(
     val profileImageUrl: String?,
 )
 
-/** 로그인 사용자 본인 정보. 이메일이 포함되는 유일한 응답이다. */
+/** 로그인 사용자 본인 정보. 이메일이 포함되는 유일한 응답이다. 제공 동의를 받지 못한 계정은 null 이다. */
 data class MeResponse(
     val id: Long,
     val name: String,
-    val email: String,
+    val email: String?,
     val profileImageUrl: String?,
 )
 

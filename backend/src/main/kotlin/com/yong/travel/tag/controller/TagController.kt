@@ -15,6 +15,7 @@ class TagController(
     private val tagService: TagService,
 ) {
 
+    /** 태그 자동완성. 후보는 요청자가 볼 수 있는 기록에 쓰인 태그로 제한된다. */
     @GetMapping
     fun search(
         @RequestParam(required = false) keyword: String?,

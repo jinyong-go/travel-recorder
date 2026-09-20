@@ -21,12 +21,12 @@ class PlaceSearchController(
     private val placeSearchService: PlaceSearchService,
 ) {
 
+    /** 장소 검색. 네이버 지역 검색 결과를 집계해 페이지로 돌려준다. */
     @GetMapping("/search")
     fun search(
         @RequestParam keyword: String,
         @RequestParam(required = false) lat: Double?,
         @RequestParam(required = false) lng: Double?,
         @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "10") size: Int,
-    ): PageResponse<PlaceSearchResultResponse> = placeSearchService.search(keyword, lat, lng, page, size)
+    ): PageResponse<PlaceSearchResultResponse> = placeSearchService.search(keyword, lat, lng, page)
 }

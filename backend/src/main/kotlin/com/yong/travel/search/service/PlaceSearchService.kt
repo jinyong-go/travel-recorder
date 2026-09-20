@@ -9,7 +9,7 @@ import com.yong.travel.search.dto.PlaceSearchResultResponse
 import org.springframework.stereotype.Service
 
 interface PlaceSearchService {
-    fun search(keyword: String, lat: Double?, lng: Double?, page: Int, size: Int): PageResponse<PlaceSearchResultResponse>
+    fun search(keyword: String, lat: Double?, lng: Double?, page: Int): PageResponse<PlaceSearchResultResponse>
 }
 
 @Service
@@ -22,7 +22,6 @@ class PlaceSearchServiceImpl(
         lat: Double?,
         lng: Double?,
         page: Int,
-        size: Int,
     ): PageResponse<PlaceSearchResultResponse> {
         // 원본 API 는 검색어당 최대 5건만 반환한다. 후보 풀을 늘리려면 여기서 검색어 변형
         // (지역명 결합 등)으로 추가 호출한 뒤 아래 중복 제거에 함께 태운다.
@@ -36,16 +35,15 @@ class PlaceSearchServiceImpl(
             candidates
         }
 
-        val pageSize = size.coerceAtLeast(1)
-        val fromIndex = (page.coerceAtLeast(0) * pageSize).coerceAtMost(sorted.size)
-        val toIndex = (fromIndex + pageSize).coerceAtMost(sorted.size)
+        val fromIndex = (page.coerceAtLeast(0) * PAGE_SIZE).coerceAtMost(sorted.size)
+        val toIndex = (fromIndex + PAGE_SIZE).coerceAtMost(sorted.size)
 
         return PageResponse(
             content = sorted.subList(fromIndex, toIndex),
             page = page,
-            size = pageSize,
+            size = PAGE_SIZE,
             totalElements = sorted.size.toLong(),
-            totalPages = if (sorted.isEmpty()) 0 else (sorted.size + pageSize - 1) / pageSize,
+            totalPages = if (sorted.isEmpty()) 0 else (sorted.size + PAGE_SIZE - 1) / PAGE_SIZE,
         )
     }
 
@@ -70,6 +68,12 @@ class PlaceSearchServiceImpl(
     }
 
     companion object {
+        /**
+         * 한 페이지 5건. 원본 API 가 호출당 5건까지만 주므로 더 키워도 첫 페이지조차 채울 수 없다
+         * (명세 §4.1, §4.5). 검색어 변형 집계로 후보 풀이 늘어나면 이 값을 다시 볼 자리다.
+         */
+        private const val PAGE_SIZE = 5
+
         private const val COORDINATE_SCALE = 10_000_000.0
         private val HTML_TAG_REGEX = Regex("<[^>]*>")
     }
