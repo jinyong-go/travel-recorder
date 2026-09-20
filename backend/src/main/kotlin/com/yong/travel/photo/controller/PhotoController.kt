@@ -21,6 +21,7 @@ class PhotoController(
     private val photoService: PhotoService,
 ) {
 
+    /** 기록에 사진 업로드 (여러 장). 기록 작성자만 할 수 있다. */
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun upload(
         @PathVariable recordId: Long,
@@ -28,6 +29,7 @@ class PhotoController(
         @AuthenticationPrincipal principal: CustomOAuth2User?,
     ): List<PhotoResponse> = photoService.upload(recordId, requireLogin(principal), files)
 
+    /** 사진 삭제. 파일 본체까지 함께 지우는 물리 삭제다. */
     @DeleteMapping("/{photoId}")
     fun delete(
         @PathVariable recordId: Long,

@@ -1,0 +1,60 @@
+/*
+ * 여행 폼의 스타일. `.trip-form` 아래로 한정해 기록 등록 폼(.register-form)에 영향을 주지 않는다.
+ * 두 폼은 같은 서비스의 입력 화면이라 생김새가 닮았지만, 함께 바뀔 이유가 있는 코드는 아니다.
+ */
+.trip-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.trip-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trip-form .form-field > label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.trip-form input[type='text'],
+.trip-form input[type='number'],
+.trip-form input[type='date'],
+.trip-form textarea {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font: inherit;
+  font-size: 14.5px;
+}
+
+.trip-form textarea {
+  resize: vertical;
+}
+
+.trip-form .field-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.trip-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* 만들기 화면에서는 카드 안에 담긴다. 상세의 수정 폼은 이미 섹션 안이라 테두리를 더하지 않는다. */
+.trip-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(20px, 4vw, 32px);
+}

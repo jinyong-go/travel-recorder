@@ -64,7 +64,7 @@ export default function LandingPage() {
           </p>
 
           <div className="landing-cta">
-            <Link to="/records?scope=public" className="landing-cta-primary">
+            <Link to="/trips?scope=public" className="landing-cta-primary">
               여행지 둘러보기
             </Link>
             <Link to="/login" className="landing-cta-secondary">

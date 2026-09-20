@@ -19,11 +19,16 @@ class AuthController(
     private val authService: AuthService,
 ) {
 
-    /** 로그인 시작은 Spring Security 가 제공하는 GET /oauth2/authorization/naver 를 사용한다. */
+    /**
+     * 로그인한 본인 정보 조회. 이메일이 담기는 유일한 응답이다 (공통 명세 §3.1).
+     *
+     * 로그인 시작은 Spring Security 가 제공하는 GET /oauth2/authorization/naver 를 사용한다.
+     */
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal principal: CustomOAuth2User?): MeResponse =
         authService.getCurrentUser(requireLogin(principal))
 
+    /** 로그아웃. 세션을 버리고 SecurityContext 를 비운다. */
     @PostMapping("/logout")
     fun logout(request: HttpServletRequest): ResponseEntity<Void> {
         request.getSession(false)?.invalidate()

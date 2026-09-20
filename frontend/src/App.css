@@ -165,38 +165,6 @@
   gap: 20px;
 }
 
-/* 카테고리 탭 */
-.category-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.category-tab {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  padding: 10px 22px;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 15px;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.category-tab:hover {
-  border-color: var(--accent);
-  color: var(--accent-strong);
-}
-
-.category-tab.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
-  box-shadow: var(--shadow-sm);
-}
-
 /* 목록 영역 */
 .list-section {
   background: var(--surface);
@@ -554,6 +522,14 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 
+  .trip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-cover {
+    height: 120px;
+  }
+
   .place-thumb {
     height: 96px;
   }
@@ -625,11 +601,25 @@
 
 .btn-secondary,
 .btn-primary {
+  /* Link 로도 쓰이므로 앵커 기본 밑줄을 지우고, 아이콘과 글자를 수직 가운데로 맞춘다. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
   border-radius: var(--radius-pill);
   padding: 11px 24px;
   font-weight: 700;
   font-size: 14.5px;
+  line-height: 1;
   cursor: pointer;
+}
+
+.btn-secondary svg,
+.btn-primary svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .btn-secondary {
@@ -658,33 +648,238 @@
   cursor: not-allowed;
 }
 
-/* 범위 탭 — 내 기록 / 공유받은 기록 / 둘러보기. 카테고리 탭보다 상위 구분이라 위에 둔다. */
+/* 범위 탭 — 내 여행 / 공유받은 여행 / 둘러보기. 목록을 나누는 탭은 이 한 줄뿐이다. */
 .scope-tabs {
   display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .scope-tab {
-  border: none;
-  background: transparent;
-  padding: 10px 14px;
-  font-size: 0.95rem;
-  font-weight: 700;
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text-muted);
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .scope-tab:hover {
-  color: var(--text);
+  border-color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .scope-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 여행 카드 */
+.trip-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.trip-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.trip-card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+/* 대표 사진 자리. 지정된 사진이 없으면 첫 여행지의 카테고리 아이콘이 들어온다. */
+.trip-cover {
+  height: 148px;
+  background: linear-gradient(135deg, var(--thumb-grad-a), var(--thumb-grad-b));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trip-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trip-cover-icon {
+  font-size: 46px;
+}
+
+.trip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px 18px;
+}
+
+.trip-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.trip-card-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.trip-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.trip-card-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.trip-card:hover .trip-card-link {
   color: var(--accent-strong);
-  border-bottom-color: var(--accent-strong);
+}
+
+.trip-period {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.trip-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trip-owner {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+/* 설명이 길면 두 줄에서 자른다. 자르는 위치는 글자 폭에 따라 달라져야 한다. */
+.trip-memo {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 접을 수 있는 섹션 (공개 범위, 여행 정보 수정) */
+.collapsible-section > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.collapsible-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 펼침 상태를 삼각형으로 알린다. 열리면 아래를 가리킨다. */
+.collapsible-summary::before {
+  content: '▸';
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.collapsible-section[open] .collapsible-summary::before {
+  content: '▾';
+}
+
+.collapsible-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+/* 여행 상세 머리말 */
+.trip-detail-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trip-detail-period,
+.trip-detail-owner {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.trip-detail-budget {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.trip-detail-memo {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.trip-records-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detail-saved-msg {
+  font-size: 0.85rem;
+  color: var(--accent-strong);
+}
+
+.detail-shared-groups,
+.detail-trip-link {
+  margin-left: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }
 
 /* 남의 기록 카드에는 공개 범위 대신 작성자를 보여준다. */
@@ -716,6 +911,20 @@
 .header-groups-link svg {
   width: 16px;
   height: 16px;
+}
+
+/* 받은 초대 건수. 라벨이 숨는 좁은 화면에서도 남아야 해서 아이콘 옆에 붙인다. */
+.header-invite-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-strong);
+  color: var(--surface);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 @media (max-width: 480px) {

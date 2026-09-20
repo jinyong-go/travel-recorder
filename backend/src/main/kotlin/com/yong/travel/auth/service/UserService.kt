@@ -29,7 +29,8 @@ class UserService(
         val attributes = if (provider == "naver") unwrapNaverResponse(oAuth2User) else oAuth2User.attributes
 
         val providerId = attributes["id"].toString()
-        val email = attributes["email"] as? String ?: ""
+        // 빈 문자열로 채우면 이메일을 못 받은 계정이 둘째로 생기는 순간 유니크 제약에 걸린다 (User 참고).
+        val email = (attributes["email"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
         val name = (attributes["name"] ?: attributes["nickname"]) as? String ?: providerId
         val profileImageUrl = attributes["profile_image"] as? String
 

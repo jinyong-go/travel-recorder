@@ -17,8 +17,8 @@ export default function NotFoundPage() {
         <Link to="/" className="notfound-home-btn">
           <ArrowLeftIcon /> 홈으로
         </Link>
-        <Link to="/records" className="notfound-places-link">
-          여행지 목록 보기
+        <Link to="/trips" className="notfound-places-link">
+          여행 목록 보기
         </Link>
       </div>
     </main>
