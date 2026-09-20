@@ -89,6 +89,7 @@ canEdit(record) := requester == record.trip.owner
 | `canView` 실패 — 여행 | 404 | `TRIP_NOT_FOUND` |
 | `canView` 실패 — 기록 (소속 여행을 못 보는 경우 포함) | 404 | `RECORD_NOT_FOUND` |
 | `canView` 는 통과하나 `canEdit` 실패 | 403 | `FORBIDDEN` |
+| 당사자가 아닌 초대에 접근 (보낸 소유자·받은 사람이 아님) | 404 | `INVITE_NOT_FOUND` |
 
 - **열람 권한이 없으면 `403` 이 아니라 `404` 다.** 응답 본문이 실제로 없는 것과 구분되지 않아야
   하며, 메시지 문구도 같아야 한다 (§6).
@@ -178,12 +179,15 @@ GroupMember
   joinedAt: Instant
   // unique(group_id, user_id)
 
-GroupInvite
+GroupInvite                     // 소유자가 특정 사용자 앞으로 보낸 가입 요청 (공통 명세 §3.7)
   id: Long (PK)
-  group: Group (FK)             // unique — 그룹당 유효 초대 1건
-  token: String (unique)        // 추측 불가능한 난수 (URL-safe, 최소 128비트)
-  expiresAt: Instant            // 만료 시각 (기간은 공통 명세 §3.7)
+  group: Group (FK)
+  invitee: User (FK)            // 초대받은 사람. 가입자만 지정할 수 있다
+  invitedBy: User (FK)          // 보낸 사람 = 초대 시점의 그룹 소유자
   createdAt: Instant
+  // unique(group_id, invitee_id) — 같은 사람에게 같은 그룹의 대기 초대는 1건
+  // 토큰·만료 컬럼은 두지 않는다 — 초대가 서비스 밖으로 나가지 않아 추측 대상도, 수명도 없다
+  // 상태 컬럼도 두지 않는다 — 수락·거절·철회는 모두 행 삭제로 끝난다 (§3.2)
 
 TripShare                       // trip.visibility=GROUP 일 때만 사용
   id: Long (PK)
@@ -241,8 +245,14 @@ FK 는 `photo_id` 를 `trips` 쪽에 두고 `ON DELETE SET NULL` 로 선언한�
 - `Group` 은 SQL 예약어라 테이블명을 `share_group` 으로 둔다 (엔티티 클래스명은 `Group`).
 - **그룹당 멤버는 소유자 포함 최대 5명**이다. 애플리케이션 레벨에서 검증하며, 초과 시
   `409 GROUP_MEMBER_LIMIT_EXCEEDED` 다. 그룹 생성 시 소유자를 `GroupMember` 로 함께 입력한다.
-- `GroupInvite` 는 그룹당 1건만 존재한다 (`group_id` 유니크). 재발급은 기존 행의 `token` 과
-  `expiresAt` 을 갱신하는 방식이라 이전 토큰은 즉시 무효가 된다.
+- `GroupInvite` 는 `unique(group_id, invitee_id)` 다. 대기 중인 초대가 있는 상대를 다시
+  초대해도 행이 늘지 않고 기존 초대가 그대로 유지된다 (멱등, §4.8).
+- **초대 대상은 가입자만이다.** 요청의 이메일과 일치하는 `User` 가 없으면 `404 USER_NOT_FOUND`
+  이며, 이메일 비교는 대소문자를 구분하지 않는다. 이미 `GroupMember` 인 사용자를 초대하면
+  `409 ALREADY_MEMBER` 다.
+- **정원 판정은 수락 시점에만 한다.** 대기 중인 `GroupInvite` 는 정원에 포함되지 않으므로,
+  정원이 찬 뒤의 수락은 `409 GROUP_MEMBER_LIMIT_EXCEEDED` 로 거부된다. 이때 **초대 행은 지우지
+  않는다** — 자리가 나면 같은 초대로 다시 수락할 수 있어야 한다 (공통 명세 §3.7).
 - `TripShare` 는 `Trip.visibility` 가 `GROUP` 일 때만 의미가 있다. `PRIVATE`/`PUBLIC` 으로
   바꿀 때 기존 공유 행은 삭제한다 — 남겨 두면 나중에 `GROUP` 으로 되돌렸을 때 의도치 않은
   공유가 되살아난다.
@@ -270,18 +280,22 @@ FK 는 `photo_id` 를 `trips` 쪽에 두고 `ON DELETE SET NULL` 로 선언한�
 - **`Group`, `GroupMember`, `GroupInvite`, `TripShare` 는 물리 삭제한다.** 공유 해제와
   그룹 탈퇴는 즉시 조회 권한을 없애야 하는 동작이라, 남아 있는 행이 권한 판정에 끼어들 여지를
   만들지 않는다.
+- **초대는 수락·거절·철회 어느 쪽으로 끝나든 행을 지운다.** 상태 컬럼도 거절 이력도 남기지
+  않으므로 거절한 상대를 다시 초대할 수 있다 (공통 명세 §3.7, §3.9).
 - 그룹 삭제 시 그 그룹의 `GroupMember`, `GroupInvite`, `TripShare` 행을 함께 지운다.
   그 그룹으로만 공유되던 여행은 실질적으로 비공개가 되며, 여행과 기록 자체는 삭제되지 않는다.
 - `updatedAt` 은 마지막 수정 시각이며 soft delete 도 수정으로 보아 함께 갱신된다.
 
 ## 4. API 명세
 
-기본 경로: `/api`. 응답은 JSON. 목록 조회는 페이지네이션을 지원한다 (`page`(0-base), `size`).
+기본 경로: `/api`. 응답은 JSON. 목록 조회는 페이지네이션을 지원하며, 요청이 받는 것은
+`page`(0-base) 하나다 (§4.1).
 
-### 4.1 목록 조회의 공통 규칙 (여행·기록 공통)
+### 4.1 목록 조회의 공통 규칙
 
-**조회 범위 (`scope`)** — 목록 조회는 **어떤 범위를 보는지**를 항상 명시한다. 세 범위는 성격이
-달라 한 목록에 섞지 않으며, `scope` 는 **모든 목록 조회의 필수 파라미터**다.
+**조회 범위 (`scope`)** — **여행·기록 목록**은 **어떤 범위를 보는지**를 항상 명시한다. 세 범위는
+성격이 달라 한 목록에 섞지 않으며, `scope` 는 그 두 목록의 **필수 파라미터**다. 초대 목록(§4.8)은
+당사자 것만 보이므로 고를 범위가 없어 받지 않는다.
 
 | `scope` | 여행 목록에서 | 기록 목록에서 | 비로그인 |
 |---|---|---|:---:|
@@ -295,15 +309,21 @@ FK 는 `photo_id` 를 `trips` 쪽에 두고 `ON DELETE SET NULL` 로 선언한�
 - **기록 목록의 범위 판정도 소속 여행으로 한다** (§2.2). 기록 자체에는 판정 근거가 없다.
 
 **페이지네이션** — 모든 목록 응답은 `content`, `page`(0-base), `size`, `totalElements`,
-`totalPages` 를 포함한다.
+`totalPages` 를 포함한다. **요청이 받는 것은 `page` 하나뿐이고 페이지 크기는 서버가 정한다.**
+크기를 클라이언트가 고르게 두면 한 번에 전부 받아 가는 요청을 막을 상한이 매번 필요해지고,
+그 상한 자체가 또 하나의 값 규칙이 된다.
 
-| 목록 | 기본 `size` | `size` 상한 |
-|---|---|---|
-| 여행 목록 (`/api/trips`) | 10 | 100 |
-| 기록 목록 (`/api/records`) | 10 | 100 |
-| 장소 검색 (`/api/places/search`) | 10 | 10 (고정) |
+| 목록 | 페이지 크기 |
+|---|---|
+| 여행 목록 (`/api/trips`) | 10 |
+| 기록 목록 (`/api/records`) | 10 |
+| 장소 검색 (`/api/places/search`) | 5 |
+| 초대 목록 (`/api/invites`, `/api/groups/{id}/invites`) | 10 |
 
-- `size` 상한을 넘는 요청은 **오류가 아니라 상한값으로 잘라** 처리한다.
+- **요청에 `size` 를 담아도 무시한다.** 응답의 `size` 는 서버가 적용한 크기를 알려주는 값이다.
+- `page` 가 음수면 `0` 으로 보고, 범위를 넘는 `page` 는 오류가 아니라 **빈 `content`** 다.
+- **장소 검색만 5건인 것은 원본 API가 호출당 5건까지만 주기 때문이다** (공통 명세 §4.2 1항).
+  페이지 크기를 그보다 키우면 첫 페이지조차 채우지 못한 채 다음 페이지가 늘 비게 된다 (§4.5).
 - 여행 상세의 하위 기록도 같은 스키마를 쓴다 (`tripId` 로 한정, §4.4.1).
 
 ### 4.2 인증
@@ -329,7 +349,7 @@ FK 는 `photo_id` 를 `trips` 쪽에 두고 `ON DELETE SET NULL` 로 선언한�
 #### 4.3.1 여행 목록 조회
 
 ```
-GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0&size=10
+GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0
 ```
 
 | 파라미터 | 값 | 설명 |
@@ -337,11 +357,11 @@ GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0&size=10
 | `scope` | `mine` \| `shared` \| `public` | **필수.** 조회 범위 (§4.1) |
 | `keyword` | 문자열 | 여행 이름 부분 일치 |
 | `sort` | `recent`(기본) \| `startDate` | `recent` 는 생성 시각 역순, `startDate` 는 시작일 역순 |
-| `page`, `size` | 정수 | 기본 `0`, `10` (§4.1) |
+| `page` | 정수 | 0-base, 기본 `0`. 페이지 크기는 10 고정 (§4.1) |
 
 - `sort=distance` 는 여행 목록에 없다. 여행은 좌표를 갖지 않기 때문이다.
-- `visibility`·`sharedGroups`·`budget` 은 **요청자가 소유자인 여행에만** 응답에 포함한다
-  (공통 명세 §3.5 노출 표).
+- `visibility`·`sharedGroups` 는 **요청자가 소유자인 여행에만** 응답에 포함한다.
+  `budget` 은 열람 권한이 있으면 누구에게나 내려준다 (공통 명세 §3.5 노출 표).
 
 **응답 예시 (`scope=mine`)**
 ```json
@@ -413,9 +433,9 @@ GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0&size=10
 }
 ```
 
-- 요청자가 소유자가 아니면 `isOwner: false` 이며 **`visibility`, `sharedGroups`, `budget` 을
-  응답에서 제외한다.** 앞의 둘은 "누구에게 공유했는지"를 열람자에게 알릴 이유가 없어서이고,
-  `budget` 은 금액이 공유 대상에게도 민감하기 때문이다 (공통 명세 §3.5 노출 표).
+- 요청자가 소유자가 아니면 `isOwner: false` 이며 **`visibility` 와 `sharedGroups` 를 응답에서
+  제외한다.** "누구에게 공유했는지"는 열람자에게 알릴 이유가 없기 때문이다. **`budget` 은
+  제외하지 않는다** — 예산은 공개 범위를 그대로 따르는 값이다 (공통 명세 §3.5 노출 표).
 - **하위 기록 목록은 이 응답에 포함되지 않는다.** `GET /api/records?tripId={id}` 로 따로 조회한다
   (§4.4.1). 여행당 기록 수에 제한이 없어 상세 응답이 무한정 커지는 것을 막기 위해서다.
 
@@ -464,7 +484,7 @@ PATCH /api/trips/{id}/cover
 
 ```
 GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
-                &sort=recent&lat=37.55&lng=126.97&page=0&size=10
+                &sort=recent&lat=37.55&lng=126.97&page=0
 ```
 
 | 파라미터 | 값 | 설명 |
@@ -475,7 +495,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | `tag`, `keyword` | 문자열 | 태그 일치, 장소명·주소 부분 일치 |
 | `sort` | `recent`(기본) \| `rating` \| `distance` | `rating` 은 기록의 평점 기준 |
 | `lat`, `lng` | 실수 | `sort=distance` 일 때 필수. 요청자의 기준 위치 |
-| `page`, `size` | 정수 | 기본 `0`, `10`, 상한 100 (§4.1) |
+| `page` | 정수 | 0-base, 기본 `0`. 페이지 크기는 10 고정 (§4.1) |
 
 - **범위 판정은 모두 소속 여행을 조인해서 한다** (§2.2, §4.1). 기록 테이블만 봐서는 판정할 수 없다.
 - `tripId` 로 지정한 여행을 볼 수 없으면 `404 TRIP_NOT_FOUND` 다. `scope` 와 `tripId` 가
@@ -582,14 +602,15 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 | Method | Path | 설명 | 인증 |
 |---|---|---|:---:|
-| GET | `/api/places/search?keyword={keyword}&lat={lat}&lng={lng}&page={page}&size=10` | 지역 검색 결과를 집계·정렬·페이지네이션하여 반환 | 선택 |
+| GET | `/api/places/search?keyword={keyword}&lat={lat}&lng={lng}&page={page}` | 지역 검색 결과를 집계·정렬·페이지네이션하여 반환 | 선택 |
 
 **동작 방식**
 1. 원 검색어 및 보조 변형(지역명 결합 등)으로 **여러 번 호출**해 후보를 모으고 `(name, address)`
    기준으로 중복을 제거한다.
 2. 각 후보의 `mapx`/`mapy` 를 WGS84로 변환한다 (§1.3).
 3. `lat`/`lng` 가 주어지면 거리를 계산해 가까운 순으로 정렬하고, 없으면 원본 API 순서를 유지한다.
-4. 집계된 전체 후보를 10건 단위로 페이지네이션한다 (§4.1).
+4. 집계된 전체 후보를 **5건 단위**로 페이지네이션한다. 원본 API가 호출당 5건까지만 주므로
+   페이지 크기를 그보다 키워도 채울 수 없다 (§4.1).
 5. 원본 API 자체가 검색어당 5건으로 제한되므로 확보된 만큼만 반환하며, `totalElements` 로
    실제 확보 건수를 그대로 알려준다.
 
@@ -609,7 +630,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
       "link": "https://map.naver.com/..."
     }
   ],
-  "page": 0, "size": 10, "totalElements": 4, "totalPages": 1
+  "page": 0, "size": 5, "totalElements": 4, "totalPages": 1
 }
 ```
 
@@ -642,7 +663,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | POST | `/api/groups` | 그룹 생성 (소유자를 멤버로 함께 입력) | 필요 |
 | GET | `/api/groups/{id}` | 그룹 상세 (멤버 목록 포함) | 소유자·멤버 |
 | PUT | `/api/groups/{id}` | 그룹 이름 변경 | 소유자만 |
-| DELETE | `/api/groups/{id}` | 그룹 삭제 (멤버·초대·공유 관계 함께 삭제) | 소유자만 |
+| DELETE | `/api/groups/{id}` | 그룹 삭제 (멤버·대기 초대·공유 관계 함께 삭제) | 소유자만 |
 | DELETE | `/api/groups/{id}/members/{userId}` | 멤버 제외 | 소유자만 |
 | DELETE | `/api/groups/{id}/members/me` | 그룹 탈퇴. 소유자는 `403` | 멤버 본인 |
 
@@ -666,32 +687,70 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 ### 4.8 초대
 
+초대는 **보내는 쪽(그룹)** 과 **받는 쪽(사용자)** 두 경로로 나뉜다. 공개 토큰 URL은 존재하지
+않으며 모든 엔드포인트가 로그인을 요구한다 (공통 명세 §2.1).
+
 | Method | Path | 설명 | 인증 |
 |---|---|---|:---:|
-| POST | `/api/groups/{id}/invite` | 초대 링크 발급/재발급. 이전 토큰은 즉시 무효 | 소유자만 |
-| GET | `/api/groups/{id}/invite` | 현재 유효한 초대 링크 조회. 없으면 `204 No Content` | 소유자만 |
-| DELETE | `/api/groups/{id}/invite` | 초대 링크 폐기 | 소유자만 |
-| GET | `/api/invites/{token}` | 초대 미리보기 (그룹명·초대자·만료 시각) | 선택 |
-| POST | `/api/invites/{token}/accept` | 초대 수락 → 멤버로 가입 | 필요 |
+| GET | `/api/groups/{id}/invites` | 그 그룹의 **대기 중인 초대 목록** | 소유자만 |
+| POST | `/api/groups/{id}/invites` | 이메일로 초대 보내기 | 소유자만 |
+| DELETE | `/api/groups/{id}/invites/{inviteId}` | 초대 철회 | 소유자만 |
+| GET | `/api/invites` | **내가 받은 초대 목록** | 필요 |
+| POST | `/api/invites/{inviteId}/accept` | 수락 → 멤버로 가입 | 받은 본인만 |
+| POST | `/api/invites/{inviteId}/reject` | 거절 | 받은 본인만 |
 
-**POST `/api/groups/{id}/invite` 응답 예시**
+- **두 목록 모두 페이지네이션한다** (§4.1). **건수를 묶어 주는 상한이 없기 때문이다** — 대기 초대는
+  정원 판정이 수락 시점이라 정원을 넘겨 보낼 수 있고, 받은 초대는 나를 초대할 수 있는 그룹 수에
+  제한이 없다. 정원(5명)이 곧 상한인 그룹 목록(§4.7)과는 다르다.
+- 수락·거절·철회는 모두 해당 행을 지운다 (§3.2). 성공 응답은 본문 없이 `204 No Content` 다.
+
+**POST `/api/groups/{id}/invites` 요청·응답 예시**
+```json
+{ "email": "friend@example.com" }
+```
 ```json
 {
-  "token": "ZXhhbXBsZS10b2tlbi0xMjM0NTY",
-  "expiresAt": "2026-09-24T09:12:00Z"
+  "id": 31,
+  "invitee": { "id": 9, "name": "김영희", "profileImageUrl": "https://..." },
+  "createdAt": "2026-09-20T09:12:00Z"
 }
 ```
-- 토큰은 추측 불가능한 난수(URL-safe, 최소 128비트)다. 프론트엔드가 이 값으로 초대 URL을 조립한다.
-- 유효 기간과 **그룹당 유효 토큰 1개** 규칙은 공통 명세 §3.7을 따른다. 재발급하면 기존 행을 갱신해
-  이전 토큰이 즉시 무효가 된다 (§3.1).
-- 하나의 토큰으로 여러 명이 수락할 수 있다. 정원(5명)에 도달하면
-  `409 GROUP_MEMBER_LIMIT_EXCEEDED` 다.
-- `GET /api/invites/{token}` 은 비로그인도 호출할 수 있다. 로그인 전에 "무슨 그룹 초대인지"를
-  보여줘야 하기 때문이며, 그룹명·초대자 이름·만료 시각만 내려주고 멤버 목록이나 기록은 포함하지 않는다.
-- 이미 멤버인 사용자의 수락은 **오류가 아니다.** 멤버 상태를 그대로 두고 `200` 으로 응답한다
-  (재클릭·중복 클릭이 실패처럼 보이지 않게 하기 위해서다).
-- 만료된 토큰은 `410 INVITE_EXPIRED`, 없는 토큰은 `404 INVITE_NOT_FOUND` 다. 둘을 구분하는 이유는
-  만료의 경우 "재발급을 요청하세요"라고 안내할 수 있기 때문이다.
+- 이메일은 **완전 일치**로만 사용자를 찾으며 대소문자는 구분하지 않는다. 부분 일치 검색이나
+  사용자 목록 조회 엔드포인트는 만들지 않는다 (공통 명세 §3.7).
+- **응답에 이메일을 담지 않는다.** 소유자가 직접 입력한 값이라도 되돌려주지 않으며, 상대는
+  이름·프로필 사진으로 식별한다 (공통 명세 §3.1, §3.7).
+- 대기 중인 초대가 이미 있는 상대를 다시 초대하면 **새 행을 만들지 않고 기존 초대를 `200` 으로
+  반환한다.** 중복 클릭이 실패처럼 보이지 않게 하기 위해서이며, `unique(group_id, invitee_id)`
+  가 이를 보장한다 (§3.1). 새로 만들어진 경우만 `201` 이다.
+- 실패 응답: 가입자가 없으면 `404 USER_NOT_FOUND`, 이미 멤버면 `409 ALREADY_MEMBER` 다.
+  **가입 여부를 은닉하지 않는 것은 의도된 선택이다** — 소유자가 오타를 알아차릴 유일한 수단이며,
+  그 대가는 공통 명세 §7.2에 한계로 적혀 있다.
+
+**GET `/api/invites` 응답 예시**
+```json
+{
+  "content": [
+    {
+      "id": 31,
+      "group": { "id": 2, "name": "가족" },
+      "invitedBy": { "id": 7, "name": "홍길동", "profileImageUrl": "https://..." },
+      "createdAt": "2026-09-20T09:12:00Z"
+    }
+  ],
+  "page": 0, "size": 10, "totalElements": 1, "totalPages": 1
+}
+```
+- **수락 전에는 그룹명·초대자·보낸 시각까지만 내려준다.** 멤버 목록도, 그 그룹으로 공유된 여행도
+  포함하지 않는다 (공통 명세 §3.7).
+- **당사자가 아닌 초대는 `404 INVITE_NOT_FOUND` 다.** 보낸 소유자와 받은 사람 외에는 그 초대의
+  존재가 드러나지 않아야 하며, 없는 `inviteId` 와 응답이 같아야 한다 (§2.2.2).
+- 수락 시 정원(5명)이 차 있으면 `409 GROUP_MEMBER_LIMIT_EXCEEDED` 이고 **초대 행은 남는다.**
+  자리가 난 뒤 같은 초대로 다시 수락할 수 있어야 하기 때문이다 (§3.1).
+- 수락 처리는 정원 검사와 `GroupMember` 입력을 **한 트랜잭션에서, 그룹 행을 잠근 뒤** 수행한다.
+  정원을 강제하는 DB 제약이 없어 애플리케이션 검사가 유일한 관문이므로, 검사와 입력 사이에 다른
+  수락이 끼어들면 6명짜리 그룹이 만들어진다.
+- 그룹이 삭제되면 그 그룹의 초대도 함께 사라지므로(§3.2), 이미 받은 목록에 있던 초대의 수락이
+  `404 INVITE_NOT_FOUND` 가 될 수 있다. 정상 동작이다.
 
 ### 4.9 태그
 
@@ -753,12 +812,13 @@ interface PhotoStorageService {
 | 존재하지 않거나 **열람 권한이 없는** 기록 | 404 | `RECORD_NOT_FOUND` |
 | 존재하지 않거나 접근 권한이 없는 그룹 | 404 | `GROUP_NOT_FOUND` |
 | 존재하지 않는 사진 | 404 | `PHOTO_NOT_FOUND` |
-| 존재하지 않는 초대 토큰 | 404 | `INVITE_NOT_FOUND` |
+| 존재하지 않거나 **당사자가 아닌** 초대 | 404 | `INVITE_NOT_FOUND` |
+| 초대 대상 이메일의 가입자가 없음 | 404 | `USER_NOT_FOUND` |
 | 매핑되지 않은 주소, 존재하지 않는 정적 파일 | 404 | `NOT_FOUND` |
 | 지원하지 않는 HTTP 메서드 | 405 | `METHOD_NOT_ALLOWED` |
-| 만료된 초대 토큰 | 410 | `INVITE_EXPIRED` |
 | 지원하지 않는 `Content-Type` | 415 | `UNSUPPORTED_MEDIA_TYPE` |
 | 그룹 정원(5명) 초과 | 409 | `GROUP_MEMBER_LIMIT_EXCEEDED` |
+| 이미 멤버인 사용자를 초대 | 409 | `ALREADY_MEMBER` |
 | 그 밖의 DB 제약 위반 (동시 요청 경합 등) | 409 | `CONFLICT` |
 | 네이버 지역 검색 오픈API 호출 실패/한도 초과 | 502 | `PLACE_SEARCH_UNAVAILABLE` |
 | 그 밖의 처리되지 않은 예외 | 500 | `INTERNAL_ERROR` |
@@ -783,7 +843,8 @@ interface PhotoStorageService {
   헤더가 없으면 `403` 이다.
 - CORS 허용 오리진은 프론트엔드 개발 서버(Vite, 기본 `http://localhost:5173`)이며 자격 증명
   포함 요청을 허용한다.
-- 초대 토큰은 `SecureRandom` 기반으로 생성한다. 순번·UUIDv1 등 추측 가능한 값은 쓰지 않는다.
+- **초대에는 추측 가능한 진입점이 없어야 한다.** 초대 id 로 접근한 요청은 당사자인지 먼저
+  판정하고, 아니면 `404` 다 (§4.8). 순번 id 를 쓰더라도 이 판정이 유일한 관문이 된다.
 - 파일 업로드 최대 요청 크기는 `spring.servlet.multipart.max-request-size` 로 제한한다.
 
 **조회 정확성** — 이 항목들은 어기면 곧바로 정보 유출이거나 잘못된 건수다.
@@ -829,6 +890,14 @@ interface PhotoStorageService {
   결정하며, §8.2의 도구 도입이 선행되어야 한다.
 
 ### 8.2 그 밖의 구현 잔여 작업
+- **초대를 링크 모델에서 초대 목록 모델로 옮긴다** (§4.8). 현재 `GroupInvite` 는 `token` 과
+  `expiresAt` 을 갖고 `InviteController` 가 토큰 기반 미리보기·수락을 제공한다. 옮기려면
+  `invitee`·`invited_by` FK 추가, `token`·`expires_at` 컬럼과 `/api/invites/{token}` 경로 제거,
+  `unique(group_id, invitee_id)` 신설, `INVITE_EXPIRED` 코드 폐기와 `USER_NOT_FOUND`·
+  `ALREADY_MEMBER` 추가가 필요하다. **기존 행은 이관하지 않고 버린다** — 링크를 누가 받았는지
+  서버가 모르므로 초대 대상을 복원할 수 없다.
+- **여행 응답에서 `budget` 을 소유자 조건에서 뺀다** (§4.3.1). 예산은 공개 범위를 따르는 값이
+  되었다 (공통 명세 §3.5).
 - **`SecurityConfig` 의 `permitAll()` 을 §2.2 정책으로 되돌린다.** 공개 범위 판정은 서비스·조회
   계층에 구현되어 있으나, 인증 자체는 아직 컨트롤러가 `requireLogin` 으로 막는다. 인가의 첫
   관문을 필터체인으로 되돌리는 작업이 남아 있다.
