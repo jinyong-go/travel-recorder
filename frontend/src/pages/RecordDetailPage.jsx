@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { categoryIcon, categoryLabel, visibilityMeta } from '../data/records.js'
+import { categoryIcon, categoryLabel } from '../data/records.js'
 import { useRecords } from '../context/RecordsContext.jsx'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import useMapMode from '../hooks/useMapMode.js'
@@ -9,23 +9,19 @@ import ThemeSelector from '../components/ThemeSelector.jsx'
 import StarRatingDisplay from '../components/StarRatingDisplay.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
-import VisibilitySelect from '../components/VisibilitySelect.jsx'
 import { ArrowLeftIcon, MapPinIcon, MapViewIcon } from '../components/icons.jsx'
 import './RecordDetailPage.css'
 
 export default function RecordDetailPage() {
   const { recordId } = useParams()
   const navigate = useNavigate()
-  const { findRecord, currentUser, myGroups, changeVisibility, deleteRecord } = useRecords()
+  const { findRecord, tripOf, currentUser, myGroups, deleteRecord } = useRecords()
   const { themeKey, changeTheme } = useTheme()
   const { isEmbed } = useMapMode()
 
   const record = findRecord(recordId)
   const isAuthor = record != null && record.authorId === currentUser.id
 
-  const [visibilityDraft, setVisibilityDraft] = useState(record?.visibility ?? 'PRIVATE')
-  const [groupDraft, setGroupDraft] = useState(record?.sharedGroupIds ?? [])
-  const [toast, setToast] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
 
@@ -37,8 +33,8 @@ export default function RecordDetailPage() {
         <div className="detail-missing">
           <h1>기록을 찾을 수 없습니다</h1>
           <p className="detail-missing-desc">존재하지 않거나 볼 수 없는 기록이에요.</p>
-          <Link to="/records" className="detail-missing-link">
-            <ArrowLeftIcon /> 목록으로
+          <Link to="/trips" className="detail-missing-link">
+            <ArrowLeftIcon /> 여행 목록으로
           </Link>
         </div>
       </main>
@@ -46,10 +42,9 @@ export default function RecordDetailPage() {
   }
 
   const photos = record.photos ?? []
-  const sharedGroups = myGroups.filter((g) => record.sharedGroupIds.includes(g.id))
-  const visibilityChanged =
-    visibilityDraft !== record.visibility ||
-    groupDraft.join(',') !== record.sharedGroupIds.join(',')
+  // 공개 범위는 기록이 아니라 소속 여행이 갖는다 (공통 명세 §3.5).
+  const trip = tripOf(record)
+  const sharedGroups = myGroups.filter((g) => trip.sharedGroupIds.includes(g.id))
 
   const handleMapClick = () => {
     if (isEmbed) {
@@ -59,23 +54,9 @@ export default function RecordDetailPage() {
     }
   }
 
-  // 범위를 바꾸면 그 결과를 문장으로 알린다. 넓히는 쪽이든 좁히는 쪽이든 누가 볼 수 있게 되는지가 핵심이다.
-  const handleVisibilitySave = () => {
-    changeVisibility(record.id, visibilityDraft, groupDraft)
-    const names = myGroups.filter((g) => groupDraft.includes(g.id)).map((g) => g.name)
-    const message =
-      visibilityDraft === 'PUBLIC'
-        ? '이제 로그인하지 않은 사람도 볼 수 있습니다.'
-        : visibilityDraft === 'GROUP' && names.length > 0
-          ? `이제 ${names.join(', ')} 멤버가 볼 수 있습니다.`
-          : `이제 ${currentUser.name}만 볼 수 있습니다.`
-    setToast(message)
-    window.setTimeout(() => setToast(''), 4000)
-  }
-
   const handleDelete = () => {
     deleteRecord(record.id)
-    navigate('/records')
+    navigate(`/trips/${trip.id}`)
   }
 
   return (
@@ -95,8 +76,8 @@ export default function RecordDetailPage() {
 
       <main className="detail-page">
         <div className="detail-inner">
-          <Link to="/records" className="back-link">
-            <ArrowLeftIcon /> 목록으로
+          <Link to={`/trips/${trip.id}`} className="back-link">
+            <ArrowLeftIcon /> {trip.name}
           </Link>
 
           {/* 기본 정보 */}
@@ -168,38 +149,24 @@ export default function RecordDetailPage() {
             )}
           </section>
 
-          {/* 공개 범위 — 작성자에게만 보인다. 누구에게 공유했는지는 작성자만 아는 정보다. */}
-          {isAuthor && (
-            <section className="detail-section detail-visibility-section">
-              <h2 className="detail-section-title">공개 범위</h2>
+          {/* 소속 여행. 공개 범위는 여기서 바꾸지 않고 여행 화면에서 바꾼다 (공통 명세 §3.5). */}
+          <section className="detail-section">
+            <h2 className="detail-section-title">소속 여행</h2>
+            <p className="detail-trip-link">
+              <Link to={`/trips/${trip.id}`}>{trip.name}</Link>
+            </p>
+            {isAuthor && (
               <p className="detail-visibility-current">
-                현재 <VisibilityBadge visibility={record.visibility} />
-                {record.visibility === 'GROUP' && sharedGroups.length > 0 && (
+                이 여행의 공개 범위 <VisibilityBadge visibility={trip.visibility} />
+                {trip.visibility === 'GROUP' && sharedGroups.length > 0 && (
                   <span>· {sharedGroups.map((g) => g.name).join(', ')}</span>
                 )}
               </p>
-
-              <VisibilitySelect
-                value={visibilityDraft}
-                onChange={setVisibilityDraft}
-                groups={myGroups}
-                selectedGroupIds={groupDraft}
-                onChangeGroups={setGroupDraft}
-                onCreateGroupClick={() => navigate('/groups')}
-              />
-
-              <div className="detail-visibility-actions">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={!visibilityChanged}
-                  onClick={handleVisibilitySave}
-                >
-                  공개 범위 저장
-                </button>
-              </div>
-            </section>
-          )}
+            )}
+            <p className="detail-empty">
+              공개 범위는 여행 단위로 정해집니다. 바꾸려면 여행 화면에서 변경해주세요.
+            </p>
+          </section>
 
           {isAuthor && (
             <section className="detail-section detail-danger-zone">
@@ -214,12 +181,6 @@ export default function RecordDetailPage() {
           )}
         </div>
       </main>
-
-      {toast && (
-        <p className="detail-toast" role="status">
-          {toast}
-        </p>
-      )}
 
       {confirmingDelete && (
         <div className="modal-overlay" onClick={() => setConfirmingDelete(false)}>

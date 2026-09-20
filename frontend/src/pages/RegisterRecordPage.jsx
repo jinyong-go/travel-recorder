@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { CATEGORIES, DEFAULT_VISIBILITY, categoryIcon } from '../data/records.js'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { CATEGORIES, categoryIcon } from '../data/records.js'
 import { useRecords } from '../context/RecordsContext.jsx'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import { haversineDistanceKm } from '../utils/geo.js'
@@ -12,7 +12,6 @@ import {
 } from '../config/uploadLimits.js'
 import PlaceSearchModal from '../components/PlaceSearchModal.jsx'
 import StarRatingInput from '../components/StarRatingInput.jsx'
-import VisibilitySelect from '../components/VisibilitySelect.jsx'
 import { ArrowLeftIcon, CloseIcon, PhotoIcon, SearchIcon } from '../components/icons.jsx'
 import './RegisterRecordPage.css'
 
@@ -27,17 +26,20 @@ const REFERENCE_LOCATION_LABEL = {
 
 export default function RegisterRecordPage() {
   const navigate = useNavigate()
-  const { addRecord, myGroups } = useRecords()
+  const [searchParams] = useSearchParams()
+  const { addRecord, myTrips } = useRecords()
   const { location: referenceLocation, source, status, setManualLocation } = useReferenceLocation()
+
+  // 소속 여행을 먼저 정해야 기록을 만들 수 있다. 여행 없는 기록은 존재할 수 없다 (공통 명세 §3.3).
+  const tripIdParam = searchParams.get('tripId')
+  const presetTrip = myTrips.find((t) => String(t.id) === String(tripIdParam)) ?? null
+  const [tripId, setTripId] = useState(presetTrip ? String(presetTrip.id) : '')
 
   const [category, setCategory] = useState('')
   const [selectedPlace, setSelectedPlace] = useState(null)
   const [rating, setRating] = useState(0)
   const [memo, setMemo] = useState('')
   const [photos, setPhotos] = useState([])
-  // 기본값은 언제나 "나만 보기" 다. 공개는 사용자가 직접 고른 결과여야 한다.
-  const [visibility, setVisibility] = useState(DEFAULT_VISIBILITY)
-  const [sharedGroupIds, setSharedGroupIds] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
   const [manualLocationOpen, setManualLocationOpen] = useState(false)
   const [photoErrors, setPhotoErrors] = useState([])
@@ -79,6 +81,7 @@ export default function RegisterRecordPage() {
 
   const validate = () => {
     const next = {}
+    if (!tripId) next.trip = '이 기록을 담을 여행을 선택해주세요.'
     if (!selectedPlace) next.place = '장소를 검색해 선택해주세요.'
     if (!category) next.category = '카테고리를 선택해주세요.'
     if (!rating) next.rating = '평점을 선택해주세요.'
@@ -99,6 +102,7 @@ export default function RegisterRecordPage() {
       const today = new Date().toISOString().slice(0, 10)
       addRecord({
         id: `local-${Date.now()}`,
+        tripId: Number(tripId),
         name: selectedPlace.name,
         externalLink: selectedPlace.link,
         category,
@@ -111,10 +115,8 @@ export default function RegisterRecordPage() {
         memo: memo.trim(),
         photos: photos.map((p) => p.previewUrl),
         location: selectedPlace.location,
-        visibility,
-        sharedGroupIds: visibility === 'GROUP' ? sharedGroupIds : [],
       })
-      navigate('/records')
+      navigate(`/trips/${tripId}`)
     }, 500)
   }
 
@@ -122,13 +124,45 @@ export default function RegisterRecordPage() {
     <div className="register-page">
       <div className="register-page-inner">
         <div className="register-page-header">
-          <button type="button" className="back-link" onClick={() => navigate('/records')}>
-            <ArrowLeftIcon /> 목록으로
+          <button
+            type="button"
+            className="back-link"
+            onClick={() => navigate(tripId ? `/trips/${tripId}` : '/trips')}
+          >
+            <ArrowLeftIcon /> 돌아가기
           </button>
-          <h1>기록 남기기</h1>
+          <h1>여행지 남기기</h1>
         </div>
 
         <form className="register-form" onSubmit={handleSubmit} noValidate>
+          {/* 공개 범위는 묻지 않는다. 소속 여행에서 이미 정해졌다 (공통 명세 §2.3). */}
+          <div className="form-field">
+            <label htmlFor="trip-select">소속 여행</label>
+            {presetTrip ? (
+              // 여행 상세에서 들어온 경로다. 대상이 이미 정해져 있으므로 바꾸는 수단을 두지 않는다.
+              <p className="preset-trip">{presetTrip.name} 여행에 추가합니다</p>
+            ) : myTrips.length === 0 ? (
+              <p className="field-hint">
+                아직 여행이 없습니다. <Link to="/trips/new">여행을 먼저 만들어</Link> 주세요.
+              </p>
+            ) : (
+              <select
+                id="trip-select"
+                value={tripId}
+                onChange={(e) => setTripId(e.target.value)}
+              >
+                <option value="">여행을 선택해주세요</option>
+                {myTrips.map((trip) => (
+                  <option key={trip.id} value={trip.id}>
+                    {trip.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {errors.trip && <p className="field-error">{errors.trip}</p>}
+            <p className="field-hint">이 기록의 공개 범위는 소속 여행을 따릅니다.</p>
+          </div>
+
           <div className="form-field">
             <label htmlFor="place-name">장소명</label>
             <div className="place-search-row">
@@ -232,17 +266,6 @@ export default function RegisterRecordPage() {
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
               placeholder="이 방문에 대한 메모를 남겨보세요"
-            />
-          </div>
-
-          <div className="form-field">
-            <VisibilitySelect
-              value={visibility}
-              onChange={setVisibility}
-              groups={myGroups}
-              selectedGroupIds={sharedGroupIds}
-              onChangeGroups={setSharedGroupIds}
-              onCreateGroupClick={() => navigate('/groups')}
             />
           </div>
 

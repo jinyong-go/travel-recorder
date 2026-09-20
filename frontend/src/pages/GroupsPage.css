@@ -175,30 +175,61 @@
   color: #c55a5a;
 }
 
-.invite-link-row {
+.invite-form {
   display: flex;
   gap: 8px;
 }
 
-.invite-link-row input {
+.invite-form input {
   flex: 1;
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-soft);
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
 }
 
-.invite-expiry {
+.invite-list {
+  display: grid;
+  gap: 8px;
   margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  padding: 0;
+  list-style: none;
 }
 
-.invite-actions {
+/* 멤버 목록과 같은 줄 구성이되, 참여일 자리에 보낸 날짜가 온다. */
+.invite-item {
   display: flex;
-  gap: 14px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.invite-sent-at {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.received-invites {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.received-invite-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.invite-info {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--accent-strong);
 }
 
 .invite-note {
@@ -213,28 +244,6 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: #c55a5a;
-}
-
-.invite-panel {
-  text-align: center;
-  justify-items: center;
-  padding-top: 40px;
-}
-
-.invite-icon {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--surface-soft);
-  color: var(--accent-strong);
-}
-
-.invite-target {
-  margin: 0;
-  font-size: 1.05rem;
-  color: var(--text);
 }
 
 .group-danger-zone {

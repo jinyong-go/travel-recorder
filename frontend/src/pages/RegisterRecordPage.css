@@ -43,6 +43,36 @@
   color: var(--text);
 }
 
+/* 여행 만들기 폼의 텍스트·숫자·날짜 입력. 장소 검색 input 과 같은 생김새를 쓴다. */
+.form-field > input[type='text'],
+.form-field > input[type='number'],
+.form-field > input[type='date'],
+.form-field select {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-size: 14.5px;
+}
+
+.preset-trip {
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 14.5px;
+}
+
+.field-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
 .place-search-row {
   display: flex;
   gap: 8px;

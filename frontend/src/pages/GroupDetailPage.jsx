@@ -1,13 +1,18 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { GROUP_MEMBER_LIMIT, INVITE_TTL_DAYS, buildInviteUrl } from '../data/groups.js'
+import { GROUP_MEMBER_LIMIT } from '../data/groups.js'
 import { useRecords } from '../context/RecordsContext.jsx'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
-import { ArrowLeftIcon, LinkIcon, MapPinIcon } from '../components/icons.jsx'
+import { ArrowLeftIcon, MapPinIcon, PlusIcon } from '../components/icons.jsx'
 import './GroupsPage.css'
 
 const formatDate = (iso) => new Date(iso).toLocaleDateString('ko-KR')
+
+const INVITE_ERROR = {
+  USER_NOT_FOUND: '해당 이메일로 가입한 사용자가 없습니다. 주소를 다시 확인해주세요.',
+  ALREADY_MEMBER: '이미 이 그룹의 멤버입니다.',
+}
 
 export default function GroupDetailPage() {
   const { groupId } = useParams()
@@ -15,8 +20,8 @@ export default function GroupDetailPage() {
   const {
     findGroup,
     currentUser,
-    invites,
-    issueInvite,
+    pendingInvites,
+    sendInvite,
     revokeInvite,
     removeMember,
     leaveGroup,
@@ -25,7 +30,8 @@ export default function GroupDetailPage() {
   const { themeKey, changeTheme } = useTheme()
 
   const group = findGroup(groupId)
-  const [copied, setCopied] = useState(false)
+  const [email, setEmail] = useState('')
+  const [inviteMessage, setInviteMessage] = useState(null)
   const [confirming, setConfirming] = useState(null)
 
   if (!group) {
@@ -44,21 +50,31 @@ export default function GroupDetailPage() {
   }
 
   const isOwner = group.ownerId === currentUser.id
-  const invite = invites[group.id]
-  const isFull = group.members.length >= GROUP_MEMBER_LIMIT
+  const pending = pendingInvites(group.id)
 
-  const handleIssue = () => {
-    issueInvite(group.id)
-    setCopied(false)
-  }
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(buildInviteUrl(invite.token))
-      setCopied(true)
-    } catch {
-      setCopied(false)
+  const handleSend = (e) => {
+    e.preventDefault()
+    const trimmed = email.trim()
+    if (!trimmed) {
+      setInviteMessage({ type: 'error', text: '초대할 상대의 이메일을 입력해주세요.' })
+      return
     }
+
+    const result = sendInvite(group.id, trimmed)
+    if (result.error) {
+      setInviteMessage({
+        type: 'error',
+        text: INVITE_ERROR[result.error] ?? '초대를 보내지 못했습니다.',
+      })
+      return
+    }
+
+    // 이미 초대한 상대를 다시 초대한 것은 오류가 아니다. 초대가 늘어나지 않을 뿐이다.
+    setEmail('')
+    setInviteMessage({
+      type: 'info',
+      text: result.duplicated ? '이미 초대한 상대입니다.' : '초대를 보냈습니다.',
+    })
   }
 
   const confirmAction = () => {
@@ -112,7 +128,9 @@ export default function GroupDetailPage() {
 
           <h1 className="groups-title">{group.name}</h1>
           <p className="groups-desc">
-            멤버 {group.members.length}/{GROUP_MEMBER_LIMIT}명 · {isOwner ? '내가 만든 그룹' : '참여 중인 그룹'}
+            멤버 {group.members.length}/{GROUP_MEMBER_LIMIT}명
+            {isOwner && pending.length > 0 && ` · 대기 중인 초대 ${pending.length}건`} ·{' '}
+            {isOwner ? '내가 만든 그룹' : '참여 중인 그룹'}
           </p>
 
           <section className="group-section">
@@ -144,50 +162,56 @@ export default function GroupDetailPage() {
 
           {isOwner && (
             <section className="group-section">
-              <h2 className="group-section-title">초대 링크</h2>
-              {isFull ? (
-                <p className="detail-empty">
-                  정원({GROUP_MEMBER_LIMIT}명)이 가득 차 새로 초대할 수 없습니다.
+              <h2 className="group-section-title">초대</h2>
+              {/* 자동완성이나 검색 결과를 붙이지 않는다. 가입자를 훑을 수 있는 화면이 된다 (§3.7). */}
+              <form className="invite-form" onSubmit={handleSend}>
+                <label className="sr-only" htmlFor="invite-email">
+                  초대할 상대의 이메일
+                </label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  value={email}
+                  placeholder="friend@example.com"
+                  autoComplete="off"
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setInviteMessage(null)
+                  }}
+                />
+                <button type="submit" className="btn-primary">
+                  <PlusIcon />
+                  초대 보내기
+                </button>
+              </form>
+              <p className="invite-note">
+                상대가 이 서비스에 가입할 때 쓴 이메일을 정확히 입력해주세요.
+              </p>
+              {inviteMessage && (
+                <p className={inviteMessage.type === 'error' ? 'invite-error' : 'invite-info'}>
+                  {inviteMessage.text}
                 </p>
-              ) : invite ? (
-                <>
-                  <div className="invite-link-row">
-                    <input type="text" readOnly value={buildInviteUrl(invite.token)} />
-                    <button type="button" className="btn-secondary" onClick={handleCopy}>
-                      <LinkIcon />
-                      {copied ? '복사됨' : '복사'}
-                    </button>
-                  </div>
-                  <p className="invite-expiry">{formatDate(invite.expiresAt)}까지 유효합니다.</p>
-                  <div className="invite-actions">
-                    <button type="button" className="link-btn" onClick={handleIssue}>
-                      새 링크 만들기
-                    </button>
-                    <button
-                      type="button"
-                      className="link-btn"
-                      onClick={() => {
-                        revokeInvite(group.id)
-                        setCopied(false)
-                      }}
-                    >
-                      링크 폐기
-                    </button>
-                  </div>
-                  {/* 재발급이 이전 링크를 죽인다는 사실을 버튼 옆에서 알려야 한다. */}
-                  <p className="invite-note">
-                    새 링크를 만들면 이전 링크는 사용할 수 없습니다.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <button type="button" className="btn-primary" onClick={handleIssue}>
-                    초대 링크 만들기
-                  </button>
-                  <p className="invite-note">
-                    링크는 만든 뒤 {INVITE_TTL_DAYS}일 동안 유효하고, 그룹당 하나만 살아 있습니다.
-                  </p>
-                </>
+              )}
+
+              {pending.length > 0 && (
+                <ul className="invite-list">
+                  {pending.map((item) => (
+                    <li key={item.id} className="invite-item">
+                      <span className="member-avatar" aria-hidden="true">
+                        {item.invitee.name.slice(0, 1)}
+                      </span>
+                      <span className="member-name">{item.invitee.name}</span>
+                      <span className="invite-sent-at">{formatDate(item.createdAt)} 보냄</span>
+                      <button
+                        type="button"
+                        className="member-remove"
+                        onClick={() => revokeInvite(item.id)}
+                      >
+                        철회
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
             </section>
           )}
