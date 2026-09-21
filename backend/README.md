@@ -1,9 +1,10 @@
 # 여행 지도 (travel-recorder) — Backend
 
-방문한 장소를 개인 기록으로 남기고 원하는 상대에게만 공유하는 웹 애플리케이션의 백엔드 API 서버입니다.
-네이버 계정으로 로그인한 사용자가 방문 기록(사진·메모·평점)을 남기고, 각 기록의 공개 범위를
-`PRIVATE` / `GROUP` / `PUBLIC` 중에서 직접 정합니다. 기록 등록 시 사용하는 장소 검색은
-네이버 지역 검색 오픈API를 백엔드가 프록시·집계해 제공합니다.
+다녀온 여행을 기록으로 남기고 원하는 상대에게만 공유하는 웹 애플리케이션의 백엔드 API 서버입니다.
+네이버 계정으로 로그인한 사용자가 **여행(Trip)** 을 만들고 그 아래에 방문한 장소를
+**여행 기록(TripRecord)** 으로 남깁니다(사진·메모·평점). 공개 범위는 `PRIVATE` / `GROUP` / `PUBLIC`
+중에서 **여행 단위로** 정하며, 하위 기록은 소속 여행의 범위를 그대로 따릅니다. 기록 등록 시
+사용하는 장소 검색은 네이버 지역 검색 오픈API를 백엔드가 프록시·집계해 제공합니다.
 
 상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md)를 참고하세요.
 
@@ -40,12 +41,16 @@ backend/
 │  │  ├─ service/UserService.kt    # 네이버 프로필(response 래핑) 평탄화 + 사용자 Upsert
 │  │  ├─ security/CustomOAuth2User.kt
 │  │  └─ domain·repository·controller·dto
-│  ├─ record/                      # 방문 기록 CRUD 및 목록 조회 (유일한 저장 단위)
-│  │  ├─ domain/VisitRecord.kt, Category.kt, Visibility.kt
-│  │  ├─ repository/VisitRecordSpecifications.kt  # 공개 범위 판정 + 카테고리·태그·키워드 조건
+│  ├─ trip/                        # 여행 — 기록의 상위 그룹이자 공유의 단위
+│  │  ├─ domain/Trip.kt, TripShare.kt, Visibility.kt
+│  │  ├─ repository/TripSpecifications.kt   # 공개 범위 판정 (scope 조건)
 │  │  └─ service·controller·dto
-│  ├─ group/                       # 공유 그룹 (조회 전용 대상 목록) 과 초대 링크
-│  │  ├─ domain/Group.kt, GroupMember.kt, GroupInvite.kt, VisitRecordShare.kt
+│  ├─ record/                      # 여행 기록 CRUD 및 목록 조회 (반드시 여행 하나에 속한다)
+│  │  ├─ domain/TripRecord.kt, Category.kt
+│  │  ├─ repository/TripRecordSpecifications.kt  # 소속 여행 조인 판정 + 카테고리·태그·키워드 조건
+│  │  └─ service·controller·dto
+│  ├─ group/                       # 공유 그룹 (조회 전용 대상 목록) 과 초대 목록
+│  │  ├─ domain/Group.kt, GroupMember.kt, GroupInvite.kt
 │  │  └─ service·controller·dto·repository
 │  ├─ search/                      # 네이버 지역 검색 오픈API 연동
 │  │  ├─ client/NaverLocalSearchClient.kt
@@ -56,9 +61,11 @@ backend/
 │  │  ├─ config/                   # 업로드 제한·저장소 설정 (@ConfigurationProperties)
 │  │  └─ storage/                  # PhotoStorageService 추상화 + 파일시스템 구현체
 │  └─ common/
-│     ├─ config/WebConfig.kt       # CORS, 사진 정적 리소스 핸들러
+│     ├─ config/WebConfig.kt       # CORS, 사진 정적 리소스 핸들러, 쿼리 파라미터 enum 변환기
 │     ├─ error/                    # ErrorCode, ApiException, GlobalExceptionHandler
 │     ├─ web/AuthSupport.kt        # 인증 주체 → User 변환 헬퍼 (컨트롤러가 아니라 web 유지)
+│     ├─ web/EnumParams.kt         # scope=mine 같은 소문자 enum 파라미터 변환
+│     ├─ web/PageSupport.kt        # 목록 페이지 크기(서버 고정) 처리
 │     ├─ util/GeoUtils.kt          # 하버사인 거리 계산
 │     └─ dto/PageResponse.kt       # 공통 페이지 응답
 ├─ src/main/resources/
@@ -177,12 +184,14 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 `src/main/resources/schema.sql`이 스키마의 기준이며, 엔티티(`com.yong.travel.*.domain`)로부터 Hibernate가 생성하는 DDL에 맞춰 작성되어 있습니다.
 
 - 모든 프로파일이 `ddl-auto: validate`이므로, **엔티티와 `schema.sql`이 어긋나면 기동 시점에 실패합니다.** 엔티티를 바꿀 때는 `schema.sql`도 함께 고쳐야 합니다.
-- 스크립트는 `CREATE TABLE IF NOT EXISTS` 기반이고 외래키를 `CREATE TABLE` 안에 인라인으로 선언해 **재실행해도 안전**합니다. 이 때문에 테이블은 참조 순서(`users` → `tags` → `share_group` → `visit_records` → 나머지)로 정의되어 있습니다.
+- 스크립트는 `CREATE TABLE IF NOT EXISTS` 기반이고 외래키를 `CREATE TABLE` 안에 인라인으로 선언해 **재실행해도 안전**합니다. 이 때문에 테이블은 참조 순서(`users` → `tags` → `share_group` → `trips` → `trip_records` → 나머지)로 정의되어 있습니다.
+- **`trips.cover_photo_id`에는 외래키가 없습니다.** `trips` → `photos` → `trip_records` → `trips` 순환이라 인라인으로 선언할 수 없고, `ALTER TABLE ADD CONSTRAINT`는 PostgreSQL에 `IF NOT EXISTS`가 없어 재실행되는 이 스크립트에서 실패합니다. 대신 사진이 여행에서 사라지는 경로(사진 삭제·기록 삭제·기록의 소속 여행 변경)에서 애플리케이션이 커버 지정을 직접 해제합니다. 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3을 참고하세요.
 - `local`은 H2를 `MODE=PostgreSQL`로 띄워 dev/prod와 같은 스크립트를 그대로 사용합니다.
 - `prod`는 `spring.sql.init.mode: never`라 애플리케이션이 DDL을 실행하지 않습니다. 스키마 적용은 배포 절차에서 별도로 수행해야 합니다.
 - PostgreSQL은 외래키에 인덱스를 자동 생성하지 않으므로, 조회·삭제에 쓰이는 FK 컬럼에 인덱스를 명시해 두었습니다.
-- `visit_records`는 **soft delete**를 사용합니다. `deleted_at`이 `NULL`인 행만 살아 있는 행이며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동으로 제외합니다. 그룹·멤버·초대·공유 관계는 반대로 물리 삭제합니다 — 탈퇴와 공유 해제는 즉시 조회 권한을 없애야 하기 때문입니다. 정책과 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2를 참고하세요.
-- `CREATE TABLE IF NOT EXISTS`는 **이미 존재하는 테이블에 컬럼을 추가하지 못합니다.** 아직 테이블을 만들기 전이라 `schema.sql`을 직접 고쳐 나가고 있지만, 실제 데이터가 쌓이기 시작하면 변경 이력을 남길 마이그레이션 도구가 필요합니다.
+- `trips`와 `trip_records`는 **soft delete**를 사용합니다. `deleted_at`이 `NULL`인 행만 살아 있는 행이며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동으로 제외합니다. 여행을 지우면 하위 기록도 같은 시각으로 함께 지웁니다. 그룹·멤버·초대·공유 관계는 반대로 물리 삭제합니다 — 탈퇴와 공유 해제는 즉시 조회 권한을 없애야 하기 때문입니다. 정책과 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2를 참고하세요.
+- **`trip_records`에는 `visibility`와 `author_id` 컬럼이 없습니다.** 둘 다 소속 여행에서 파생되며, 같은 사실을 두 곳에 적으면 어긋나는 순간 어느 쪽이 맞는지 알 수 없기 때문입니다. 그래서 기록 조회는 **항상 `trip_id`로 여행을 조인해** 공개 범위를 판정합니다.
+- `CREATE TABLE IF NOT EXISTS`는 **이미 존재하는 테이블에 컬럼을 추가하지 못합니다.** 여행 계층 전환은 `schema.sql`을 새로 써서 반영했으므로 **기존 개발·dev 데이터베이스는 재생성해야 합니다.** 실제 데이터가 쌓이기 시작하면 변경 이력을 남길 마이그레이션 도구가 필요합니다.
 
 ## 설정 값
 
@@ -208,29 +217,42 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 | `GET` | `/oauth2/authorization/naver` | 네이버 로그인 시작 (Spring Security 기본 처리) |
 | `GET` | `/api/auth/me` | 현재 로그인 사용자 조회 |
 | `POST` | `/api/auth/logout` | 로그아웃 (세션 무효화) |
-| `GET` | `/api/records` | 기록 목록. `scope`(`MINE`\|`SHARED`\|`PUBLIC`) **필수**, `category`, `tag`, `keyword`, `sort`, `lat`, `lng`, 페이징 |
-| `GET` | `/api/places/search` | 등록 폼용 장소 검색 (네이버 지역 검색 프록시·집계) |
+| `GET` | `/api/trips` | 여행 목록. `scope`(`mine`\|`shared`\|`public`) **필수**, `keyword`, `sort`(`recent`\|`startDate`), `page` |
+| `GET` | `/api/trips/{tripId}` | 여행 상세. 볼 권한이 없으면 `404` |
+| `POST` | `/api/trips` | 여행 생성 (공개 범위 생략 시 `PRIVATE`) |
+| `PUT` | `/api/trips/{tripId}` | 여행 기본 정보 수정 — 공개 범위 제외 (소유자) |
+| `PATCH` | `/api/trips/{tripId}/visibility` | 공개 범위·공유 그룹만 변경 (소유자) |
+| `PATCH` | `/api/trips/{tripId}/cover` | 커버 사진 지정·해제 (소유자) |
+| `DELETE` | `/api/trips/{tripId}` | 여행 삭제. 하위 기록도 함께 soft delete (소유자) |
+| `GET` | `/api/records` | 기록 목록. `scope` **필수**, `tripId`, `category`, `tag`, `keyword`, `sort`, `lat`, `lng`, `page` |
 | `GET` | `/api/records/{recordId}` | 기록 상세. 볼 권한이 없으면 `404` |
-| `POST` | `/api/records` | 기록 등록 (공개 범위·공유 그룹 포함) |
-| `PUT` | `/api/records/{recordId}` | 기록 수정 (작성자 본인) |
-| `PATCH` | `/api/records/{recordId}/visibility` | 공개 범위·공유 그룹만 변경 (작성자 본인) |
-| `DELETE` | `/api/records/{recordId}` | 기록 삭제 (작성자 본인) |
-| `GET` | `/api/tags` | 태그 검색 (`keyword`) |
+| `POST` | `/api/records` | 기록 등록. `tripId` 필수이며 요청자가 소유한 여행이어야 합니다 |
+| `PUT` | `/api/records/{recordId}` | 기록 수정 (여행 소유자) |
+| `PATCH` | `/api/records/{recordId}/trip` | 소속 여행 변경 (여행 소유자) |
+| `DELETE` | `/api/records/{recordId}` | 기록 삭제 (여행 소유자) |
+| `GET` | `/api/places/search` | 등록 폼용 장소 검색 (네이버 지역 검색 프록시·집계) |
+| `GET` | `/api/tags` | 태그 검색 (`keyword`). 볼 수 있는 기록에 쓰인 태그로 제한 |
 | `GET` | `/api/groups` | 내가 소유하거나 참여한 그룹 목록 |
 | `POST` | `/api/groups` | 그룹 생성 (소유자도 멤버로 입력) |
 | `GET` | `/api/groups/{groupId}` | 그룹 상세 (멤버 목록). 멤버가 아니면 `404` |
 | `PUT` \| `DELETE` | `/api/groups/{groupId}` | 그룹 이름 변경 / 삭제 (소유자) |
 | `DELETE` | `/api/groups/{groupId}/members/me` | 그룹 탈퇴 (소유자는 `403`) |
 | `DELETE` | `/api/groups/{groupId}/members/{userId}` | 멤버 제외 (소유자) |
-| `POST` \| `GET` \| `DELETE` | `/api/groups/{groupId}/invite` | 초대 링크 발급(재발급 시 이전 무효) / 조회 / 폐기 |
-| `GET` | `/api/invites/{token}` | 초대 미리보기 (비로그인 가능) |
-| `POST` | `/api/invites/{token}/accept` | 초대 수락 |
-| `POST` | `/api/records/{recordId}/photos` | 사진 업로드 (`multipart/form-data`, 작성자 본인) |
-| `DELETE` | `/api/records/{recordId}/photos/{photoId}` | 사진 삭제 (작성자 본인) |
+| `GET` \| `POST` | `/api/groups/{groupId}/invites` | 대기 중인 초대 목록 / 이메일로 초대 발송 (소유자) |
+| `DELETE` | `/api/groups/{groupId}/invites/{inviteId}` | 초대 철회 (소유자) |
+| `GET` | `/api/invites` | 내가 받은 초대 목록 |
+| `POST` | `/api/invites/{inviteId}/accept` | 초대 수락 (정원이 차 있으면 `409`) |
+| `POST` | `/api/invites/{inviteId}/reject` | 초대 거절 |
+| `POST` | `/api/records/{recordId}/photos` | 사진 업로드 (`multipart/form-data`, 여행 소유자) |
+| `DELETE` | `/api/records/{recordId}/photos/{photoId}` | 사진 삭제 (여행 소유자) |
+
+- `scope`와 `sort`는 **소문자로 보냅니다.** 대문자도 받습니다 (`common/web/EnumParams.kt`).
+- 목록의 **페이지 크기는 서버가 정합니다.** 요청에 `size`를 담아도 무시하며, 응답의 `size`가 적용된 값입니다.
 
 오류 응답은 `common/error`의 `ErrorResponse`(`code`/`message`/`status`) 형식으로 통일되어 있으며,
-`ErrorCode`에 정의된 코드(`UNAUTHENTICATED`, `FORBIDDEN`, `PLACE_NOT_FOUND`, `REVIEW_NOT_FOUND`,
-`VALIDATION_ERROR`, `PLACE_SEARCH_UNAVAILABLE` 등)를 함께 내려줍니다.
+`ErrorCode`에 정의된 코드(`UNAUTHENTICATED`, `FORBIDDEN`, `TRIP_NOT_FOUND`, `RECORD_NOT_FOUND`,
+`GROUP_NOT_FOUND`, `VALIDATION_ERROR`, `PLACE_SEARCH_UNAVAILABLE` 등)를 함께 내려줍니다.
+**열람 권한이 없으면 `403`이 아니라 `404`입니다** — 없는 것과 응답이 구분되지 않아야 하기 때문입니다.
 
 `GlobalExceptionHandler`는 컨트롤러가 던지는 `ApiException`뿐 아니라 **컨트롤러에 도달하기 전에 발생하는
 실패도 모두 같은 형식으로 변환**합니다 — 매핑되지 않은 주소(404), 메서드 불일치(405), `Content-Type` 불일치(415),
@@ -248,13 +270,15 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 ## 현재 구현 상태
 
 구현 완료
-- 도메인 모델 및 API (방문 기록, 공개 범위, 공유 그룹, 초대, 태그, 사진)
+- 도메인 모델 및 API — 여행, 여행 기록, 공개 범위(여행 단위), 공유 그룹, 초대, 태그, 사진
+- 공개 범위 판정을 조회 쿼리에 싣습니다. 기록 목록·상세·태그 자동완성 모두 소속 여행을 조인해 판정합니다
 - 네이버 OAuth2 로그인 연동 및 사용자 Upsert
 - 네이버 지역 검색 오픈API 프록시 (중복 제거, 거리순 정렬, 페이징)
 - 파일시스템 사진 저장소 및 정적 서빙, 공통 예외 처리
 
 미구현 / 예정 (상세는 SPECIFICATION.md 8장)
-- **인가 정책 적용** — `SecurityConfig`가 개발 편의를 위해 `anyRequest().permitAll()`로 열려 있습니다. 기능 개발 완료 후 SPECIFICATION.md 2.2의 정책대로 `authenticated()`로 전환해야 합니다.
-- 스키마 마이그레이션 도구 도입 (Flyway/Liquibase) — 현재는 `schema.sql` 단일 파일이라 기존 테이블의 변경 이력을 관리할 수 없습니다.
+- **인가 정책 적용** — `SecurityConfig`가 개발 편의를 위해 `anyRequest().permitAll()`로 열려 있습니다. 인증은 컨트롤러가 `requireLogin`으로 직접 막고 있으며, SPECIFICATION.md 2.2의 정책대로 필터체인의 `authenticated()`로 되돌려야 합니다.
+- 스키마 마이그레이션 도구 도입 (Flyway/Liquibase) — 현재는 `schema.sql` 단일 파일이라 기존 테이블의 변경 이력을 관리할 수 없습니다. 도입하면 `trips.cover_photo_id`에 외래키를 되돌릴 수 있습니다.
 - 사진 저장소의 AWS S3 전환 (`app.storage.type: s3`)
+- 사진 서빙에 공개 범위가 적용되지 않습니다 — 경로를 아는 사람은 비공개 여행의 사진도 볼 수 있으며, 현재는 추측 불가능한 UUID 경로에만 의존합니다.
 - 장소 검색 후보 풀 확대 — 원본 API가 검색어당 최대 5건만 반환하므로, 검색어 변형으로 추가 호출해 집계하는 로직이 필요합니다.
