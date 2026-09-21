@@ -3,15 +3,18 @@ package com.yong.travel
 import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.repository.UserRepository
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.VisitRecord
-import com.yong.travel.record.dto.VisitRecordCreateRequest
-import com.yong.travel.record.repository.VisitRecordRepository
+import com.yong.travel.record.domain.TripRecord
+import com.yong.travel.record.dto.TripRecordCreateRequest
+import com.yong.travel.record.repository.TripRecordRepository
+import com.yong.travel.trip.domain.Trip
+import com.yong.travel.trip.repository.TripRepository
 import jakarta.validation.Validator
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -25,7 +28,8 @@ class RecordRatingTest {
 
     @Autowired private lateinit var validator: Validator
     @Autowired private lateinit var userRepository: UserRepository
-    @Autowired private lateinit var recordRepository: VisitRecordRepository
+    @Autowired private lateinit var recordRepository: TripRecordRepository
+    @Autowired private lateinit var tripRepository: TripRepository
 
     @Test
     fun `0_5 단위 값은 통과한다`() {
@@ -48,11 +52,21 @@ class RecordRatingTest {
         val user = userRepository.save(
             User(provider = "naver", providerId = "provider-1", email = "t@example.com", name = "테스터"),
         )
+        // 기록은 여행 없이 저장될 수 없다 (trip_id NOT NULL).
+        val trip = tripRepository.save(
+            Trip(
+                owner = user,
+                name = "테스트 여행",
+                startDate = LocalDate.of(2026, 9, 5),
+                endDate = LocalDate.of(2026, 9, 8),
+                headcount = 2,
+            ),
+        )
 
         assertFailsWith<DataIntegrityViolationException> {
             recordRepository.saveAndFlush(
-                VisitRecord(
-                    author = user,
+                TripRecord(
+                    trip = trip,
                     name = "테스트 기록",
                     category = Category.FOOD,
                     address = "서울시 어딘가",
@@ -64,7 +78,8 @@ class RecordRatingTest {
         }
     }
 
-    private fun newRequest(rating: Double) = VisitRecordCreateRequest(
+    private fun newRequest(rating: Double) = TripRecordCreateRequest(
+        tripId = 1L,
         name = "테스트 기록",
         category = Category.FOOD,
         address = "서울시 어딘가",

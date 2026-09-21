@@ -7,8 +7,8 @@ import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.dto.PhotoResponse
 import com.yong.travel.photo.repository.PhotoRepository
 import com.yong.travel.photo.storage.PhotoStorageService
-import com.yong.travel.record.domain.VisitRecord
-import com.yong.travel.record.repository.VisitRecordRepository
+import com.yong.travel.record.domain.TripRecord
+import com.yong.travel.record.repository.TripRecordRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
@@ -26,7 +26,7 @@ interface PhotoService {
 @Service
 @Transactional(readOnly = true)
 class PhotoServiceImpl(
-    private val recordRepository: VisitRecordRepository,
+    private val recordRepository: TripRecordRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorageService: PhotoStorageService,
     private val uploadProperties: PhotoUploadProperties,
@@ -58,9 +58,13 @@ class PhotoServiceImpl(
 
     @Transactional
     override fun delete(recordId: Long, photoId: Long, requesterId: Long) {
-        findOwnRecord(recordId, requesterId)
+        val record = findOwnRecord(recordId, requesterId)
         val photo = photoRepository.findByIdAndRecordId(photoId, recordId)
             ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
+
+        // 외래키가 없어 ON DELETE SET NULL 이 돌지 않는다. 여기서 직접 풀지 않으면
+        // 없는 사진을 가리키는 커버가 남아 여행 조회가 깨진다 (명세 §3, §4.6).
+        record.trip.clearCoverIfAmong(listOf(photoId))
 
         photoStorageService.delete(photo.storageKey)
         photoRepository.delete(photo)
@@ -72,10 +76,10 @@ class PhotoServiceImpl(
      *
      * 남의 기록이면 403 이 아니라 404 다 — 작성자가 아닌 사람에게는 그 기록의 존재 자체를 알리지 않는다.
      */
-    private fun findOwnRecord(recordId: Long, requesterId: Long): VisitRecord {
+    private fun findOwnRecord(recordId: Long, requesterId: Long): TripRecord {
         val record = recordRepository.findById(recordId)
             .orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
-        if (record.author.id != requesterId) throw ApiException(ErrorCode.RECORD_NOT_FOUND)
+        if (record.trip.owner.id != requesterId) throw ApiException(ErrorCode.RECORD_NOT_FOUND)
         return record
     }
 }

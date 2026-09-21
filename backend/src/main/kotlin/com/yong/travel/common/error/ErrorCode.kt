@@ -10,6 +10,7 @@ enum class ErrorCode(val status: HttpStatus, val defaultMessage: String) {
      * 없는 기록과 "볼 권한이 없는 기록" 이 같은 코드·같은 문구를 쓴다.
      * 403 으로 나누거나 문구를 달리하면 그 차이만으로 비공개 기록의 존재가 드러난다.
      */
+    TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 여행입니다."),
     RECORD_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 기록입니다."),
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 그룹입니다."),
     PHOTO_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사진입니다."),

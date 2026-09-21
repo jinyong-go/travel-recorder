@@ -1,7 +1,6 @@
 package com.yong.travel.record.dto
 
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.Visibility
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.DecimalMin
@@ -10,7 +9,14 @@ import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import kotlin.math.floor
 
-data class VisitRecordCreateRequest(
+data class TripRecordCreateRequest(
+    /**
+     * 소속 여행. 필수이며, 요청자가 소유하지 않은 여행이면 404 TRIP_NOT_FOUND 다 (명세 §4.4).
+     * 기록은 여행 없이 존재할 수 없어 기본값을 두지 않는다.
+     */
+    @field:NotNull
+    val tripId: Long,
+
     @field:NotBlank
     val name: String,
 
@@ -38,19 +44,13 @@ data class VisitRecordCreateRequest(
 
     @field:Size(max = 1000)
     val memo: String? = null,
-
-    /** 생략하면 PRIVATE. 명시적으로 넓히지 않는 한 공개되지 않는다. */
-    val visibility: Visibility = Visibility.PRIVATE,
-
-    /** visibility = GROUP 일 때만 의미가 있다. 그 외 값이면 무시된다. */
-    val groupIds: List<Long> = emptyList(),
 ) {
     @get:AssertTrue(message = "평점은 0.5점 단위로만 입력할 수 있습니다.")
     val isHalfPointStep: Boolean
         get() = isHalfPoint(rating)
 }
 
-data class VisitRecordUpdateRequest(
+data class TripRecordUpdateRequest(
     @field:NotBlank
     val name: String,
 
@@ -78,22 +78,20 @@ data class VisitRecordUpdateRequest(
 
     @field:Size(max = 1000)
     val memo: String? = null,
-
-    val visibility: Visibility = Visibility.PRIVATE,
-
-    val groupIds: List<Long> = emptyList(),
 ) {
     @get:AssertTrue(message = "평점은 0.5점 단위로만 입력할 수 있습니다.")
     val isHalfPointStep: Boolean
         get() = isHalfPoint(rating)
 }
 
-/** 공개 범위만 바꾼다. 공유 그룹 목록은 전체 교체이며, 빠진 그룹의 공유는 해제된다. */
-data class VisibilityUpdateRequest(
+/**
+ * 기록을 다른 여행으로 옮긴다. 대상 여행은 요청자가 소유한 여행이어야 한다 (명세 §4.4).
+ *
+ * 옮기는 즉시 그 기록의 공개 범위는 새 여행의 것이 된다 — 넓히는 이동일 수 있다.
+ */
+data class TripChangeRequest(
     @field:NotNull
-    val visibility: Visibility,
-
-    val groupIds: List<Long> = emptyList(),
+    val tripId: Long,
 )
 
 /**

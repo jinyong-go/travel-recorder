@@ -10,14 +10,20 @@ import com.yong.travel.group.dto.InviteRequest
 import com.yong.travel.group.repository.GroupInviteRepository
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.InviteService
+import com.yong.travel.group.repository.GroupRepository
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.Visibility
 import com.yong.travel.record.dto.RecordListQuery
 import com.yong.travel.record.dto.RecordScope
-import com.yong.travel.record.dto.VisibilityUpdateRequest
-import com.yong.travel.record.dto.VisitRecordCreateRequest
-import com.yong.travel.record.service.VisitRecordService
+import com.yong.travel.record.dto.TripChangeRequest
+import com.yong.travel.record.dto.TripRecordCreateRequest
+import com.yong.travel.record.service.TripRecordService
+import com.yong.travel.trip.domain.Trip
+import com.yong.travel.trip.domain.TripShare
+import com.yong.travel.trip.domain.Visibility
+import com.yong.travel.trip.repository.TripRepository
+import com.yong.travel.trip.repository.TripShareRepository
 import jakarta.persistence.EntityManager
+import java.time.LocalDate
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
@@ -41,25 +47,30 @@ class RecordVisibilityTest {
 
     @Autowired private lateinit var entityManager: EntityManager
     @Autowired private lateinit var userRepository: UserRepository
-    @Autowired private lateinit var recordService: VisitRecordService
+    @Autowired private lateinit var recordService: TripRecordService
     @Autowired private lateinit var groupService: GroupService
     @Autowired private lateinit var inviteService: InviteService
     @Autowired private lateinit var inviteRepository: GroupInviteRepository
+    @Autowired private lateinit var groupRepository: GroupRepository
+    @Autowired private lateinit var tripRepository: TripRepository
+    @Autowired private lateinit var tripShareRepository: TripShareRepository
 
     @Test
-    fun `공개 범위를 지정하지 않으면 비공개로 저장된다`() {
-        val author = newUser()
-        val recordId = newRecord(author)
+    fun `공개 범위를 지정하지 않은 여행의 기록은 비공개다`() {
+        val owner = newUser()
+        val other = newUser()
+        val recordId = newRecord(newTrip(owner))
         flush()
 
-        assertEquals(Visibility.PRIVATE, recordService.get(recordId, author).visibility)
+        assertEquals(recordId, recordService.get(recordId, owner).id)
+        assertEquals(ErrorCode.RECORD_NOT_FOUND, assertThrows<ApiException> { recordService.get(recordId, other) }.errorCode)
     }
 
     @Test
-    fun `비공개 기록은 남에게도 비로그인에게도 404 다`() {
-        val author = newUser()
+    fun `비공개 여행의 기록은 남에게도 비로그인에게도 404 다`() {
+        val owner = newUser()
         val other = newUser()
-        val recordId = newRecord(author)
+        val recordId = newRecord(newTrip(owner))
         flush()
 
         // 403 이 아니라 404 여야 한다. 403 은 "그 기록이 존재한다" 는 사실을 알려주는 셈이다.
@@ -68,30 +79,32 @@ class RecordVisibilityTest {
     }
 
     @Test
-    fun `전체 공개 기록은 비로그인도 볼 수 있지만 공개 범위는 작성자에게만 보인다`() {
-        val author = newUser()
+    fun `전체 공개 여행의 기록은 비로그인도 볼 수 있고 소속 여행을 가리킨다`() {
+        val owner = newUser()
         val other = newUser()
-        val recordId = newRecord(author, visibility = Visibility.PUBLIC)
+        val tripId = newTrip(owner, Visibility.PUBLIC)
+        val recordId = newRecord(tripId)
         flush()
 
-        val asAuthor = recordService.get(recordId, author)
-        assertTrue(asAuthor.isAuthor)
-        assertEquals(Visibility.PUBLIC, asAuthor.visibility)
+        val asOwner = recordService.get(recordId, owner)
+        assertTrue(asOwner.isAuthor)
+        assertEquals(tripId, asOwner.trip.id)
 
         val asGuest = recordService.get(recordId, null)
         assertFalse(asGuest.isAuthor)
-        assertNull(asGuest.visibility, "열람자에게 공개 범위를 알릴 이유가 없다")
-        assertNull(recordService.get(recordId, other).sharedGroups)
+        // 작성자는 기록이 아니라 여행 소유자에서 온다.
+        assertEquals(owner, asGuest.author.id)
+        assertEquals(tripId, recordService.get(recordId, other).trip.id)
     }
 
     @Test
-    fun `그룹 공유 기록은 멤버만 볼 수 있고 비멤버에게는 404 다`() {
-        val author = newUser()
+    fun `그룹 공유 여행의 기록은 멤버만 볼 수 있고 비멤버에게는 404 다`() {
+        val owner = newUser()
         val member = newUser()
         val stranger = newUser()
-        val groupId = newGroupWith(author, member)
+        val groupId = newGroupWith(owner, member)
 
-        val recordId = newRecord(author, visibility = Visibility.GROUP, groupIds = listOf(groupId))
+        val recordId = newRecord(newTrip(owner, Visibility.GROUP, listOf(groupId)))
         flush()
 
         assertEquals(recordId, recordService.get(recordId, member).id)
@@ -100,28 +113,29 @@ class RecordVisibilityTest {
     }
 
     @Test
-    fun `공개 범위를 좁히면 직전까지 보이던 사용자도 곧바로 볼 수 없다`() {
-        val author = newUser()
+    fun `여행의 공개 범위를 좁히면 하위 기록이 곧바로 보이지 않는다`() {
+        val owner = newUser()
         val member = newUser()
-        val groupId = newGroupWith(author, member)
-        val recordId = newRecord(author, visibility = Visibility.GROUP, groupIds = listOf(groupId))
+        val groupId = newGroupWith(owner, member)
+        val tripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val recordId = newRecord(tripId)
         flush()
         assertEquals(recordId, recordService.get(recordId, member).id)
 
-        recordService.changeVisibility(recordId, author, VisibilityUpdateRequest(Visibility.PRIVATE))
+        // 기록은 손대지 않는다. 범위는 여행 한 곳에만 있어서 여행만 바꾸면 하위가 전부 따라온다.
+        changeTripVisibility(tripId, Visibility.PRIVATE)
         flush()
 
         assertThrows<ApiException> { recordService.get(recordId, member) }
-        // GROUP 이 아니게 되면 공유 행도 지워야 나중에 다시 GROUP 으로 되돌렸을 때 예전 공유가 되살아나지 않는다.
-        assertEquals(0L, count("select count(*) from visit_record_share where record_id = $recordId"))
+        assertTrue(list(RecordScope.SHARED, member).isEmpty())
     }
 
     @Test
-    fun `그룹에서 탈퇴하면 그 그룹으로 공유된 기록이 보이지 않는다`() {
-        val author = newUser()
+    fun `그룹에서 탈퇴하면 그 그룹으로 공유된 여행의 기록이 보이지 않는다`() {
+        val owner = newUser()
         val member = newUser()
-        val groupId = newGroupWith(author, member)
-        val recordId = newRecord(author, visibility = Visibility.GROUP, groupIds = listOf(groupId))
+        val groupId = newGroupWith(owner, member)
+        val recordId = newRecord(newTrip(owner, Visibility.GROUP, listOf(groupId)))
         flush()
 
         groupService.leave(groupId, member)
@@ -131,54 +145,82 @@ class RecordVisibilityTest {
     }
 
     @Test
-    fun `그룹을 삭제해도 기록은 남고 비공개처럼 동작한다`() {
-        val author = newUser()
+    fun `그룹을 삭제해도 여행과 기록은 남고 비공개처럼 동작한다`() {
+        val owner = newUser()
         val member = newUser()
-        val groupId = newGroupWith(author, member)
-        val recordId = newRecord(author, visibility = Visibility.GROUP, groupIds = listOf(groupId))
+        val groupId = newGroupWith(owner, member)
+        val tripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val recordId = newRecord(tripId)
         flush()
 
-        groupService.delete(groupId, author)
+        groupService.delete(groupId, owner)
         flush()
 
-        assertEquals(recordId, recordService.get(recordId, author).id, "기록 자체는 삭제되지 않는다")
+        assertEquals(recordId, recordService.get(recordId, owner).id, "기록 자체는 삭제되지 않는다")
         assertThrows<ApiException> { recordService.get(recordId, member) }
+        // 주인 없는 공유 행이 남아 권한 판정에 끼어들면 안 된다.
+        assertEquals(0L, count("select count(*) from trip_shares where trip_id = $tripId"))
     }
 
     @Test
-    fun `속하지 않은 그룹에는 공유할 수 없다`() {
-        val author = newUser()
+    fun `남의 여행에는 기록을 넣을 수도 옮길 수도 없다`() {
+        val owner = newUser()
         val stranger = newUser()
-        val foreignGroupId = requireNotNull(groupService.create(stranger, GroupRequest("남의 그룹")).id)
+        val foreignTripId = newTrip(owner, Visibility.PUBLIC)
+        val myTripId = newTrip(stranger)
+        val myRecordId = newRecord(myTripId, authorId = stranger)
         flush()
 
-        val failure = assertThrows<ApiException> {
-            newRecord(author, visibility = Visibility.GROUP, groupIds = listOf(foreignGroupId))
-        }
-        // 403 이면 "그런 그룹이 있다" 는 뜻이 되므로 여기서도 404 다.
-        assertEquals(ErrorCode.GROUP_NOT_FOUND, failure.errorCode)
+        // 볼 수 있는 공개 여행이라도 남의 것이면 404 다. 403 이면 그 여행의 존재가 드러난다.
+        assertEquals(
+            ErrorCode.TRIP_NOT_FOUND,
+            assertThrows<ApiException> { newRecord(foreignTripId, authorId = stranger) }.errorCode,
+        )
+        assertEquals(
+            ErrorCode.TRIP_NOT_FOUND,
+            assertThrows<ApiException> {
+                recordService.changeTrip(myRecordId, stranger, TripChangeRequest(foreignTripId))
+            }.errorCode,
+        )
+    }
+
+    @Test
+    fun `기록을 옮기면 공개 범위는 새 여행의 것을 따른다`() {
+        val owner = newUser()
+        val stranger = newUser()
+        val privateTripId = newTrip(owner)
+        val publicTripId = newTrip(owner, Visibility.PUBLIC)
+        val recordId = newRecord(privateTripId)
+        flush()
+
+        assertThrows<ApiException> { recordService.get(recordId, stranger) }
+
+        recordService.changeTrip(recordId, owner, TripChangeRequest(publicTripId))
+        flush()
+
+        assertEquals(publicTripId, recordService.get(recordId, stranger).trip.id)
     }
 
     @Test
     fun `목록 범위는 권한을 넓히지 못한다`() {
-        val author = newUser()
+        val owner = newUser()
         val member = newUser()
         val stranger = newUser()
-        val groupId = newGroupWith(author, member)
+        val groupId = newGroupWith(owner, member)
 
-        val privateId = newRecord(author, name = "비공개")
-        val groupId2 = newRecord(author, name = "그룹공유", visibility = Visibility.GROUP, groupIds = listOf(groupId))
-        val publicId = newRecord(author, name = "전체공개", visibility = Visibility.PUBLIC)
+        val privateId = newRecord(newTrip(owner), name = "비공개")
+        val sharedId = newRecord(newTrip(owner, Visibility.GROUP, listOf(groupId)), name = "그룹공유")
+        val publicId = newRecord(newTrip(owner, Visibility.PUBLIC), name = "전체공개")
         flush()
 
         // 남이 MINE 으로 조회해도 남의 기록이 딸려 나오지 않는다.
         assertTrue(list(RecordScope.MINE, stranger).isEmpty())
-        assertEquals(setOf(privateId, groupId2, publicId), list(RecordScope.MINE, author).toSet())
+        assertEquals(setOf(privateId, sharedId, publicId), list(RecordScope.MINE, owner).toSet())
 
         // SHARED 는 공유받은 타인의 기록만. 내 기록은 MINE 에 이미 있으므로 제외된다.
-        assertEquals(listOf(groupId2), list(RecordScope.SHARED, member))
+        assertEquals(listOf(sharedId), list(RecordScope.SHARED, member))
         assertTrue(list(RecordScope.SHARED, stranger).isEmpty())
-        assertTrue(list(RecordScope.SHARED, author).isEmpty())
+        assertTrue(list(RecordScope.SHARED, owner).isEmpty())
 
         // PUBLIC 은 비로그인도 볼 수 있고, 공개된 것만 나온다.
         assertEquals(listOf(publicId), list(RecordScope.PUBLIC, null))
@@ -186,28 +228,43 @@ class RecordVisibilityTest {
     }
 
     @Test
+    fun `tripId 필터는 권한을 넓히지 못한다`() {
+        val owner = newUser()
+        val stranger = newUser()
+        val privateTripId = newTrip(owner)
+        val recordId = newRecord(privateTripId)
+        flush()
+
+        // 볼 수 없는 여행의 id 를 찍어도 오류가 아니라 빈 목록이다 (명세 §4.4.1).
+        assertTrue(list(RecordScope.PUBLIC, stranger, privateTripId).isEmpty())
+        assertTrue(list(RecordScope.MINE, stranger, privateTripId).isEmpty())
+        assertEquals(listOf(recordId), list(RecordScope.MINE, owner, privateTripId))
+    }
+
+    @Test
     fun `기록을 삭제하면 목록과 상세에서 사라지지만 행은 남는다`() {
-        val author = newUser()
-        val recordId = newRecord(author, visibility = Visibility.PUBLIC)
+        val owner = newUser()
+        val recordId = newRecord(newTrip(owner, Visibility.PUBLIC))
         flush()
 
-        recordService.delete(recordId, author)
+        recordService.delete(recordId, owner)
         flush()
 
-        assertThrows<ApiException> { recordService.get(recordId, author) }
+        assertThrows<ApiException> { recordService.get(recordId, owner) }
         assertTrue(list(RecordScope.PUBLIC, null).none { it == recordId })
-        assertEquals(1L, count("select count(*) from visit_records where id = $recordId"))
+        assertEquals(1L, count("select count(*) from trip_records where id = $recordId"))
     }
 
     @Test
     fun `같은 장소를 다시 기록해도 중복으로 막지 않는다`() {
-        val author = newUser()
-        val first = newRecord(author, name = "성산일출봉")
-        val second = newRecord(author, name = "성산일출봉")
+        val owner = newUser()
+        val tripId = newTrip(owner)
+        val first = newRecord(tripId, name = "성산일출봉")
+        val second = newRecord(tripId, name = "성산일출봉")
         flush()
 
         assertTrue(first != second)
-        assertEquals(2, list(RecordScope.MINE, author).size)
+        assertEquals(2, list(RecordScope.MINE, owner).size)
     }
 
     @Test
@@ -347,8 +404,8 @@ class RecordVisibilityTest {
     /** 목록 검증은 첫 페이지만 본다. 페이지 크기는 서버가 정하므로(명세 §4.1) 테스트도 그 값을 그대로 쓴다. */
     private fun firstPage() = PageRequest.of(0, DEFAULT_PAGE_SIZE)
 
-    private fun list(scope: RecordScope, userId: Long?): List<Long> =
-        recordService.list(RecordListQuery(scope), userId, PageRequest.of(0, 10)).content.map { it.id }
+    private fun list(scope: RecordScope, userId: Long?, tripId: Long? = null): List<Long> =
+        recordService.list(RecordListQuery(scope, tripId), userId, PageRequest.of(0, 10)).content.map { it.id }
 
     /** 이메일은 계정마다 고유해야 한다 (users.email 유니크). 초대 대상 조회에 쓰이는 값이라 필요하면 직접 지정한다. */
     private fun newUser(email: String = "tester-${System.nanoTime()}@example.com"): Long = requireNotNull(
@@ -372,22 +429,54 @@ class RecordVisibilityTest {
         return groupId
     }
 
-    private fun newRecord(
-        authorId: Long,
-        name: String = "테스트 기록",
+    /**
+     * 여행을 만들고 id 를 돌려준다.
+     *
+     * `/api/trips` 가 아직 없어 리포지토리로 직접 만든다. 공유 행 정리 같은 쓰기 규칙은
+     * TripService 가 생기면 그쪽 테스트에서 검증한다.
+     */
+    private fun newTrip(
+        ownerId: Long,
         visibility: Visibility = Visibility.PRIVATE,
         groupIds: List<Long> = emptyList(),
+    ): Long {
+        val trip = tripRepository.save(
+            Trip(
+                owner = userRepository.findById(ownerId).orElseThrow(),
+                name = "테스트 여행",
+                startDate = LocalDate.of(2026, 9, 5),
+                endDate = LocalDate.of(2026, 9, 8),
+                headcount = 2,
+                visibility = visibility,
+            ),
+        )
+        groupIds.forEach { groupId ->
+            tripShareRepository.save(TripShare(trip = trip, group = groupRepository.findById(groupId).orElseThrow()))
+        }
+        return requireNotNull(trip.id)
+    }
+
+    private fun changeTripVisibility(tripId: Long, visibility: Visibility) {
+        val trip = tripRepository.findById(tripId).orElseThrow()
+        trip.visibility = visibility
+        tripRepository.saveAndFlush(trip)
+    }
+
+    /** 기록은 여행 없이 존재할 수 없다. 작성자를 따로 주지 않으면 여행 소유자로 만든다. */
+    private fun newRecord(
+        tripId: Long,
+        name: String = "테스트 기록",
+        authorId: Long = requireNotNull(tripRepository.findById(tripId).orElseThrow().owner.id),
     ): Long = recordService.create(
         authorId,
-        VisitRecordCreateRequest(
+        TripRecordCreateRequest(
+            tripId = tripId,
             name = name,
             category = Category.FOOD,
             address = "서울시 어딘가",
             latitude = 37.5,
             longitude = 127.0,
             rating = 4.5,
-            visibility = visibility,
-            groupIds = groupIds,
         ),
     ).id
 

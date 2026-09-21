@@ -21,10 +21,9 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
   세 프로파일 모두 `ddl-auto: validate` 라 엔티티와 `schema.sql` 이 어긋나면 기동 시점에 실패한다.
 - OAuth2 클라이언트는 **네이버만 등록되어 있다** (§2.1).
 
-> ⚠️ **본 문서는 목표 상태를 기술한다.** 현재 코드는 `Trip` 계층이 없는 평면 구조이며
-> (`VisitRecord` 가 직접 `visibility` 와 `VisitRecordShare` 를 갖는다), 본 문서가 쓰는
-> `TripRecord` 는 그 엔티티의 개명 후 이름이다. 인가도 `SecurityConfig` 가 열려 있어 컨트롤러가
-> 대신 막고 있다. **구현과의 차이와 이관 절차는 §8.1에 있다.**
+> ⚠️ **여행 계층은 구현되어 있다.** 다만 **인가의 첫 관문이 아직 필터체인이 아니다** —
+> `SecurityConfig` 가 열려 있어 컨트롤러가 `requireLogin` 으로 직접 막는다. 공개 범위 판정 자체는
+> 서비스·조회 계층에 구현되어 있다. 남은 차이는 §8.1에 있다.
 
 ### 1.3 네이버 지역 검색 오픈API — 구현에 필요한 사실
 제품 구분과 구조적 제약(검색어당 5건 상한, 거리순 정렬 미지원, CORS 미지원, 고유 장소 ID 부재)은
@@ -39,7 +38,7 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
 | 건수 부족 | 후보 풀이 요청 건수에 못 미쳐도 **오류가 아니다.** 확보된 만큼 반환한다 |
 
 - `title` 에는 검색어 강조용 HTML 태그가 섞여 오므로 제거 후 저장한다.
-- 좌표계와 일일 호출 한도는 구현 착수 시점에 공식 문서로 재검증한다 (§8.4).
+- 좌표계와 일일 호출 한도는 구현 착수 시점에 공식 문서로 재검증한다 (§8.3).
 
 ## 2. 인증 및 인가
 
@@ -197,8 +196,13 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 ```
 
 `Trip.coverPhoto` 와 `Photo.record` 는 `Trip → TripRecord → Photo → Trip` 순환 참조를 만든다.
-FK 는 `photo_id` 를 `trips` 쪽에 두고 `ON DELETE SET NULL` 로 선언한다 — 사진이 지워지면 커버
-지정만 풀리고 여행은 남아야 하기 때문이다 (§3.1).
+`cover_photo_id` 컬럼은 `trips` 에 두되 **외래키는 선언하지 않는다.** 순환 때문에 인라인 FK 로는
+어떤 테이블 순서로도 선언할 수 없고, `ALTER TABLE ADD CONSTRAINT` 는 PostgreSQL 에 `IF NOT EXISTS`
+가 없어 `schema.sql` 을 재실행하는 기동에서 실패하기 때문이다 (§8.1).
+
+따라서 **사진이 지워질 때 커버 지정을 푸는 것은 애플리케이션의 책임**이다. 사진이 사라져도 여행은
+남아야 하므로 이 처리를 빠뜨리면 여행 조회가 깨진다. 마이그레이션 도구를 도입하면 FK 와
+`ON DELETE SET NULL` 로 되돌린다.
 
 ### 3.1 제약 조건
 
@@ -274,9 +278,12 @@ FK 는 `photo_id` 를 `trips` 쪽에 두고 `ON DELETE SET NULL` 로 선언한�
   거르는 방식도 가능하지만, `@SQLRestriction` 은 조인 대상의 조건까지 걸어 주지 않아 누락 지점이
   생기기 쉽다 — 누락은 곧 정보 유출이므로 명시적 전파를 택한다.
 - 기록 하나만 삭제하는 것은 여행에 영향을 주지 않는다. 마지막 기록을 지워 기록이 0건이 되어도
-  여행은 그대로 남는다.
+  여행은 그대로 남는다. **다만 그 기록의 사진이 커버였다면 커버 지정은 해제된다** — 커버는
+  "그 여행의 하위 기록에 속한 사진" 이어야 하고(§3.1), 지워진 기록의 사진이 여행을 계속
+  대표하게 두면 그 불변식이 깨진다. 사진 행과 파일 자체는 남는다.
 - `Photo` 는 파일 본체를 함께 지워야 하므로 soft delete 대상이 아니며 물리 삭제한다.
-  삭제된 사진을 커버로 쓰던 여행은 `cover_photo_id` 가 `NULL` 이 된다 (`ON DELETE SET NULL`, §3).
+  삭제된 사진을 커버로 쓰던 여행은 `cover_photo_id` 가 `NULL` 이 된다. DB 제약이 아니라
+  애플리케이션이 지우는 시점에 해제한다 (§3).
 - **`Group`, `GroupMember`, `GroupInvite`, `TripShare` 는 물리 삭제한다.** 공유 해제와
   그룹 탈퇴는 즉시 조회 권한을 없애야 하는 동작이라, 남아 있는 행이 권한 판정에 끼어들 여지를
   만들지 않는다.
@@ -650,7 +657,8 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
   백엔드는 이를 설정값으로 외부화한다.
   서버는 Content-Type/확장자를 검증하고 위반 시 `400 INVALID_FILE` 을 반환한다.
 - **사진을 올리고 지울 수 있는 사람은 소속 여행의 소유자뿐이다.**
-- 삭제된 사진이 어느 여행의 커버였다면 그 여행의 `cover_photo_id` 는 `NULL` 이 된다 (§3.2).
+- 삭제된 사진이 어느 여행의 커버였다면 그 여행의 `cover_photo_id` 는 `NULL` 이 된다. 외래키가 없어
+  사진 삭제 처리가 직접 해제해야 한다 (§3).
   커버 지정 자체는 `PATCH /api/trips/{id}/cover` 로 한다 (§4.3.2).
 - ⚠️ `GET /api/files/photos/**` 는 **공개 범위를 적용하지 않는다.** 경로를 아는 사람은 비공개
   여행의 사진도 볼 수 있으며, 현재는 추측 불가능한 UUID 경로에만 의존한다 (§8).
@@ -868,47 +876,24 @@ interface PhotoStorageService {
 도메인 차원의 미결 사항(공동 편집, 공개 링크, 방문일, 예산 범위 등)은
 [공통 명세 §7](../SPECIFICATION.md) 에 있다. 여기서는 **백엔드가 해야 할 일**만 둔다.
 
-### 8.1 여행(Trip) 계층 구현 — 최우선
-현재 코드는 `VisitRecord` 가 직접 `visibility` 와 `VisitRecordShare` 를 갖는 평면 구조다.
-본 문서의 목표 상태로 옮기려면:
-
-| # | 작업 |
-|---|---|
-| 1 | `Trip`·`TripShare` 엔티티와 `trips`·`trip_shares` 테이블 신설 |
-| 2 | `VisitRecord` → `TripRecord` 개명 (`visit_records` → `trip_records`, `visit_record_tags` → `trip_record_tags`) |
-| 3 | `trip_records` 에 `trip_id`(NOT NULL) 추가, `visibility`·`author_id` 컬럼 제거, `visit_record_shares` 폐기 |
-| 4 | `trips.cover_photo_id` FK 추가 (`ON DELETE SET NULL`, §3) |
-| 5 | 공개 범위 판정을 기록 조건에서 **여행 조인 조건**으로 이동 (§2.2, §7) |
-| 6 | `PATCH /api/records/{id}/visibility` 제거, `/api/trips/**` 신설 (§4.3) |
-
-- **API 경로와 오류 코드는 개명하지 않는다.** `/api/records`, `recordCount`, `RECORD_NOT_FOUND`
-  는 그대로 둔다 — 엔티티명이 바뀌어도 가리키는 대상이 같고, 공개된 계약을 흔들 이유가 없다.
-- **기존 데이터 이관이 무손실이 아니다.** `trip_id` 가 NOT NULL 이므로 기존 기록을 담을 여행이
-  먼저 있어야 한다. 사용자별 기본 여행 1건을 만들어 묶고 기존 `visit_records.visibility` 와
-  `visit_record_shares` 를 그 여행으로 옮기는데, **기록마다 공개 범위가 달랐던 사용자**는
-  범위별로 여행을 나누거나 가장 좁은 범위로 수렴시켜야 한다. 어느 쪽을 택할지는 이관 시점에
-  결정하며, §8.2의 도구 도입이 선행되어야 한다.
-
-### 8.2 그 밖의 구현 잔여 작업
-- **초대를 링크 모델에서 초대 목록 모델로 옮긴다** (§4.8). 현재 `GroupInvite` 는 `token` 과
-  `expiresAt` 을 갖고 `InviteController` 가 토큰 기반 미리보기·수락을 제공한다. 옮기려면
-  `invitee`·`invited_by` FK 추가, `token`·`expires_at` 컬럼과 `/api/invites/{token}` 경로 제거,
-  `unique(group_id, invitee_id)` 신설, `INVITE_EXPIRED` 코드 폐기와 `USER_NOT_FOUND`·
-  `ALREADY_MEMBER` 추가가 필요하다. **기존 행은 이관하지 않고 버린다** — 링크를 누가 받았는지
-  서버가 모르므로 초대 대상을 복원할 수 없다.
-- **여행 응답에서 `budget` 을 소유자 조건에서 뺀다** (§4.3.1). 예산은 공개 범위를 따르는 값이
-  되었다 (공통 명세 §3.5).
+### 8.1 구현 잔여 작업
 - **`SecurityConfig` 의 `permitAll()` 을 §2.2 정책으로 되돌린다.** 공개 범위 판정은 서비스·조회
   계층에 구현되어 있으나, 인증 자체는 아직 컨트롤러가 `requireLogin` 으로 막는다. 인가의 첫
   관문을 필터체인으로 되돌리는 작업이 남아 있다.
 - **스키마 마이그레이션 도구(Flyway/Liquibase)가 없다.** `schema.sql` 이
-  `CREATE TABLE IF NOT EXISTS` 기반이라 이미 만들어진 테이블에 컬럼을 추가하지 못한다.
-  두 차례의 개정으로 구조가 크게 바뀌었으므로(기존 `places`/`reviews` 를 쓰던 개발 DB 는 재생성이
-  필요하고, 본 개정은 여기에 §8.1을 더한다) **운영 데이터가 생기기 전에** 도입해야 한다.
+  `CREATE TABLE IF NOT EXISTS` 기반이라 이미 만들어진 테이블에 컬럼을 추가하지 못한다. 여행 계층
+  전환은 이 스크립트를 새로 써서 반영했으므로 **기존 개발·dev DB 는 재생성해야 한다.**
+  이 제약의 대가를 두 곳에서 치르고 있다.
+    - `trips.cover_photo_id` 에 외래키가 없다. 순환 참조라 인라인 선언이 불가능하고
+      `ALTER TABLE ADD CONSTRAINT` 는 재실행되지 않기 때문이다 (§3). 도구를 도입하면
+      FK 와 `ON DELETE SET NULL` 로 되돌리고, 커버 해제를 애플리케이션에서 뺄 수 있다.
+    - 구조가 바뀔 때마다 DB 재생성이 필요하다.
+
+  **운영 데이터가 생기기 전에** 도입해야 한다.
 - **태그 API(`/api/tags`)는 구현되어 있으나 호출하는 화면이 없다.** 현재 등록 요청은 항상 빈
   태그 목록으로 들어온다 (frontend §10).
 
-### 8.3 알려진 한계
+### 8.2 알려진 한계
 - **사진 서빙에 공개 범위가 적용되지 않는다** (§4.6). 추측 불가능한 UUID 경로에만 의존하는
   상태이며, 서명 URL 또는 인가 기반 서빙으로의 전환이 후속 과제다 (§5.2).
 - **장소 검색 후보 풀이 부족할 수 있다** (§4.5). 원본 API의 검색어당 5건 상한 때문에 다중 호출
@@ -917,7 +902,7 @@ interface PhotoStorageService {
 - **여행 단위 집계를 제공하지 않는다.** `recordCount` 외의 통계는 범위 밖이며, 평균 평점은
   의도적으로 집계하지 않는다 (§3.1).
 
-### 8.4 외부 확인이 필요한 것
+### 8.3 외부 확인이 필요한 것
 - 네이버 지역 검색 오픈API의 **정확한 `mapx`/`mapy` 좌표계**와 **일일 호출 한도**는 구현 착수
   시점에 developers.naver.com 공식 문서로 재검증해야 한다 (§1.3).
 - 오브젝트 스토리지 전환 일정과 기존 파일시스템 데이터 마이그레이션 절차는 후속 명세에서 다룬다 (§5.2).

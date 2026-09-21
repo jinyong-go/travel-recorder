@@ -170,12 +170,17 @@ frontend/  React + Vite. components / context / config / utils / pages
 - 백엔드 테스트: `cd backend && ./gradlew test`
 
 ### 5.1 현재 구현 상태
-**명세와 코드가 어긋나 있다.** 작업 전에 반드시 확인한다.
 
-- **여행(Trip) 계층이 구현되지 않았다.** 명세는 `Trip → TripRecord` 2계층이지만 코드는
-  `VisitRecord` 가 직접 `visibility` 를 갖는 평면 구조다. 상세는 backend §8.1, frontend §10.1.
-- **프론트엔드가 백엔드 API를 호출하지 않는다.** 목업 데이터로 동작한다.
-- **`SecurityConfig` 가 `permitAll()` 로 열려 있다.** 인증은 컨트롤러가 직접 막는다.
+- **백엔드는 여행(Trip) 계층으로 전환되었다.** `Trip → TripRecord` 2계층이고 공개 범위와
+  공유 관계는 `Trip` 에만 있다. `/api/trips` 6개가 구현되어 있으며, 기록 조회는 항상 소속
+  여행을 조인해 판정한다.
+- **프론트엔드가 백엔드 API를 호출하지 않는다.** 목업 데이터로 동작한다. 화면은 여행 계층을
+  이미 반영하고 있어 연동만 남았다. 상세는 frontend §10.
+- **`SecurityConfig` 가 `permitAll()` 로 열려 있다.** 인증은 컨트롤러가 `requireLogin` 으로
+  직접 막는다 (backend §8.1).
+- **스키마 마이그레이션 도구가 없다.** `schema.sql` 을 새로 써서 여행 계층을 반영했으므로
+  **기존 개발·dev DB 는 재생성해야 한다.** `trips.cover_photo_id` 에 외래키가 없는 것도 같은
+  제약 탓이며, 커버 해제를 애플리케이션이 직접 한다 (backend §3, §8.1).
 
-코드에서 `VisitRecord`, `Place`, `Review` 를 보면 이전 모델이다. 새 작업은 명세 기준으로 하되,
-**기존 코드를 명세에 맞춰 고치는 것은 별도 작업**이므로 임의로 착수하지 않는다.
+`REFERENCE.md` 의 초기 스케치와 `backend/README.md` 의 구조 설명에는 `VisitRecord`·`Place`·
+`Review` 등 이전 모델의 이름이 남아 있다. **코드와 명세가 기준이다.**

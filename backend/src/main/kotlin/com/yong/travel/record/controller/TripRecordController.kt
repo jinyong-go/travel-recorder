@@ -8,12 +8,12 @@ import com.yong.travel.record.domain.Category
 import com.yong.travel.record.dto.RecordListQuery
 import com.yong.travel.record.dto.RecordScope
 import com.yong.travel.record.dto.RecordSort
-import com.yong.travel.record.dto.VisibilityUpdateRequest
-import com.yong.travel.record.dto.VisitRecordCreateRequest
-import com.yong.travel.record.dto.VisitRecordResponse
-import com.yong.travel.record.dto.VisitRecordSummaryResponse
-import com.yong.travel.record.dto.VisitRecordUpdateRequest
-import com.yong.travel.record.service.VisitRecordService
+import com.yong.travel.record.dto.TripChangeRequest
+import com.yong.travel.record.dto.TripRecordCreateRequest
+import com.yong.travel.record.dto.TripRecordResponse
+import com.yong.travel.record.dto.TripRecordSummaryResponse
+import com.yong.travel.record.dto.TripRecordUpdateRequest
+import com.yong.travel.record.service.TripRecordService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -30,8 +30,8 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/records")
-class VisitRecordController(
-    private val recordService: VisitRecordService,
+class TripRecordController(
+    private val recordService: TripRecordService,
 ) {
 
     /**
@@ -44,6 +44,7 @@ class VisitRecordController(
     @GetMapping
     fun list(
         @RequestParam scope: RecordScope,
+        @RequestParam(required = false) tripId: Long?,
         @RequestParam(required = false) category: Category?,
         @RequestParam(required = false) tag: String?,
         @RequestParam(required = false) keyword: String?,
@@ -52,13 +53,13 @@ class VisitRecordController(
         @RequestParam(required = false) lng: Double?,
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: CustomOAuth2User?,
-    ): PageResponse<VisitRecordSummaryResponse> {
+    ): PageResponse<TripRecordSummaryResponse> {
         val userId = when (scope) {
             RecordScope.MINE, RecordScope.SHARED -> requireLogin(principal)
             RecordScope.PUBLIC -> principal?.userId
         }
         return recordService.list(
-            RecordListQuery(scope, category, tag, keyword, sort, lat, lng),
+            RecordListQuery(scope, tripId, category, tag, keyword, sort, lat, lng),
             userId,
             listPageRequest(page),
         )
@@ -69,30 +70,33 @@ class VisitRecordController(
     fun get(
         @PathVariable recordId: Long,
         @AuthenticationPrincipal principal: CustomOAuth2User?,
-    ): VisitRecordResponse = recordService.get(recordId, principal?.userId)
+    ): TripRecordResponse = recordService.get(recordId, principal?.userId)
 
-    /** 기록 등록. 작성자는 요청자로 고정되며 요청으로 지정할 수 없다. */
+    /** 기록 등록. 소속 여행은 요청자가 소유한 것이어야 하며, 작성자는 그 여행의 소유자다. */
     @PostMapping
     fun create(
-        @RequestBody @Valid request: VisitRecordCreateRequest,
+        @RequestBody @Valid request: TripRecordCreateRequest,
         @AuthenticationPrincipal principal: CustomOAuth2User?,
-    ): VisitRecordResponse = recordService.create(requireLogin(principal), request)
+    ): TripRecordResponse = recordService.create(requireLogin(principal), request)
 
     /** 기록 수정. 작성자만 할 수 있다. */
     @PutMapping("/{recordId}")
     fun update(
         @PathVariable recordId: Long,
-        @RequestBody @Valid request: VisitRecordUpdateRequest,
+        @RequestBody @Valid request: TripRecordUpdateRequest,
         @AuthenticationPrincipal principal: CustomOAuth2User?,
-    ): VisitRecordResponse = recordService.update(recordId, requireLogin(principal), request)
+    ): TripRecordResponse = recordService.update(recordId, requireLogin(principal), request)
 
-    /** 기록의 공개 범위 변경. GROUP 이면 공유 그룹 목록도 함께 갱신된다. */
-    @PatchMapping("/{recordId}/visibility")
-    fun changeVisibility(
+    /**
+     * 소속 여행 변경. 공개 범위를 바꾸는 수단은 기록에 없다 —
+     * `PATCH /api/trips/{id}/visibility` 로 여행에서 바꾼다 (명세 §4.4).
+     */
+    @PatchMapping("/{recordId}/trip")
+    fun changeTrip(
         @PathVariable recordId: Long,
-        @RequestBody @Valid request: VisibilityUpdateRequest,
+        @RequestBody @Valid request: TripChangeRequest,
         @AuthenticationPrincipal principal: CustomOAuth2User?,
-    ): VisitRecordResponse = recordService.changeVisibility(recordId, requireLogin(principal), request)
+    ): TripRecordResponse = recordService.changeTrip(recordId, requireLogin(principal), request)
 
     /** 기록 삭제. soft delete 라 행은 남고 조회에서만 사라진다. */
     @DeleteMapping("/{recordId}")

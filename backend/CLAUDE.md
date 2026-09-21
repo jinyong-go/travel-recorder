@@ -52,8 +52,8 @@ com.yong.travel
   ```kotlin
   @RestController
   @RequestMapping("/api/records")
-  class VisitRecordController(
-      private val recordService: VisitRecordService,
+  class TripRecordController(
+      private val recordService: TripRecordService,
   )
   ```
 

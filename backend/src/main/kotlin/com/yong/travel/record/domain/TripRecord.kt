@@ -1,7 +1,7 @@
 package com.yong.travel.record.domain
 
-import com.yong.travel.auth.domain.User
 import com.yong.travel.tag.domain.Tag
+import com.yong.travel.trip.domain.Trip
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -20,7 +20,10 @@ import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 
 /**
- * 방문 기록 — 서비스의 유일한 저장 단위이자 개인 데이터다.
+ * 여행 기록 — 여행에 속한 방문 한 건이다.
+ *
+ * **작성자도 공개 범위도 이 엔티티에 두지 않는다.** 둘 다 소속 여행에서 파생되며, 같은 사실을
+ * 두 곳에 적으면 어긋나는 순간 어느 쪽이 맞는지 알 수 없기 때문이다 (명세 §3.1).
  *
  * 장소는 외부(네이버 지역 검색)에서 조회할 뿐 자체 저장 단위로 두지 않으므로,
  * 장소명·주소·좌표·원본 링크는 등록 시점의 스냅샷으로 이 행에 복사해 둔다.
@@ -30,12 +33,18 @@ import java.time.Instant
  * 중복이 아니며, 그래서 중복 방지 제약도 두지 않는다.
  */
 @Entity
-@Table(name = "visit_records")
+@Table(name = "trip_records")
 @SQLRestriction("deleted_at is null")
-class VisitRecord(
+class TripRecord(
+    /**
+     * 소속 여행. 작성자와 공개 범위의 유일한 출처다.
+     *
+     * NOT NULL 이다 — 여행에 속하지 않는 기록은 누가 볼 수 있는지 판정할 근거가 없다.
+     * 다른 여행으로 옮기는 것은 이 참조를 바꾸는 것으로 처리한다 (명세 §3.1).
+     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id", nullable = false)
-    var author: User,
+    @JoinColumn(name = "trip_id", nullable = false)
+    var trip: Trip,
 
     @Column(nullable = false)
     var name: String,
@@ -64,10 +73,6 @@ class VisitRecord(
 
     @Column(length = 1000)
     var memo: String? = null,
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    var visibility: Visibility = Visibility.PRIVATE,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -76,7 +81,7 @@ class VisitRecord(
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "visit_record_tags",
+        name = "trip_record_tags",
         joinColumns = [JoinColumn(name = "record_id")],
         inverseJoinColumns = [JoinColumn(name = "tag_id")],
     )

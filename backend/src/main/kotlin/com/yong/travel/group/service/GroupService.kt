@@ -13,7 +13,7 @@ import com.yong.travel.group.dto.GroupSummaryResponse
 import com.yong.travel.group.repository.GroupInviteRepository
 import com.yong.travel.group.repository.GroupMemberRepository
 import com.yong.travel.group.repository.GroupRepository
-import com.yong.travel.group.repository.VisitRecordShareRepository
+import com.yong.travel.trip.repository.TripShareRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -39,7 +39,7 @@ class GroupServiceImpl(
     private val groupRepository: GroupRepository,
     private val groupMemberRepository: GroupMemberRepository,
     private val groupInviteRepository: GroupInviteRepository,
-    private val shareRepository: VisitRecordShareRepository,
+    private val tripShareRepository: TripShareRepository,
     private val userRepository: UserRepository,
 ) : GroupService {
 
@@ -74,14 +74,14 @@ class GroupServiceImpl(
 
     /**
      * 그룹을 지우면 멤버·초대·공유 관계가 함께 사라진다.
-     * 이 그룹으로만 공유되던 기록은 결과적으로 비공개가 되며, 기록 자체는 삭제되지 않는다.
+     * 이 그룹으로만 공유되던 여행은 결과적으로 비공개가 되며, 여행과 하위 기록은 삭제되지 않는다.
      */
     @Transactional
     override fun delete(groupId: Long, userId: Long) {
         val group = findGroup(groupId)
         requireOwner(group, userId)
 
-        shareRepository.deleteByGroupId(groupId)
+        tripShareRepository.deleteByGroupId(groupId)
         groupInviteRepository.deleteByGroupId(groupId)
         groupMemberRepository.deleteByGroupId(groupId)
         groupRepository.delete(group)

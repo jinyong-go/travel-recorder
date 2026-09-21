@@ -3,7 +3,6 @@ package com.yong.travel.group.repository
 import com.yong.travel.group.domain.Group
 import com.yong.travel.group.domain.GroupInvite
 import com.yong.travel.group.domain.GroupMember
-import com.yong.travel.group.domain.VisitRecordShare
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -58,17 +57,6 @@ interface GroupInviteRepository : JpaRepository<GroupInvite, Long> {
     fun findByInviteeIdOrderByCreatedAtAsc(inviteeId: Long, pageable: Pageable): Page<GroupInvite>
 
     fun findByGroupIdAndInviteeId(groupId: Long, inviteeId: Long): GroupInvite?
-
-    fun deleteByGroupId(groupId: Long)
-}
-
-interface VisitRecordShareRepository : JpaRepository<VisitRecordShare, Long> {
-
-    fun findByRecordId(recordId: Long): List<VisitRecordShare>
-
-    fun existsByRecordIdAndGroupIdIn(recordId: Long, groupIds: Collection<Long>): Boolean
-
-    fun deleteByRecordId(recordId: Long)
 
     fun deleteByGroupId(groupId: Long)
 }

@@ -38,3 +38,7 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+### 사진 저장소 (app.storage.local.root-dir 기본값) ###
+# 테스트와 bootRun 이 실제 파일을 쓰는 자리다. 저장소 내용은 추적하지 않는다.
+uploads/
