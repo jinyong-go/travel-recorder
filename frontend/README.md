@@ -1,8 +1,9 @@
 # 여행 지도 (travel-recorder) — Frontend
 
-방문한 장소를 개인 기록으로 남기고 원하는 상대에게만 공유하는 웹 애플리케이션의 프론트엔드입니다.
-네이버 로그인으로 인증한 사용자가 방문 기록을 남기고, 각 기록의 공개 범위(나만 보기 / 그룹 공유 /
-전체 공개)를 직접 정합니다. 목록은 내 기록·공유받은 기록·둘러보기로 나뉩니다.
+다녀온 여행을 기록으로 남기고 원하는 상대에게만 공유하는 웹 애플리케이션의 프론트엔드입니다.
+네이버 로그인으로 인증한 사용자가 **여행**(기간·인원·예산)을 만들고 그 하위에 방문한 장소를
+기록으로 남깁니다. 공개 범위(나만 보기 / 그룹 공유 / 전체 공개)는 **여행 단위로** 정하며 하위
+기록이 전부 함께 따라갑니다. 목록은 내 여행·공유받은 여행·둘러보기로 나뉩니다.
 
 상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md)를 참고하세요.
 
@@ -35,25 +36,28 @@ frontend/
 │  ├─ pages/
 │  │  ├─ LandingPage.jsx       # 인덱스/랜딩 (/)
 │  │  ├─ LoginPage.jsx         # 로그인 (/login, 네이버 OAuth 진입점)
-│  │  ├─ RecordListPage.jsx    # 기록 목록 (/records, 범위 탭·카테고리 탭·정렬·페이지네이션)
-│  │  ├─ RecordDetailPage.jsx  # 기록 상세 (/records/:recordId, 사진·평점·공개 범위 설정)
-│  │  ├─ RegisterRecordPage.jsx # 기록 등록 (/records/register)
-│  │  ├─ GroupsPage.jsx        # 공유 그룹 목록·생성 (/groups)
-│  │  ├─ GroupDetailPage.jsx   # 그룹 상세 — 멤버·초대 링크·삭제 (/groups/:groupId)
-│  │  ├─ InviteAcceptPage.jsx  # 초대 수락 (/invites/:token, 비로그인도 열람 가능)
+│  │  ├─ TripListPage.jsx      # 여행 목록 (/trips, 범위 탭·정렬·페이지네이션)
+│  │  ├─ TripRegisterPage.jsx  # 여행 만들기 (/trips/new)
+│  │  ├─ TripDetailPage.jsx    # 여행 상세 (/trips/:tripId, 하위 기록·공개 범위·정보 수정·삭제)
+│  │  ├─ RecordDetailPage.jsx  # 기록 상세·수정 (/records/:recordId)
+│  │  ├─ RegisterRecordPage.jsx # 기록 등록 (/records/register, 소속 여행 선택)
+│  │  ├─ GroupsPage.jsx        # 공유 그룹 목록·생성, 받은 초대 (/groups)
+│  │  ├─ GroupDetailPage.jsx   # 그룹 상세 — 멤버·이메일 초대·삭제 (/groups/:groupId)
 │  │  └─ NotFoundPage.jsx      # 404 (그 외 모든 경로)
+│  │                           # /records 로 들어온 요청은 /trips 로 보낸다
 │  ├─ components/
 │  │  ├─ PlaceSearchModal.jsx  # 장소 검색 모달 (10건 페이징, 거리순 정렬)
 │  │  ├─ PlaceMapModal.jsx     # 지도 모달 (목록·상세 공용)
 │  │  ├─ NaverMapView.jsx      # 네이버 지도 SDK v3 렌더링 + 마커
 │  │  ├─ StarRatingInput.jsx   # 평점 입력 (0.5점 단위)
 │  │  ├─ StarRatingDisplay.jsx # 평점 표시 (읽기 전용)
-│  │  ├─ VisibilitySelect.jsx  # 공개 범위 선택 + 공유 그룹 다중 선택 (등록·상세 공용)
-│  │  ├─ VisibilityBadge.jsx   # 공개 범위 배지 (작성자에게만 노출, 아이콘+텍스트)
+│  │  ├─ TripForm.jsx          # 여행 입력 폼 (만들기·정보 수정 공용, 공개 범위는 제외)
+│  │  ├─ VisibilitySelect.jsx  # 공개 범위 선택 + 공유 그룹 다중 선택 (여행 전용)
+│  │  ├─ VisibilityBadge.jsx   # 공개 범위 배지 (소유자에게만 노출, 아이콘+텍스트)
 │  │  ├─ SettingsMenu.jsx      # 지도 표시 방식 설정
 │  │  ├─ ThemeSelector.jsx     # 라이트/다크 테마 토글
 │  │  └─ icons.jsx             # 아이콘 컴포넌트
-│  ├─ context/RecordsContext.jsx       # 기록·그룹·초대 전역 상태 + 공개 범위 판정
+│  ├─ context/RecordsContext.jsx       # 여행·기록·그룹·초대 전역 상태 + 공개 범위 판정
 │  ├─ hooks/
 │  │  ├─ useReferenceLocation.js       # 기준 위치(Geolocation/수동/기본값) 훅
 │  │  ├─ useTheme.js                   # 라이트/다크 테마 상태 (테마 토글이 있는 화면 공용)
@@ -64,7 +68,7 @@ frontend/
 │  │  ├─ mapSettings.js                # 지도 표시 방식·지도 URL 생성
 │  │  ├─ uploadLimits.js               # 사진 용량·형식 제한 및 검증
 │  │  └─ referenceLocation.js          # 기준 위치 저장/조회, 기본값(서울역)
-│  ├─ data/                            # 백엔드 연동 전 목업 데이터
+│  ├─ data/                            # 백엔드 연동 전 목업 데이터 (trips·records·groups)
 │  ├─ theme/themes.js                  # 라이트/다크 테마 정의 및 로컬 저장
 │  └─ utils/geo.js                     # 하버사인 거리 계산
 ├─ index.html
@@ -134,7 +138,7 @@ SPA 라우팅(`/records/register` 등)을 사용하므로, 서버에서 **알 �
 ## 백엔드 연동
 
 - 백엔드는 같은 저장소의 `backend/` (Spring Boot + Kotlin)이며 기본 포트는 **8080**입니다.
-- API 기본 경로는 `/api` 이하입니다. (`/api/auth`, `/api/records`, `/api/records/{recordId}/photos`, `/api/groups`, `/api/invites`, `/api/places/search`, `/api/tags`)
+- API 기본 경로는 `/api` 이하입니다. (`/api/auth`, `/api/trips`, `/api/records`, `/api/records/{recordId}/photos`, `/api/groups`, `/api/invites`, `/api/places/search`, `/api/tags`)
 - 백엔드는 CORS 허용 오리진으로 `http://localhost:5173`을 설정해 두었으므로, 개발 시 프론트엔드를 기본 포트로 실행하면 별도 프록시 설정 없이 호출할 수 있습니다.
 - 현재 프론트엔드는 **아직 API를 호출하지 않고 `src/data/`의 목업 데이터로 화면을 구성**합니다. 실제 연동 시 API 응답 스키마에 맞춘 매핑 레이어를 추가합니다.
 
@@ -142,15 +146,18 @@ SPA 라우팅(`/records/register` 등)을 사용하므로, 서버에서 **알 �
 
 구현 완료
 - 랜딩 페이지 (`/`), 404 페이지 (정의되지 않은 모든 경로)
-- 기록 목록 화면 (`/records`) — 범위 탭(내 기록/공유받은 기록/둘러보기), 카테고리 탭, 정렬, 페이지네이션, 지도 모달, 등록 FAB. 범위/필터/정렬/페이지는 쿼리 파라미터(`?scope=&category=&sort=&page=`)로 유지
-- 기록 상세 화면 (`/records/:recordId`) — 사진 갤러리, 평점·메모, 공개 범위 변경(작성자 전용), 삭제 확인 모달
-- 기록 등록 페이지 (`/records/register`) 및 장소 검색 모달, 평점 입력, 공개 범위 선택(기본값 나만 보기)
-- 공유 그룹 (`/groups`, `/groups/:groupId`) — 그룹 생성·이름 표시, 멤버 목록·제외·탈퇴, 초대 링크 발급/재발급/폐기, 그룹 삭제
-- 초대 수락 (`/invites/:token`) — 만료·부재·정원 초과 상태별 안내
+- 여행 목록 화면 (`/trips`) — 범위 탭(내 여행/공유받은 여행/둘러보기), 정렬(최신순/시작일순), 페이지네이션. 범위/정렬/페이지는 쿼리 파라미터(`?scope=&sort=&page=`)로 유지되어 상세에서 돌아와도 보존됩니다. `/records` 로 들어온 요청은 `/trips` 로 보냅니다
+- 여행 만들기 (`/trips/new`) — 이름·기간·인원·예산·설명. 공개 범위 기본값은 나만 보기
+- 여행 상세 (`/trips/:tripId`) — 하위 기록 카드 목록, 공개 범위 변경(소유자 전용, 접을 수 있음), 정보 수정(확인 모달), 삭제 확인 모달(함께 지워지는 기록 건수를 문장으로 명시)
+- 기록 상세·수정 (`/records/:recordId`) — 사진 갤러리, 평점·메모, 소속 여행 링크와 읽기 전용 범위 배지, 수정 폼(장소·카테고리·평점·메모·사진), 삭제 확인 모달
+- 기록 등록 (`/records/register`) — 소속 여행 선택, 장소 검색 모달, 평점 입력, 사진 첨부
+- 공유 그룹 (`/groups`, `/groups/:groupId`) — 그룹 생성, 받은 초대 수락·거절, 멤버 목록·제외·탈퇴, 이메일 초대 발송과 대기 초대 철회, 그룹 삭제
 - 로그인 페이지 (`/login`) — 네이버 OAuth 진입점(백엔드 `/oauth2/authorization/naver`로 전체 페이지 이동)
 - 지도 연동 — 네이버 지도. 설정 메뉴에서 "새 창으로 열기"(지도 검색)와 "페이지 내 지도 보기"(SDK v3 + 마커, Client ID 필요) 중 선택
 - 라이트/다크 테마 토글(시스템 설정 기본값, 선택 시 로컬 저장), 기준 위치(Geolocation → 수동 지정 → 서울역) 처리
 
 미구현 / 예정 (상세는 SPECIFICATION.md 10장)
-- 네이버 로그인 이후 처리 — 세션 유지, 로그인 상태 UI(프로필·로그아웃), 로그인 사용자 판별. 현재는 목업 사용자(`CURRENT_USER`) 기준으로 작성자 여부를 판단합니다
-- 백엔드 API 연동 (현재 목업 데이터 사용)
+- 네이버 로그인 이후 처리 — 세션 유지, 로그인 상태 UI(프로필·로그아웃), 로그인 사용자 판별. 현재는 목업 사용자(`CURRENT_USER`) 기준으로 소유자 여부를 판단합니다
+- 백엔드 API 연동 (현재 목업 데이터 사용). 사진 업로드·삭제도 목업 단계이며 연동 지점은 코드에 TODO 로 표시되어 있습니다
+- 여행 대표 사진 지정, 기록의 소속 여행 변경(다른 여행으로 옮기기), 하위 기록 목록 페이지네이션
+- 태그 입력·필터 UI (백엔드는 지원하지만 화면이 없어 등록 요청이 항상 빈 태그 목록으로 나갑니다)
