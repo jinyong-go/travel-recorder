@@ -168,6 +168,23 @@ export function RecordsProvider({ children }) {
     setRecords((prev) => prev.filter((r) => String(r.id) !== String(recordId)))
   }, [])
 
+  /**
+   * 기록 수정(장소·카테고리·평점·메모·사진). 고칠 때마다 updatedAt 을 올린다 —
+   * 상세와 카드의 "(수정됨)" 표시가 이 값에 달려 있다.
+   *
+   * 소속 여행(tripId)은 이 함수로 바꾸지 않는다. 여행이 바뀌면 공개 범위가 함께 바뀌므로
+   * 확인 절차가 따로 필요하다 (frontend 명세 §5.6.1, 미구현).
+   *
+   * 작성자 판정은 호출부(기록 상세)가 하고, 실제 차단 책임은 서버에 있다.
+   */
+  const updateRecord = useCallback((recordId, patch) => {
+    setRecords((prev) =>
+      prev.map((r) =>
+        String(r.id) === String(recordId) ? { ...r, ...patch, updatedAt: today() } : r,
+      ),
+    )
+  }, [])
+
   const myGroups = useMemo(
     () => groups.filter((g) => g.members.some((m) => m.id === currentUser.id)),
     [groups, currentUser.id],
@@ -362,6 +379,7 @@ export function RecordsProvider({ children }) {
       changeTripVisibility,
       findRecord,
       addRecord,
+      updateRecord,
       deleteRecord,
       groups,
       myGroups,
@@ -393,6 +411,7 @@ export function RecordsProvider({ children }) {
       changeTripVisibility,
       findRecord,
       addRecord,
+      updateRecord,
       deleteRecord,
       groups,
       myGroups,

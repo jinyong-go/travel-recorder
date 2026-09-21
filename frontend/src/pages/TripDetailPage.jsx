@@ -38,6 +38,8 @@ export default function TripDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [editedMessage, setEditedMessage] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  // 확인을 누르기 전까지 수정 값을 들고만 있는다. 반영은 confirmEdit 이 한다.
+  const [pendingEdit, setPendingEdit] = useState(null)
 
   if (!trip) {
     // 볼 수 없는 여행과 없는 여행을 구분해 표시하지 않는다. 구분하면 존재가 드러난다.
@@ -70,8 +72,12 @@ export default function TripDetailPage() {
     }
   }
 
-  const handleEditSubmit = (values) => {
-    updateTrip(trip.id, values)
+  /** 폼 제출은 확인 모달을 여는 데서 끝난다. 실제 반영은 확인을 눌러야 일어난다. */
+  const handleEditSubmit = (values) => setPendingEdit(values)
+
+  const confirmEdit = () => {
+    updateTrip(trip.id, pendingEdit)
+    setPendingEdit(null)
     setEditOpen(false)
     setEditedMessage('여행 정보를 수정했습니다.')
   }
@@ -162,7 +168,7 @@ export default function TripDetailPage() {
                       disabled={!visibilityChanged}
                       onClick={handleVisibilitySave}
                     >
-                      공개 범위 저장
+                      저장
                     </button>
                     {savedMessage && <span className="detail-saved-msg">{savedMessage}</span>}
                   </div>
@@ -182,7 +188,7 @@ export default function TripDetailPage() {
                   {/* 공개 범위는 이 폼에 없다. 위의 전용 섹션에서만 바꾼다. */}
                   <TripForm
                     initialTrip={trip}
-                    submitLabel="수정 저장"
+                    submitLabel="수정"
                     onSubmit={handleEditSubmit}
                     onCancel={() => setEditOpen(false)}
                   />
@@ -280,6 +286,36 @@ export default function TripDetailPage() {
               </button>
               <button type="button" className="confirm-ok" onClick={handleDelete}>
                 삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingEdit && (
+        <div className="modal-overlay" onClick={() => setPendingEdit(null)}>
+          <div
+            className="modal-panel confirm-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="여행 정보 수정 확인"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>여행 정보를 수정할까요?</h2>
+            {/* 공개 범위는 이 폼에 없다는 사실을 문구로 확인시킨다 (§9). */}
+            <p className="confirm-desc">
+              입력한 내용으로 여행 정보가 바뀝니다. 공개 범위는 그대로입니다.
+            </p>
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="confirm-cancel"
+                onClick={() => setPendingEdit(null)}
+              >
+                취소
+              </button>
+              <button type="button" className="confirm-ok confirm-ok-safe" onClick={confirmEdit}>
+                수정
               </button>
             </div>
           </div>

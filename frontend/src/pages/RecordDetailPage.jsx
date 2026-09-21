@@ -1,29 +1,66 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { categoryIcon, categoryLabel } from '../data/records.js'
+import { CATEGORIES, categoryIcon, categoryLabel } from '../data/records.js'
 import { useRecords } from '../context/RecordsContext.jsx'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
+import {
+  ALLOWED_PHOTO_ACCEPT,
+  MAX_PHOTO_SIZE_MB,
+  MAX_PHOTO_TOTAL_MB,
+  validatePhotoFiles,
+} from '../config/uploadLimits.js'
+import { haversineDistanceKm } from '../utils/geo.js'
 import useMapMode from '../hooks/useMapMode.js'
+import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import StarRatingDisplay from '../components/StarRatingDisplay.jsx'
+import StarRatingInput from '../components/StarRatingInput.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
+import PlaceSearchModal from '../components/PlaceSearchModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
-import { ArrowLeftIcon, MapPinIcon, MapViewIcon } from '../components/icons.jsx'
+import {
+  ArrowLeftIcon,
+  CloseIcon,
+  MapPinIcon,
+  MapViewIcon,
+  PhotoIcon,
+  SearchIcon,
+} from '../components/icons.jsx'
+// 수정 폼의 입력 요소(장소 검색 줄·카테고리 칩·파일 선택)는 등록 폼과 같은 생김새를 쓴다.
+import './RegisterRecordPage.css'
 import './RecordDetailPage.css'
+
+const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
+
+// 등록 폼과 같은 제한을 쓴다 (§5.3). 두 화면이 다른 값을 쓰면 어느 쪽이 맞는지 알 수 없다.
+const MEMO_MAX_LENGTH = 1000
 
 export default function RecordDetailPage() {
   const { recordId } = useParams()
   const navigate = useNavigate()
-  const { findRecord, tripOf, currentUser, myGroups, deleteRecord } = useRecords()
+  const { findRecord, tripOf, currentUser, myGroups, deleteRecord, updateRecord } = useRecords()
   const { themeKey, changeTheme } = useTheme()
   const { isEmbed } = useMapMode()
+  const { location: referenceLocation } = useReferenceLocation()
 
   const record = findRecord(recordId)
   const isAuthor = record != null && record.authorId === currentUser.id
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
+  // 장소·카테고리·평점·메모·사진을 한 번에 고친다. 저장 전까지는 전부 초안이다.
+  const [editing, setEditing] = useState(false)
+  const [placeDraft, setPlaceDraft] = useState(null)
+  const [categoryDraft, setCategoryDraft] = useState('')
+  const [ratingDraft, setRatingDraft] = useState(0)
+  const [memoDraft, setMemoDraft] = useState('')
+  const [photosDraft, setPhotosDraft] = useState([])
+  const [editError, setEditError] = useState('')
+  const [photoErrors, setPhotoErrors] = useState([])
+  const [searchOpen, setSearchOpen] = useState(false)
+  // 지울 사진의 위치. 0번도 지울 수 있으므로 없음은 null 로 구분한다.
+  const [removingPhotoIndex, setRemovingPhotoIndex] = useState(null)
 
   if (!record) {
     // 없는 기록과 볼 권한이 없는 기록을 구분해 보여주지 않는다.
@@ -59,6 +96,84 @@ export default function RecordDetailPage() {
     navigate(`/trips/${trip.id}`)
   }
 
+  const startEdit = () => {
+    setPlaceDraft({
+      name: record.name,
+      address: record.address,
+      region: record.region,
+      location: record.location,
+      link: record.externalLink,
+    })
+    setCategoryDraft(record.category)
+    setRatingDraft(record.rating)
+    setMemoDraft(record.memo ?? '')
+    setPhotosDraft(photos)
+    setEditError('')
+    setPhotoErrors([])
+    setEditing(true)
+  }
+
+  /** 장소·카테고리·평점·메모·사진을 한 번에 반영한다. 하나라도 검증에 걸리면 아무것도 바꾸지 않는다. */
+  const handleSave = () => {
+    if (!placeDraft) {
+      setEditError('장소를 검색해 선택해주세요.')
+      return
+    }
+    if (!categoryDraft) {
+      setEditError('카테고리를 선택해주세요.')
+      return
+    }
+    if (!ratingDraft) {
+      setEditError('평점을 선택해주세요.')
+      return
+    }
+    if (memoDraft.length > MEMO_MAX_LENGTH) {
+      setEditError(`메모는 ${MEMO_MAX_LENGTH}자 이하로 입력해주세요.`)
+      return
+    }
+
+    const patch = {
+      name: placeDraft.name,
+      address: placeDraft.address,
+      region: placeDraft.region ?? placeDraft.address,
+      externalLink: placeDraft.link,
+      category: categoryDraft,
+      rating: ratingDraft,
+      memo: memoDraft.trim(),
+      photos: photosDraft,
+    }
+    // 장소가 바뀌면 거리도 다시 잰다. 기준 위치는 이 브라우저의 것이다 (§5.5).
+    // 좌표 없는 기록(목업에 검색 결과가 없는 장소)을 카테고리만 고치는 경우가 있으므로
+    // 좌표가 있을 때만 손댄다. 없는 좌표로 거리를 계산하면 화면이 통째로 깨진다.
+    if (placeDraft.location) {
+      patch.location = placeDraft.location
+      patch.distanceKm = haversineDistanceKm(referenceLocation, placeDraft.location)
+    }
+    updateRecord(record.id, patch)
+    setEditing(false)
+  }
+
+  const handlePhotoAdd = (e) => {
+    const files = Array.from(e.target.files ?? [])
+    // 이미 올라간 사진은 URL 만 남아 용량을 알 수 없다. 합계 검사는 이번에 고른 파일만 대상으로 한다.
+    const { accepted, errors: rejected } = validatePhotoFiles(files)
+    setPhotoErrors(rejected)
+    if (accepted.length > 0) {
+      // TODO(백엔드 연동): 저장 시 POST /api/records/{id}/photos 로 올린다.
+      // 지금은 미리보기 URL 을 그대로 기록에 넣는다.
+      setPhotosDraft((prev) => [...prev, ...accepted.map((file) => URL.createObjectURL(file))])
+    }
+    // 같은 파일을 연이어 고를 수 있도록 값을 비운다.
+    e.target.value = ''
+  }
+
+  // TODO(백엔드 연동): 저장 시 DELETE /api/photos/{photoId}.
+  const handlePhotoRemove = () => {
+    setPhotoErrors([])
+    setPhotosDraft((prev) => prev.filter((_, i) => i !== removingPhotoIndex))
+    setRemovingPhotoIndex(null)
+  }
+
   return (
     <>
       <header className="app-header">
@@ -80,72 +195,203 @@ export default function RecordDetailPage() {
             <ArrowLeftIcon /> {trip.name}
           </Link>
 
-          {/* 기본 정보 */}
+          {/* 기록 내용은 카드 하나에 모은다. 소속 여행과 삭제만 따로 둔다. */}
           <section className="detail-summary">
-            <div className="detail-summary-head">
-              <span className="detail-category-badge">
-                <span aria-hidden="true">{categoryIcon(record.category)}</span>{' '}
-                {categoryLabel(record.category)}
-              </span>
-              <h1 className="detail-name">{record.name}</h1>
-              <p className="detail-region">{record.address ?? record.region}</p>
-            </div>
+            {editing ? (
+              <div className="detail-edit-form">
+                <div className="form-field">
+                  <label htmlFor="edit-place-name">장소명</label>
+                  {/* 장소명은 직접 입력할 수 없다. 검색 결과에서만 채운다 (§5.3). */}
+                  <div className="place-search-row">
+                    <input
+                      id="edit-place-name"
+                      type="text"
+                      value={placeDraft?.name ?? ''}
+                      placeholder="검색 버튼으로 장소를 선택해주세요"
+                      disabled
+                      readOnly
+                    />
+                    <button
+                      type="button"
+                      className="search-trigger-btn"
+                      onClick={() => setSearchOpen(true)}
+                    >
+                      <SearchIcon />
+                      검색
+                    </button>
+                  </div>
+                  {placeDraft?.address && <p className="field-hint">{placeDraft.address}</p>}
+                </div>
 
-            <dl className="detail-meta">
-              <div className="detail-meta-item">
-                <dt>평점</dt>
-                <dd className="detail-meta-accent">★ {record.rating.toFixed(1)}</dd>
-              </div>
-              <div className="detail-meta-item">
-                <dt>거리</dt>
-                <dd>{record.distanceKm.toFixed(1)}km</dd>
-              </div>
-              <div className="detail-meta-item">
-                <dt>작성자</dt>
-                <dd>{isAuthor ? '나' : record.author.name}</dd>
-              </div>
-              <div className="detail-meta-item">
-                <dt>등록일</dt>
-                <dd>
-                  {record.createdAt}
-                  {record.updatedAt !== record.createdAt && ' (수정됨)'}
-                </dd>
-              </div>
-            </dl>
+                <div className="form-field">
+                  <span className="field-label">카테고리</span>
+                  <div className="category-choice-group" role="radiogroup" aria-label="카테고리">
+                    {SELECTABLE_CATEGORIES.map((c) => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        role="radio"
+                        aria-checked={categoryDraft === c.key}
+                        className={`category-choice${categoryDraft === c.key ? ' active' : ''}`}
+                        onClick={() => setCategoryDraft(c.key)}
+                      >
+                        {categoryIcon(c.key)} {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            <button type="button" className="detail-map-btn" onClick={handleMapClick}>
-              <MapViewIcon />
-              지도에서 보기
-            </button>
-          </section>
+                <div className="form-field">
+                  <span className="field-label">평점</span>
+                  <StarRatingInput value={ratingDraft} onChange={setRatingDraft} />
+                </div>
 
-          {/* 사진 갤러리 */}
-          <section className="detail-section">
-            <h2 className="detail-section-title">사진</h2>
-            {photos.length === 0 ? (
-              <p className="detail-empty">등록된 사진이 없습니다.</p>
+                <div className="form-field">
+                  <label htmlFor="edit-memo">메모</label>
+                  <textarea
+                    id="edit-memo"
+                    className="detail-memo-input"
+                    rows={4}
+                    value={memoDraft}
+                    onChange={(e) => setMemoDraft(e.target.value)}
+                    placeholder="이 방문에 대한 메모를 남겨보세요"
+                  />
+                </div>
+
+                <div className="form-field">
+                  <span className="field-label">사진</span>
+                  <div className="photo-upload-row">
+                    <input
+                      id="add-photos"
+                      className="photo-upload-input"
+                      type="file"
+                      accept={ALLOWED_PHOTO_ACCEPT}
+                      multiple
+                      onChange={handlePhotoAdd}
+                    />
+                    <label htmlFor="add-photos" className="photo-upload-btn">
+                      <PhotoIcon />
+                      사진 추가
+                    </label>
+                    <span className="photo-upload-hint">
+                      {photosDraft.length > 0
+                        ? `${photosDraft.length}장`
+                        : `JPG · PNG · WEBP, 한 장당 ${MAX_PHOTO_SIZE_MB}MB · 합계 ${MAX_PHOTO_TOTAL_MB}MB 이하`}
+                    </span>
+                  </div>
+                  {photoErrors.map((message) => (
+                    <p className="field-error" key={message}>
+                      {message}
+                    </p>
+                  ))}
+                  {photosDraft.length > 0 && (
+                    <ul className="detail-photo-grid">
+                      {photosDraft.map((src, i) => (
+                        <li key={src} className="detail-photo-item">
+                          <img src={src} alt={`${record.name} 사진 ${i + 1}`} loading="lazy" />
+                          <button
+                            type="button"
+                            className="detail-photo-remove"
+                            onClick={() => setRemovingPhotoIndex(i)}
+                            aria-label={`사진 ${i + 1} 삭제`}
+                          >
+                            <CloseIcon />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {editError && <p className="field-error">{editError}</p>}
+
+                <div className="detail-edit-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setEditing(false)}
+                  >
+                    취소
+                  </button>
+                  <button type="button" className="btn-primary" onClick={handleSave}>
+                    저장
+                  </button>
+                </div>
+              </div>
             ) : (
-              <ul className="detail-photo-grid">
-                {photos.map((src, i) => (
-                  <li key={src} className="detail-photo-item">
-                    <img src={src} alt={`${record.name} 사진 ${i + 1}`} loading="lazy" />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+              <>
+                <div className="detail-section-head">
+                  <div className="detail-summary-head">
+                    <span className="detail-category-badge">
+                      <span aria-hidden="true">{categoryIcon(record.category)}</span>{' '}
+                      {categoryLabel(record.category)}
+                    </span>
+                    <h1 className="detail-name">{record.name}</h1>
+                    <p className="detail-region">{record.address ?? record.region}</p>
+                  </div>
+                  {isAuthor && (
+                    <button type="button" className="btn-secondary" onClick={startEdit}>
+                      수정
+                    </button>
+                  )}
+                </div>
 
-          {/* 평점과 메모. 기록당 하나뿐이라 평균도 분포도 없다. */}
-          <section className="detail-section">
-            <h2 className="detail-section-title">평점과 메모</h2>
-            <div className="detail-rating-row">
-              <StarRatingDisplay value={record.rating} />
-              <span className="detail-rating-value">{record.rating.toFixed(1)}</span>
-            </div>
-            {record.memo ? (
-              <p className="detail-memo">{record.memo}</p>
-            ) : (
-              <p className="detail-empty">메모가 없습니다.</p>
+                <dl className="detail-meta">
+                  <div className="detail-meta-item">
+                    <dt>평점</dt>
+                    <dd className="detail-meta-accent">★ {record.rating.toFixed(1)}</dd>
+                  </div>
+                  <div className="detail-meta-item">
+                    <dt>거리</dt>
+                    <dd>{record.distanceKm.toFixed(1)}km</dd>
+                  </div>
+                  <div className="detail-meta-item">
+                    <dt>작성자</dt>
+                    <dd>{isAuthor ? '나' : record.author.name}</dd>
+                  </div>
+                  <div className="detail-meta-item">
+                    <dt>등록일</dt>
+                    <dd>
+                      {record.createdAt}
+                      {record.updatedAt !== record.createdAt && ' (수정됨)'}
+                    </dd>
+                  </div>
+                </dl>
+
+                <button type="button" className="detail-map-btn" onClick={handleMapClick}>
+                  <MapViewIcon />
+                  지도에서 보기
+                </button>
+
+                <div className="detail-subsection">
+                  <h2 className="detail-section-title">사진</h2>
+                  {photos.length === 0 ? (
+                    <p className="detail-empty">등록된 사진이 없습니다.</p>
+                  ) : (
+                    <ul className="detail-photo-grid">
+                      {photos.map((src, i) => (
+                        <li key={src} className="detail-photo-item">
+                          <img src={src} alt={`${record.name} 사진 ${i + 1}`} loading="lazy" />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* 평점과 메모. 기록당 하나뿐이라 평균도 분포도 없다. */}
+                <div className="detail-subsection">
+                  <h2 className="detail-section-title">평점과 메모</h2>
+                  <div className="detail-rating-row">
+                    <StarRatingDisplay value={record.rating} />
+                    <span className="detail-rating-value">{record.rating.toFixed(1)}</span>
+                  </div>
+                  {record.memo ? (
+                    <p className="detail-memo">{record.memo}</p>
+                  ) : (
+                    <p className="detail-empty">메모가 없습니다.</p>
+                  )}
+                </div>
+              </>
             )}
           </section>
 
@@ -209,6 +455,47 @@ export default function RecordDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {removingPhotoIndex !== null && (
+        <div className="modal-overlay" onClick={() => setRemovingPhotoIndex(null)}>
+          <div
+            className="modal-panel confirm-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="사진 삭제 확인"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>이 사진을 삭제할까요?</h2>
+            <p className="confirm-desc">
+              사진 {removingPhotoIndex + 1}번을 목록에서 뺍니다. 저장을 눌러야 실제로 지워지며,
+              취소하면 되돌아옵니다.
+            </p>
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="confirm-cancel"
+                onClick={() => setRemovingPhotoIndex(null)}
+              >
+                취소
+              </button>
+              <button type="button" className="confirm-ok" onClick={handlePhotoRemove}>
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {searchOpen && (
+        <PlaceSearchModal
+          referenceLocation={referenceLocation}
+          onSelect={(place) => {
+            setPlaceDraft(place)
+            setSearchOpen(false)
+          }}
+          onClose={() => setSearchOpen(false)}
+        />
       )}
 
       {mapOpen && <PlaceMapModal place={record} onClose={() => setMapOpen(false)} />}
