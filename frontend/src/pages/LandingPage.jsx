@@ -31,9 +31,9 @@ const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 
 export default function LandingPage() {
   const { themeKey, changeTheme } = useTheme()
-  const { listByScope } = useRecords()
-  // 랜딩은 비로그인도 보는 화면이므로 공개된 기록만 센다.
-  const publicRecords = listByScope('public')
+  const { listTripsByScope } = useRecords()
+  // 랜딩은 비로그인도 보는 화면이므로 전체 공개 여행만 센다.
+  const publicTrips = listTripsByScope('public')
 
   return (
     <>
@@ -73,7 +73,7 @@ export default function LandingPage() {
           </div>
 
           <p className="landing-stat">
-            지금까지 <strong>{publicRecords.length}</strong>건의 기록이 공개되어 있어요.
+            지금까지 <strong>{publicTrips.length}</strong>건의 여행이 공개되어 있어요.
           </p>
 
           <ul className="landing-category-chips">
