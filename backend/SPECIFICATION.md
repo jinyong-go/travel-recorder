@@ -43,6 +43,20 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
 ## 2. 인증 및 인가
 
 ### 2.1 로그인
+
+> **현재 구현은 임시 인메모리 로그인이다.** 네이버 OAuth 는 실제 키와 콜백 도메인이 갖춰지기
+> 전까지 비활성 상태이며, 아래 네이버 관련 내용은 복구 대상 명세로 남겨 둔다 (§8.1).
+>
+> - 로그인: `POST /api/auth/login` — JSON `{ "username", "password" }`. 성공 시 세션 쿠키를
+>   발급하고 `MeResponse` 를 반환하며, 실패는 `401 UNAUTHENTICATED` 다 (§6 의 공통 오류 형식).
+> - 계정은 `local`·`dev` 프로파일에서만 등록되는 고정 3개(`user1`~`user3`, 비밀번호
+>   `password`)다. 고정 비밀번호 계정을 운영 환경에 열지 않기 위해 프로파일을 제한한다.
+> - 이 계정들은 기동 시 `users` 에 `provider = "local"`, `provider_id = username` 으로
+>   upsert 된다. 초대는 이메일로 상대를 찾으므로(§4.8), 상대가 한 번도 로그인하지 않아도
+>   행이 있어야 한다.
+> - 로그인 수단이 둘이 되면서 principal 구현 타입도 둘이다. 컨트롤러는 수단이 아니라
+>   `LoginUser`(사용자 PK 만 노출하는 인터페이스)에 의존한다.
+
 - 로그인 수단은 **네이버 OAuth 2.0 하나만** 지원한다.
 - Spring Security OAuth2 Client 의 Authorization Code 플로우를 사용한다.
   - 로그인 시작: `GET /oauth2/authorization/naver`
@@ -169,6 +183,7 @@ Group                           // 조회 전용 공유 대상 목록 (테이블
   id: Long (PK)
   owner: User (FK)
   name: String                  // 그룹 이름
+  memo: String?                 // 그룹 설명. 소유자와 멤버 모두에게 보인다
   createdAt: Instant
 
 GroupMember
@@ -186,7 +201,18 @@ GroupInvite                     // 소유자가 특정 사용자 앞으로 보�
   createdAt: Instant
   // unique(group_id, invitee_id) — 같은 사람에게 같은 그룹의 대기 초대는 1건
   // 토큰·만료 컬럼은 두지 않는다 — 초대가 서비스 밖으로 나가지 않아 추측 대상도, 수명도 없다
-  // 상태 컬럼도 두지 않는다 — 수락·거절·철회는 모두 행 삭제로 끝난다 (§3.2)
+  // 상태 컬럼을 두지 않는다 — 끝난 초대는 행을 지우고 InviteHistory 로 옮긴다 (§3.2)
+
+InviteHistory                   // 끝난 초대의 기록 (공통 명세 §3.7). append-only
+  id: Long (PK)
+  groupId: Long                 // FK 를 걸지 않는다 — 그룹이 지워져도 이력은 남아야 한다
+  groupName: String             // 삭제된 그룹도 이름을 보여주기 위한 스냅샷
+  invitee: User (FK)            // 초대받았던 사람
+  invitedBy: User (FK)          // 보냈던 사람
+  outcome: InviteOutcome        // ACCEPTED | REJECTED | REVOKED | GROUP_DELETED
+  invitedAt: Instant            // 원래 초대의 createdAt 을 그대로 옮긴다
+  resolvedAt: Instant           // 끝난 시각
+  // unique 제약을 두지 않는다 — 같은 상대에게 다시 초대해 다시 끝나면 항목이 하나 더 쌓인다
 
 TripShare                       // trip.visibility=GROUP 일 때만 사용
   id: Long (PK)
@@ -247,6 +273,10 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 **그룹·공유**
 
 - `Group` 은 SQL 예약어라 테이블명을 `share_group` 으로 둔다 (엔티티 클래스명은 `Group`).
+- `Group.memo` 는 선택이며 길이 상한은 공통 명세 §3.6이 정한다. 공백만 들어오면 `null` 로 저장해
+  "메모 없음" 과 같은 값으로 만든다. **요청자에 따라 달라지지 않는다** —
+  그룹을 조회할 수 있는 사람은 소유자와 멤버뿐이고(§4.7) 둘 다 메모를 볼 수 있으므로, DTO 에
+  요청자별 분기를 두지 않는다.
 - **그룹당 멤버는 소유자 포함 최대 5명**이다. 애플리케이션 레벨에서 검증하며, 초과 시
   `409 GROUP_MEMBER_LIMIT_EXCEEDED` 다. 그룹 생성 시 소유자를 `GroupMember` 로 함께 입력한다.
 - `GroupInvite` 는 `unique(group_id, invitee_id)` 다. 대기 중인 초대가 있는 상대를 다시
@@ -263,6 +293,14 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - 소유자는 **본인이 소유하거나 멤버로 속한 그룹에만** 여행을 공유할 수 있다. 그 외 그룹 ID가
   요청에 담기면 `404 GROUP_NOT_FOUND` 다 (존재 은닉).
 - **기록 단위의 공유 관계는 존재하지 않는다.** 이전 판의 `VisitRecordShare` 는 폐기되었다.
+- **`InviteHistory` 는 초대 행을 지우는 모든 경로에서, 지우는 것과 같은 트랜잭션 안에 남긴다.**
+  경로는 넷이다 — 수락·거절·취소(철회)·그룹 삭제. 한 곳만 빠뜨려도 이력이 조용히 비고,
+  그런 누락은 조회 시점에 드러나지 않는다.
+- **`InviteHistory.groupId` 에는 외래키를 걸지 않는다.** 그룹 삭제 시 이력까지 함께 지워지거나
+  삭제가 막히면 이력을 남기는 의미가 없기 때문이다. 대신 `groupName` 스냅샷을 함께 저장해,
+  그룹이 사라진 뒤에도 무엇에 대한 초대였는지 답할 수 있게 한다 (공통 명세 §3.7).
+- **정원 초과로 수락이 거부된 경우는 이력을 남기지 않는다.** 초대 행이 그대로 남아 있으므로
+  끝난 것이 아니다 (§4.8).
 - `Tag` 는 이름 중복 없이 재사용되며, 존재하지 않는 태그명이 등록 요청에 포함되면 서버가 생성한다.
 
 ### 3.2 삭제 정책 (soft delete)
@@ -287,9 +325,16 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - **`Group`, `GroupMember`, `GroupInvite`, `TripShare` 는 물리 삭제한다.** 공유 해제와
   그룹 탈퇴는 즉시 조회 권한을 없애야 하는 동작이라, 남아 있는 행이 권한 판정에 끼어들 여지를
   만들지 않는다.
-- **초대는 수락·거절·철회 어느 쪽으로 끝나든 행을 지운다.** 상태 컬럼도 거절 이력도 남기지
-  않으므로 거절한 상대를 다시 초대할 수 있다 (공통 명세 §3.7, §3.9).
+- **초대는 수락·거절·철회·그룹 삭제 어느 쪽으로 끝나든 `group_invite` 행을 지우고, 같은 트랜잭션에서
+  `InviteHistory` 를 남긴다** (공통 명세 §3.7). 상태 컬럼을 달아 같은 행에 두지 않는 이유는
+  `unique(group_id, invitee_id)` 때문이다 — 끝난 초대가 그 자리에 남아 있으면 같은 상대를
+  다시 초대할 수 없다. 부분 유니크 인덱스로 우회할 수는 있으나 H2(local)와 PostgreSQL 의
+  문법이 갈리고 마이그레이션 도구가 없다 (§8.1).
+- **`InviteHistory` 는 지우지 않는다.** soft delete 대상도 아니다. 보관 기간을 두지 않으며,
+  사용자 탈퇴 시의 처리는 탈퇴 자체와 함께 범위 밖이다 (공통 명세 §3.1).
 - 그룹 삭제 시 그 그룹의 `GroupMember`, `GroupInvite`, `TripShare` 행을 함께 지운다.
+  이때 **대기 중이던 초대는 `GROUP_DELETED` 로 이력에 남긴다** — 받은 사람 쪽에서 보면
+  초대가 이유 없이 사라지는 일이라 그 이유를 남겨 둘 자리가 필요하다.
   그 그룹으로만 공유되던 여행은 실질적으로 비공개가 되며, 여행과 기록 자체는 삭제되지 않는다.
 - `updatedAt` 은 마지막 수정 시각이며 soft delete 도 수정으로 보아 함께 갱신된다.
 
@@ -337,7 +382,8 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 
 | Method | Path | 설명 | 인증 |
 |---|---|---|:---:|
-| GET | `/oauth2/authorization/naver` | 네이버 로그인 시작 (리다이렉트) | - |
+| POST | `/api/auth/login` | **임시** 인메모리 로그인. `local`·`dev` 전용 (§2.1) | - |
+| GET | `/oauth2/authorization/naver` | 네이버 로그인 시작 (리다이렉트). **현재 비활성** (§2.1) | - |
 | GET | `/api/auth/me` | 현재 로그인 사용자 정보 조회. 비로그인 시 `401` | 선택 |
 | POST | `/api/auth/logout` | 로그아웃, 세션 무효화 | 필요 |
 
@@ -670,7 +716,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | GET | `/api/groups` | 내가 소유하거나 속한 그룹 목록 (`role: OWNER\|MEMBER` 포함) | 필요 |
 | POST | `/api/groups` | 그룹 생성 (소유자를 멤버로 함께 입력) | 필요 |
 | GET | `/api/groups/{id}` | 그룹 상세 (멤버 목록 포함) | 소유자·멤버 |
-| PUT | `/api/groups/{id}` | 그룹 이름 변경 | 소유자만 |
+| PUT | `/api/groups/{id}` | 그룹 이름·메모 변경 | 소유자만 |
 | DELETE | `/api/groups/{id}` | 그룹 삭제 (멤버·대기 초대·공유 관계 함께 삭제) | 소유자만 |
 | DELETE | `/api/groups/{id}/members/{userId}` | 멤버 제외 | 소유자만 |
 | DELETE | `/api/groups/{id}/members/me` | 그룹 탈퇴. 소유자는 `403` | 멤버 본인 |
@@ -680,6 +726,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 {
   "id": 2,
   "name": "가족",
+  "memo": "설 연휴 사진 공유용",
   "owner": { "id": 7, "name": "홍길동", "profileImageUrl": "https://..." },
   "members": [
     { "id": 7, "name": "홍길동", "profileImageUrl": "https://...", "joinedAt": "2026-09-01T00:00:00Z" },
@@ -692,6 +739,11 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 ```
 - 멤버 정보는 이름과 프로필 사진까지만 내려준다. **이메일은 포함하지 않는다** (공통 명세 §3.1).
 - 소유자 제외 요청(`DELETE .../members/{소유자 id}`)은 `400 VALIDATION_ERROR` 다.
+- POST·PUT 요청 본문은 `{ "name": "가족", "memo": "설 연휴 사진 공유용" }` 이다. `memo` 는 생략
+  가능하며 생략하면 `null` 로 저장된다. PUT 은 두 값을 함께 덮어쓰므로 **`memo` 를 빼고 보내면
+  기존 메모가 지워진다** — 이름만 고치는 경우에도 현재 메모를 함께 실어 보내야 한다.
+- 목록(`GET /api/groups`)의 각 항목도 `memo` 를 포함한다. 그룹 카드에서 이름만으로 구분되지 않는
+  문제를 풀려고 넣은 값이라, 상세로 들어가야만 보이면 목적을 채우지 못한다.
 
 ### 4.8 초대
 
@@ -703,14 +755,29 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | GET | `/api/groups/{id}/invites` | 그 그룹의 **대기 중인 초대 목록** | 소유자만 |
 | POST | `/api/groups/{id}/invites` | 이메일로 초대 보내기 | 소유자만 |
 | DELETE | `/api/groups/{id}/invites/{inviteId}` | 초대 철회 | 소유자만 |
-| GET | `/api/invites` | **내가 받은 초대 목록** | 필요 |
+| GET | `/api/invites` | **내가 받은 대기 중인 초대 목록** | 필요 |
+| GET | `/api/invites/sent` | **내가 보낸 대기 중인 초대 목록** (그룹을 가로질러) | 필요 |
+| GET | `/api/invites/history?role=received\|sent` | **끝난 초대 이력** | 당사자만 |
 | POST | `/api/invites/{inviteId}/accept` | 수락 → 멤버로 가입 | 받은 본인만 |
 | POST | `/api/invites/{inviteId}/reject` | 거절 | 받은 본인만 |
 
 - **두 목록 모두 페이지네이션한다** (§4.1). **건수를 묶어 주는 상한이 없기 때문이다** — 대기 초대는
   정원 판정이 수락 시점이라 정원을 넘겨 보낼 수 있고, 받은 초대는 나를 초대할 수 있는 그룹 수에
   제한이 없다. 정원(5명)이 곧 상한인 그룹 목록(§4.7)과는 다르다.
-- 수락·거절·철회는 모두 해당 행을 지운다 (§3.2). 성공 응답은 본문 없이 `204 No Content` 다.
+- 수락·거절·철회는 해당 행을 지우고 같은 트랜잭션에서 이력을 남긴다 (§3.1, §3.2).
+  성공 응답은 본문 없이 `204 No Content` 다.
+- **`GET /api/invites/sent` 의 조건은 `invited_by = 나` 다.** 그룹을 조인해 소유자를 보는 것과
+  결과가 같지만(소유자는 바뀌지 않는다) 조인 없이 인덱스 하나로 끝나고, 남이 보낸 초대가
+  섞일 수 없어 인가가 조건 자체로 보장된다. `group_invite(invited_by)` 인덱스를 추가한다 —
+  현재 인덱스는 `invitee_id` 와 `uk_group_invite`(선두 `group_id`) 뿐이라 이 조회가 풀스캔이 된다.
+- **`GET /api/invites/history` 는 `role` 로 관점을 고른다.** `received` 면 `invitee_id = 나`,
+  `sent` 면 `invited_by = 나` 이며, 생략하면 `received` 다. 정렬은 `resolvedAt DESC` 이고
+  `invite_history(invitee_id, resolved_at DESC)`·`(invited_by, resolved_at DESC)` 인덱스를 둔다.
+- **`GET /api/invites/sent` 의 각 항목은 `{ id, group: { id, name }, invitee, createdAt }` 다.**
+  그룹을 가로지르는 목록이라 그룹명이 함께 필요하며, 그룹 상세에서 쓰는 응답(`invitee`·`createdAt`
+  만 있는 형태)과 나누어 둔다 — 그쪽은 어느 그룹인지가 화면에 이미 드러나 있다.
+- **이력도 페이지네이션한다** (§4.1). 대기 초대와 달리 상한이 없을 뿐 아니라 지우지 않으므로
+  계정이 오래될수록 길어진다.
 
 **POST `/api/groups/{id}/invites` 요청·응답 예시**
 ```json
@@ -759,6 +826,33 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
   수락이 끼어들면 6명짜리 그룹이 만들어진다.
 - 그룹이 삭제되면 그 그룹의 초대도 함께 사라지므로(§3.2), 이미 받은 목록에 있던 초대의 수락이
   `404 INVITE_NOT_FOUND` 가 될 수 있다. 정상 동작이다.
+
+**GET `/api/invites/history?role=sent` 응답 예시**
+```json
+{
+  "content": [
+    {
+      "id": 12,
+      "group": { "id": 2, "name": "가족", "deleted": false },
+      "counterpart": { "id": 9, "name": "김영희", "profileImageUrl": "https://..." },
+      "outcome": "REJECTED",
+      "invitedAt": "2026-09-20T09:12:00Z",
+      "resolvedAt": "2026-09-21T02:40:00Z"
+    }
+  ],
+  "page": 0, "size": 10, "totalElements": 1, "totalPages": 1
+}
+```
+- **상대는 `role` 에 따라 달라지므로 `counterpart` 한 필드로 내려준다.** `role=sent` 면 초대받았던
+  사람, `role=received` 면 보냈던 사람이다. 관점마다 필드 이름을 달리하면 화면이 같은 목록을
+  두 가지 모양으로 다뤄야 한다.
+- `group.name` 은 **끝난 시점의 스냅샷**이다. 그룹 이름이 그 뒤에 바뀌어도 이력은 따라 바뀌지
+  않으며, 그룹이 삭제되었으면 `deleted: true` 로 내려 화면이 링크를 걸지 않게 한다
+  (공통 명세 §3.7).
+- `outcome` 은 `ACCEPTED` / `REJECTED` / `REVOKED` / `GROUP_DELETED` 넷이다. **만료는 없다** —
+  초대에 수명이 없기 때문이다.
+- **이력도 당사자만 본다.** `role` 과 무관하게 남의 이력은 조회 경로가 없으며, 조건이 곧
+  본인 필터다 (공통 명세 §2.6).
 
 ### 4.9 태그
 
@@ -854,6 +948,10 @@ interface PhotoStorageService {
 - **초대에는 추측 가능한 진입점이 없어야 한다.** 초대 id 로 접근한 요청은 당사자인지 먼저
   판정하고, 아니면 `404` 다 (§4.8). 순번 id 를 쓰더라도 이 판정이 유일한 관문이 된다.
 - 파일 업로드 최대 요청 크기는 `spring.servlet.multipart.max-request-size` 로 제한한다.
+- **서버 로그에 요청 본문·헤더·OAuth 쿼리를 남기지 않는다.** 초대 요청의 이메일(공통 명세 §3.1),
+  세션 쿠키, 인가 코드가 응답에서 가려지는 것과 같은 이유로 로그에도 남지 않아야 한다. 요청
+  로그는 메서드·경로·상태·소요 시간까지다. 기준 좌표(`lat`,`lng`)도 마찬가지로 남기지 않는다 —
+  저장하지 않기로 한 값을 로그가 대신 보관하는 셈이 된다.
 
 **조회 정확성** — 이 항목들은 어기면 곧바로 정보 유출이거나 잘못된 건수다.
 
@@ -877,6 +975,13 @@ interface PhotoStorageService {
 [공통 명세 §7](../SPECIFICATION.md) 에 있다. 여기서는 **백엔드가 해야 할 일**만 둔다.
 
 ### 8.1 구현 잔여 작업
+- **초대 이력이 명세만 개정된 상태다** (§3, §4.8). `invite_history` 테이블과 세 조회
+  엔드포인트(`/api/invites/sent`, `/api/invites/history`)가 아직 없고, 초대를 지우는 네 경로도
+  이력을 남기지 않는다. 기존에 끝난 초대는 복원할 수 없으므로 **이력은 전환 시점부터 쌓인다.**
+- **네이버 OAuth 로그인을 복구한다** (§2.1). 임시 인메모리 로그인으로 대체된 상태이며,
+  되돌릴 지점은 셋이다 — `SecurityConfig` 의 주석 처리된 `oauth2Login` 블록, `local`·`dev`
+  전용인 `LocalLoginConfig`·`LocalLoginController`(들어내면 된다), 그리고 프론트엔드의 로그인
+  화면(frontend §10.2). `UserService` 와 `application.yml` 의 네이버 등록 정보는 손대지 않았다.
 - **`SecurityConfig` 의 `permitAll()` 을 §2.2 정책으로 되돌린다.** 공개 범위 판정은 서비스·조회
   계층에 구현되어 있으나, 인증 자체는 아직 컨트롤러가 `requireLogin` 으로 막는다. 인가의 첫
   관문을 필터체인으로 되돌리는 작업이 남아 있다.

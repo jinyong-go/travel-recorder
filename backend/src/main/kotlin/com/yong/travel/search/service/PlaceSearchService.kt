@@ -6,18 +6,17 @@ import com.yong.travel.common.util.roundTo2Decimals
 import com.yong.travel.search.client.NaverLocalSearchClient
 import com.yong.travel.search.dto.NaverLocalSearchItem
 import com.yong.travel.search.dto.PlaceSearchResultResponse
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
-interface PlaceSearchService {
-    fun search(keyword: String, lat: Double?, lng: Double?, page: Int): PageResponse<PlaceSearchResultResponse>
-}
-
 @Service
-class PlaceSearchServiceImpl(
+class PlaceSearchService(
     private val naverLocalSearchClient: NaverLocalSearchClient,
-) : PlaceSearchService {
+) {
 
-    override fun search(
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    fun search(
         keyword: String,
         lat: Double?,
         lng: Double?,
@@ -34,6 +33,9 @@ class PlaceSearchServiceImpl(
         } else {
             candidates
         }
+
+        // 기준 좌표(lat,lng)는 남기지 않는다. 계산에만 쓰고 사용자와 묶지 않기로 한 값이다 (명세 §7).
+        log.debug("장소 검색 page={} 거리정렬={} 후보={}건", page, lat != null && lng != null, sorted.size)
 
         val fromIndex = (page.coerceAtLeast(0) * PAGE_SIZE).coerceAtMost(sorted.size)
         val toIndex = (fromIndex + PAGE_SIZE).coerceAtMost(sorted.size)

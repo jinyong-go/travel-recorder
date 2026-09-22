@@ -3,6 +3,7 @@ package com.yong.travel.group.repository
 import com.yong.travel.group.domain.Group
 import com.yong.travel.group.domain.GroupInvite
 import com.yong.travel.group.domain.GroupMember
+import com.yong.travel.group.domain.InviteHistory
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -56,7 +57,30 @@ interface GroupInviteRepository : JpaRepository<GroupInvite, Long> {
     /** 받은 초대 목록. 나를 초대할 수 있는 그룹 수에 제한이 없어 역시 페이지로 끊는다 (명세 §4.8). */
     fun findByInviteeIdOrderByCreatedAtAsc(inviteeId: Long, pageable: Pageable): Page<GroupInvite>
 
+    /**
+     * 내가 보낸 대기 초대를 그룹을 가로질러 모은다.
+     *
+     * 그룹을 조인해 소유자로 거르는 것과 결과가 같지만(소유자는 바뀌지 않는다) 조인 없이 인덱스
+     * 하나로 끝나고, 남이 보낸 초대가 섞일 수 없어 인가가 조건 자체로 보장된다 (명세 §4.8).
+     */
+    fun findByInvitedByIdOrderByCreatedAtAsc(invitedById: Long, pageable: Pageable): Page<GroupInvite>
+
     fun findByGroupIdAndInviteeId(groupId: Long, inviteeId: Long): GroupInvite?
 
+    /** 그룹 삭제 시 이력으로 옮길 대상. 대기 초대는 정원과 무관하게 쌓일 수 있어 페이지로 끊지 않는다. */
+    fun findByGroupId(groupId: Long): List<GroupInvite>
+
     fun deleteByGroupId(groupId: Long)
+}
+
+/**
+ * 끝난 초대의 기록. 읽기는 양쪽 당사자의 관점 두 가지뿐이며, 조건이 곧 본인 필터다 (명세 §4.8).
+ *
+ * 지우는 메서드를 두지 않는다 — 이력은 삭제 대상이 아니다 (명세 §3.2).
+ */
+interface InviteHistoryRepository : JpaRepository<InviteHistory, Long> {
+
+    fun findByInviteeIdOrderByResolvedAtDesc(inviteeId: Long, pageable: Pageable): Page<InviteHistory>
+
+    fun findByInvitedByIdOrderByResolvedAtDesc(invitedById: Long, pageable: Pageable): Page<InviteHistory>
 }

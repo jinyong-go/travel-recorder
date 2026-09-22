@@ -1,6 +1,6 @@
 package com.yong.travel.photo.controller
 
-import com.yong.travel.auth.security.CustomOAuth2User
+import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.photo.dto.PhotoResponse
 import com.yong.travel.photo.service.PhotoService
@@ -26,7 +26,7 @@ class PhotoController(
     fun upload(
         @PathVariable recordId: Long,
         @RequestParam("files") files: List<MultipartFile>,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): List<PhotoResponse> = photoService.upload(recordId, requireLogin(principal), files)
 
     /** 사진 삭제. 파일 본체까지 함께 지우는 물리 삭제다. */
@@ -34,7 +34,7 @@ class PhotoController(
     fun delete(
         @PathVariable recordId: Long,
         @PathVariable photoId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
         photoService.delete(recordId, photoId, requireLogin(principal))
         return ResponseEntity.noContent().build()

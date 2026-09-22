@@ -14,6 +14,7 @@ import useMapMode from '../hooks/useMapMode.js'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
+import HeaderAuth from '../components/HeaderAuth.jsx'
 import StarRatingDisplay from '../components/StarRatingDisplay.jsx'
 import StarRatingInput from '../components/StarRatingInput.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
@@ -183,9 +184,7 @@ export default function RecordDetailPage() {
         </Link>
         <div className="header-actions">
           <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
-          <Link to="/login" className="header-login-link">
-            로그인
-          </Link>
+          <HeaderAuth />
         </div>
       </header>
 

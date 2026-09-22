@@ -51,6 +51,7 @@ export default function GroupDetailPage() {
 
   const isOwner = group.ownerId === currentUser.id
   const pending = pendingInvites(group.id)
+  const isFull = group.members.length >= GROUP_MEMBER_LIMIT
 
   const handleSend = (e) => {
     e.preventDefault()
@@ -127,6 +128,7 @@ export default function GroupDetailPage() {
           </Link>
 
           <h1 className="groups-title">{group.name}</h1>
+          {group.memo && <p className="group-memo">{group.memo}</p>}
           <p className="groups-desc">
             멤버 {group.members.length}/{GROUP_MEMBER_LIMIT}명
             {isOwner && pending.length > 0 && ` · 대기 중인 초대 ${pending.length}건`} ·{' '}
@@ -163,6 +165,17 @@ export default function GroupDetailPage() {
           {isOwner && (
             <section className="group-section">
               <h2 className="group-section-title">초대</h2>
+              {/*
+                정원 판정은 수락 시점에 하므로 정원이 차도 초대를 막지 않는다 (공통 명세 §3.7).
+                막지 않는 대신, 보내기 전에 남은 자리와 그 결과를 먼저 알린다 (§5.8.3).
+              */}
+              <p className="invite-capacity">
+                소유자를 포함해 최대 {GROUP_MEMBER_LIMIT}명까지 참여할 수 있어요. 지금{' '}
+                {group.members.length}/{GROUP_MEMBER_LIMIT}명
+                {pending.length > 0 && ` · 대기 중인 초대 ${pending.length}건`}
+                {isFull &&
+                  ' — 정원이 차서 지금은 수락되지 않아요. 자리가 나면 같은 초대로 수락할 수 있어요.'}
+              </p>
               {/* 자동완성이나 검색 결과를 붙이지 않는다. 가입자를 훑을 수 있는 화면이 된다 (§3.7). */}
               <form className="invite-form" onSubmit={handleSend}>
                 <label className="sr-only" htmlFor="invite-email">
@@ -207,7 +220,7 @@ export default function GroupDetailPage() {
                         className="member-remove"
                         onClick={() => revokeInvite(item.id)}
                       >
-                        철회
+                        초대 취소
                       </button>
                     </li>
                   ))}

@@ -3,6 +3,7 @@ import { CATEGORIES, categoryIcon } from '../data/records.js'
 import { useRecords } from '../context/RecordsContext.jsx'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
+import HeaderAuth from '../components/HeaderAuth.jsx'
 import { MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
 import './LandingPage.css'
 
@@ -44,9 +45,7 @@ export default function LandingPage() {
         </h1>
         <div className="header-actions">
           <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
-          <Link to="/login" className="header-login-link">
-            로그인
-          </Link>
+          <HeaderAuth />
         </div>
       </header>
 
@@ -58,17 +57,20 @@ export default function LandingPage() {
             <br />
             지도처럼 모아 두세요
           </h2>
+          {/* 네이버 로그인 복구 시 원문으로 되돌린다 (명세 §2.1):
+              "네이버 계정으로 로그인해 여행지를 등록하고, …" */}
           <p className="landing-sub">
-            네이버 계정으로 로그인해 여행지를 등록하고, 카테고리와 별점으로 정리된 나만의 여행
-            기록을 만들어 보세요.
+            로그인하고 여행지를 등록해, 카테고리와 별점으로 정리된 나만의 여행 기록을 만들어
+            보세요.
           </p>
 
           <div className="landing-cta">
             <Link to="/trips?scope=public" className="landing-cta-primary">
               여행지 둘러보기
             </Link>
+            {/* 네이버 로그인 복구 시 "네이버로 시작하기" 로 되돌린다 (명세 §2.1). */}
             <Link to="/login" className="landing-cta-secondary">
-              네이버로 시작하기
+              로그인하고 시작하기
             </Link>
           </div>
 

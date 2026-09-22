@@ -1,7 +1,7 @@
 package com.yong.travel.auth.controller
 
 import com.yong.travel.auth.dto.MeResponse
-import com.yong.travel.auth.security.CustomOAuth2User
+import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.auth.service.AuthService
 import com.yong.travel.common.web.requireLogin
 import jakarta.servlet.http.HttpServletRequest
@@ -22,10 +22,11 @@ class AuthController(
     /**
      * 로그인한 본인 정보 조회. 이메일이 담기는 유일한 응답이다 (공통 명세 §3.1).
      *
-     * 로그인 시작은 Spring Security 가 제공하는 GET /oauth2/authorization/naver 를 사용한다.
+     * 로그인 시작은 현재 임시 POST /api/auth/login 이다 (명세 §2.1, LocalLoginController).
+     * 네이버 OAuth 복구 시에는 Spring Security 가 제공하는 GET /oauth2/authorization/naver 를 쓴다.
      */
     @GetMapping("/me")
-    fun me(@AuthenticationPrincipal principal: CustomOAuth2User?): MeResponse =
+    fun me(@AuthenticationPrincipal principal: LoginUser?): MeResponse =
         authService.getCurrentUser(requireLogin(principal))
 
     /** 로그아웃. 세션을 버리고 SecurityContext 를 비운다. */

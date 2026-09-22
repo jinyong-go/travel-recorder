@@ -286,9 +286,9 @@
 }
 
 .detail-delete-btn {
-  border: 1px solid #d97b7b;
+  border: 1px solid var(--danger-border);
   background: var(--surface);
-  color: #c55a5a;
+  color: var(--danger);
   border-radius: var(--radius-pill);
   padding: 8px 16px;
   font-size: 0.875rem;
@@ -297,8 +297,8 @@
 
 /* 되돌릴 수 없는 동작이라 호버 시 버튼 전체를 채운다. 확인 모달의 삭제 버튼(.confirm-ok)과 같은 색이다. */
 .detail-delete-btn:hover {
-  background: #c55a5a;
-  border-color: #c55a5a;
+  background: var(--danger);
+  border-color: var(--danger);
   color: #fff;
 }
 
@@ -356,8 +356,8 @@
 }
 
 .confirm-ok {
-  background: #c55a5a;
-  border-color: #c55a5a;
+  background: var(--danger);
+  border-color: var(--danger);
   color: #fff;
   font-weight: 600;
 }

@@ -1,6 +1,6 @@
 package com.yong.travel.tag.controller
 
-import com.yong.travel.auth.security.CustomOAuth2User
+import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.tag.dto.TagResponse
 import com.yong.travel.tag.service.TagService
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -19,6 +19,6 @@ class TagController(
     @GetMapping
     fun search(
         @RequestParam(required = false) keyword: String?,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): List<TagResponse> = tagService.search(keyword, principal?.userId)
 }

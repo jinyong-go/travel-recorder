@@ -1,6 +1,6 @@
 package com.yong.travel.group.controller
 
-import com.yong.travel.auth.security.CustomOAuth2User
+import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
@@ -34,21 +34,21 @@ class GroupController(
 
     /** 내가 소유하거나 멤버로 속한 그룹 목록. */
     @GetMapping
-    fun list(@AuthenticationPrincipal principal: CustomOAuth2User?): List<GroupSummaryResponse> =
+    fun list(@AuthenticationPrincipal principal: LoginUser?): List<GroupSummaryResponse> =
         groupService.list(requireLogin(principal))
 
     /** 그룹 생성. 만든 사람이 소유자이자 첫 멤버가 된다. */
     @PostMapping
     fun create(
         @RequestBody @Valid request: GroupRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse = groupService.create(requireLogin(principal), request)
 
     /** 그룹 상세 (멤버 목록 포함). 멤버가 아니면 존재도 알리지 않고 404 다. */
     @GetMapping("/{groupId}")
     fun get(
         @PathVariable groupId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse = groupService.get(groupId, requireLogin(principal))
 
     /** 그룹 이름 변경. 소유자만 할 수 있다. */
@@ -56,14 +56,14 @@ class GroupController(
     fun rename(
         @PathVariable groupId: Long,
         @RequestBody @Valid request: GroupRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse = groupService.rename(groupId, requireLogin(principal), request)
 
     /** 그룹 삭제. 멤버·대기 초대·공유 관계가 함께 사라진다. */
     @DeleteMapping("/{groupId}")
     fun delete(
         @PathVariable groupId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
         groupService.delete(groupId, requireLogin(principal))
         return ResponseEntity.noContent().build()
@@ -77,7 +77,7 @@ class GroupController(
     @DeleteMapping("/{groupId}/members/me")
     fun leave(
         @PathVariable groupId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
         groupService.leave(groupId, requireLogin(principal))
         return ResponseEntity.noContent().build()
@@ -88,7 +88,7 @@ class GroupController(
     fun removeMember(
         @PathVariable groupId: Long,
         @PathVariable userId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
         groupService.removeMember(groupId, userId, requireLogin(principal))
         return ResponseEntity.noContent().build()
@@ -99,7 +99,7 @@ class GroupController(
     fun pendingInvites(
         @PathVariable groupId: Long,
         @RequestParam(defaultValue = "0") page: Int,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<PendingInviteResponse> =
         inviteService.listPending(groupId, requireLogin(principal), listPageRequest(page))
 
@@ -112,7 +112,7 @@ class GroupController(
     fun invite(
         @PathVariable groupId: Long,
         @RequestBody @Valid request: InviteRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<PendingInviteResponse> {
         val result = inviteService.invite(groupId, requireLogin(principal), request)
         val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
@@ -124,7 +124,7 @@ class GroupController(
     fun revokeInvite(
         @PathVariable groupId: Long,
         @PathVariable inviteId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
         inviteService.revoke(groupId, inviteId, requireLogin(principal))
         return ResponseEntity.noContent().build()

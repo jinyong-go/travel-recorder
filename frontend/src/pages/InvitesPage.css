@@ -1,0 +1,96 @@
+/* 받은/보낸 관점 전환. 선택 상태는 경로에 남는다 (명세 §5.8.4). */
+.invite-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.invite-tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  padding: 7px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.invite-tab.active {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+  color: var(--accent-contrast);
+}
+
+.invite-group-name {
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.invite-counterpart {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/*
+  끝난 방식 배지. 색은 이 배지에만 얹고 항목 전체를 칠하지 않는다 — 목록 전체가 붉어지면
+  무엇이 문제 상황인지가 오히려 흐려진다. 색은 두 갈래뿐이라 기본 글자색을 두지 않는다
+  (명세 §5.8.4).
+*/
+.invite-outcome {
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 성사된 결과. 브랜드가 연두라 수락을 초록으로 칠하면 액센트와 섞여 파랑을 쓴다. */
+.invite-outcome-accepted {
+  border-color: var(--info-border);
+  color: var(--info);
+}
+
+/* 성사되지 않고 끝난 결과 — 거절·취소·그룹 삭제. "거절" 버튼과 같은 색 토큰이지만
+   배지는 테두리와 글자만, 버튼은 채움이라 형태로 갈린다. */
+.invite-outcome-failed {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+/* 지난 초대는 끝난 시각이 마지막에 온다. 배지가 auto 를 가져갔으므로 여백만 둔다. */
+.invite-outcome + .invite-sent-at {
+  margin-left: 0;
+}
+
+/* 거절은 되돌릴 수 없다 — 확인 모달의 실행 버튼과 같은 색을 쓴다 (명세 §5.8.4).
+   되돌릴 수 있는 "초대 취소"·"멤버 제외"(.member-remove)와 구분되는 자리다. */
+.invite-reject {
+  border: 1px solid var(--danger);
+  background: var(--danger);
+  color: var(--danger-contrast);
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.invite-reject:hover {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+
+@media (max-width: 480px) {
+  /* 360px 에서 한 줄에 네 값이 들어가지 않는다. 그룹명을 첫 줄에 두고 나머지를 접는다. */
+  .invite-item {
+    flex-wrap: wrap;
+  }
+
+  .invite-outcome {
+    margin-left: 0;
+  }
+}

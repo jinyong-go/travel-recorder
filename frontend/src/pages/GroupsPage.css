@@ -23,24 +23,64 @@
   color: var(--text-muted);
 }
 
-.group-create-form {
+.groups-actions {
   display: flex;
-  gap: 8px;
+  justify-content: flex-end;
 }
 
-.group-create-form input {
-  flex: 1;
+.group-form-panel {
+  width: min(420px, 100%);
+}
+
+/* .modal-panel 은 확인 모달 기준으로 가운데 정렬이다. 라벨이 달린 입력 폼은 왼쪽으로 되돌린다. */
+.group-form {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  text-align: left;
+}
+
+.group-form label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.group-form label + input,
+.group-form label + textarea {
+  margin-bottom: 6px;
+}
+
+.group-form input,
+.group-form textarea {
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
+  font: inherit;
   font-size: 0.95rem;
 }
 
-.group-create-form input:focus-visible {
+.group-form textarea {
+  resize: vertical;
+}
+
+.group-form input:focus-visible,
+.group-form textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+.field-optional {
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.field-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-faint);
 }
 
 .group-list {
@@ -58,8 +98,10 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* 이름·배지·인원이 한 줄, 메모가 있으면 flex-basis 100% 로 둘째 줄에 놓인다. */
 .group-card-link {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 14px 18px;
@@ -92,6 +134,16 @@
   margin-left: auto;
   font-size: 0.85rem;
   color: var(--text-faint);
+}
+
+.group-card-memo {
+  flex-basis: 100%;
+  margin-top: -2px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .group-section {
@@ -171,8 +223,8 @@
 }
 
 .member-remove:hover {
-  border-color: #d97b7b;
-  color: #c55a5a;
+  border-color: var(--danger-border);
+  color: var(--danger);
 }
 
 .invite-form {
@@ -215,10 +267,19 @@
   color: var(--text-faint);
 }
 
-.received-invites {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 28px;
+/* 그룹 목록에서 초대함으로 보내는 알림 줄. 목록 자체는 여기서 그리지 않는다 (명세 §5.8.4). */
+.invite-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .received-invite-actions {
@@ -232,6 +293,14 @@
   color: var(--accent-strong);
 }
 
+/* 초대 폼 위의 정원 안내. 정원이 차도 초대를 막지 않는 대신 결과를 먼저 알린다 (명세 §5.8.3). */
+.invite-capacity {
+  margin: -4px 0 4px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 .invite-note {
   margin: 0;
   font-size: 0.8rem;
@@ -243,7 +312,16 @@
   margin: 0;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #c55a5a;
+  color: var(--danger);
+}
+
+/* 그룹 상세의 메모. 소유자와 멤버 모두에게 보인다 (공통 명세 §3.6). */
+.group-memo {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
 }
 
 .group-danger-zone {

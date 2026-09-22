@@ -3,6 +3,7 @@ package com.yong.travel.auth.service
 import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.repository.UserRepository
 import com.yong.travel.auth.security.CustomOAuth2User
+import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService
@@ -22,6 +23,8 @@ class UserService(
     private val delegate: DefaultOAuth2UserService = DefaultOAuth2UserService(),
 ) : OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Transactional
     override fun loadUser(userRequest: OAuth2UserRequest): OAuth2User {
         val oAuth2User = delegate.loadUser(userRequest)
@@ -34,7 +37,8 @@ class UserService(
         val name = (attributes["name"] ?: attributes["nickname"]) as? String ?: providerId
         val profileImageUrl = attributes["profile_image"] as? String
 
-        val user = userRepository.findByProviderAndProviderId(provider, providerId)
+        val existing = userRepository.findByProviderAndProviderId(provider, providerId)
+        val user = existing
             ?.apply {
                 this.email = email
                 this.name = name
@@ -48,6 +52,8 @@ class UserService(
                 profileImageUrl = profileImageUrl,
             )
         val savedUser = userRepository.save(user)
+        // 이메일·이름·providerId 는 남기지 않는다. 계정을 가리키는 값은 내부 id 하나로 충분하다.
+        log.debug("로그인 userId={} provider={} 신규가입={}", savedUser.id, provider, existing == null)
 
         return CustomOAuth2User(
             DefaultOAuth2User(oAuth2User.authorities, attributes, "id"),

@@ -1,6 +1,6 @@
 package com.yong.travel.record.controller
 
-import com.yong.travel.auth.security.CustomOAuth2User
+import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
@@ -52,7 +52,7 @@ class TripRecordController(
         @RequestParam(required = false) lat: Double?,
         @RequestParam(required = false) lng: Double?,
         @RequestParam(defaultValue = "0") page: Int,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<TripRecordSummaryResponse> {
         val userId = when (scope) {
             RecordScope.MINE, RecordScope.SHARED -> requireLogin(principal)
@@ -69,14 +69,14 @@ class TripRecordController(
     @GetMapping("/{recordId}")
     fun get(
         @PathVariable recordId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse = recordService.get(recordId, principal?.userId)
 
     /** 기록 등록. 소속 여행은 요청자가 소유한 것이어야 하며, 작성자는 그 여행의 소유자다. */
     @PostMapping
     fun create(
         @RequestBody @Valid request: TripRecordCreateRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse = recordService.create(requireLogin(principal), request)
 
     /** 기록 수정. 작성자만 할 수 있다. */
@@ -84,7 +84,7 @@ class TripRecordController(
     fun update(
         @PathVariable recordId: Long,
         @RequestBody @Valid request: TripRecordUpdateRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse = recordService.update(recordId, requireLogin(principal), request)
 
     /**
@@ -95,14 +95,14 @@ class TripRecordController(
     fun changeTrip(
         @PathVariable recordId: Long,
         @RequestBody @Valid request: TripChangeRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse = recordService.changeTrip(recordId, requireLogin(principal), request)
 
     /** 기록 삭제. soft delete 라 행은 남고 조회에서만 사라진다. */
     @DeleteMapping("/{recordId}")
     fun delete(
         @PathVariable recordId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
         recordService.delete(recordId, requireLogin(principal))
         return ResponseEntity.noContent().build()

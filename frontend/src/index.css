@@ -18,6 +18,16 @@
   --accent: var(--green-500);
   --accent-strong: var(--green-600);
   --accent-contrast: #ffffff;
+  /* 되돌릴 수 없는 동작(삭제·거절)에만 쓰는 색. 연두 브랜드 컬러와 구분되어야 하므로
+     라이트·다크가 같은 값을 쓴다 — 테마별 재정의를 두지 않는다. */
+  --danger: #c55a5a;
+  --danger-border: #d97b7b;
+  --danger-hover: #b34c4c;
+  --danger-contrast: #ffffff;
+  /* 성사된 결과 표시용. 브랜드가 연두라 초록을 성공색으로 쓰면 액센트와 섞인다.
+     --danger 와 같은 규칙으로 테마별 재정의를 두지 않는다. */
+  --info: #4a78b8;
+  --info-border: #7ba0d1;
   --shadow: 0 6px 20px -8px rgba(76, 130, 58, 0.28);
   --shadow-sm: 0 2px 8px -2px rgba(76, 130, 58, 0.18);
   --thumb-grad-a: var(--green-100);

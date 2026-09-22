@@ -9,15 +9,10 @@ import com.yong.travel.photo.repository.PhotoRepository
 import com.yong.travel.photo.storage.PhotoStorageService
 import com.yong.travel.record.domain.TripRecord
 import com.yong.travel.record.repository.TripRecordRepository
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
-
-interface PhotoService {
-    fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<PhotoResponse>
-
-    fun delete(recordId: Long, photoId: Long, requesterId: Long)
-}
 
 /**
  * 사진은 기록에 종속되며, 올리고 지울 수 있는 사람은 기록 작성자뿐이다.
@@ -25,16 +20,23 @@ interface PhotoService {
  */
 @Service
 @Transactional(readOnly = true)
-class PhotoServiceImpl(
+class PhotoService(
     private val recordRepository: TripRecordRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorageService: PhotoStorageService,
     private val uploadProperties: PhotoUploadProperties,
-) : PhotoService {
+) {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    override fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<PhotoResponse> {
+    fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<PhotoResponse> {
         val record = findOwnRecord(recordId, requesterId)
+        // 원본 파일명과 바이너리는 남기지 않는다. 건수와 크기면 업로드 추적에 충분하다.
+        log.debug(
+            "사진 업로드 recordId={} requesterId={} 건수={} 총크기={}bytes",
+            recordId, requesterId, files.size, files.sumOf { it.size },
+        )
 
         return files.map { file ->
             if (file.contentType !in uploadProperties.allowedContentTypes ||
@@ -57,7 +59,7 @@ class PhotoServiceImpl(
     }
 
     @Transactional
-    override fun delete(recordId: Long, photoId: Long, requesterId: Long) {
+    fun delete(recordId: Long, photoId: Long, requesterId: Long) {
         val record = findOwnRecord(recordId, requesterId)
         val photo = photoRepository.findByIdAndRecordId(photoId, recordId)
             ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
@@ -68,6 +70,7 @@ class PhotoServiceImpl(
 
         photoStorageService.delete(photo.storageKey)
         photoRepository.delete(photo)
+        log.debug("사진 삭제 recordId={} photoId={} requesterId={}", recordId, photoId, requesterId)
     }
 
     /**
@@ -79,7 +82,14 @@ class PhotoServiceImpl(
     private fun findOwnRecord(recordId: Long, requesterId: Long): TripRecord {
         val record = recordRepository.findById(recordId)
             .orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
-        if (record.trip.owner.id != requesterId) throw ApiException(ErrorCode.RECORD_NOT_FOUND)
+        if (record.trip.owner.id != requesterId) {
+            // 존재 은닉 때문에 응답이 "없는 기록"과 같다 (명세 §2.2).
+            log.debug(
+                "사진 접근 차단 recordId={} requesterId={} ownerId={}",
+                recordId, requesterId, record.trip.owner.id,
+            )
+            throw ApiException(ErrorCode.RECORD_NOT_FOUND)
+        }
         return record
     }
 }

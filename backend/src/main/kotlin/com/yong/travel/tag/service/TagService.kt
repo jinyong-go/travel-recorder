@@ -4,33 +4,32 @@ import com.yong.travel.group.service.GroupService
 import com.yong.travel.tag.domain.Tag
 import com.yong.travel.tag.dto.TagResponse
 import com.yong.travel.tag.repository.TagRepository
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-interface TagService {
-    /** 자동완성 후보는 요청자가 볼 수 있는 기록에 쓰인 태그로 제한된다. */
-    fun search(keyword: String?, userId: Long?): List<TagResponse>
-
-    /** 기록 등록/수정 시 새 태그명은 생성하고 기존 태그는 재사용한다. */
-    fun findOrCreateAll(names: List<String>): Set<Tag>
-}
-
 @Service
 @Transactional(readOnly = true)
-class TagServiceImpl(
+class TagService(
     private val tagRepository: TagRepository,
     private val groupService: GroupService,
-) : TagService {
+) {
 
-    override fun search(keyword: String?, userId: Long?): List<TagResponse> {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    /** 자동완성 후보는 요청자가 볼 수 있는 기록에 쓰인 태그로 제한된다. */
+    fun search(keyword: String?, userId: Long?): List<TagResponse> {
         val groupIds = groupService.groupIdsOf(userId).ifEmpty { listOf(NO_MATCH) }
-        return tagRepository
+        val tags = tagRepository
             .findVisibleTags(keyword?.trim()?.takeIf { it.isNotBlank() }, userId ?: NO_MATCH, groupIds)
-            .map { TagResponse(requireNotNull(it.id), it.name) }
+        // 자동완성도 볼 수 있는 기록의 태그로만 제한된다. 건수가 튀면 판정이 샌 것이다 (명세 §7).
+        log.debug("태그 자동완성 userId={} 건수={}", userId, tags.size)
+        return tags.map { TagResponse(requireNotNull(it.id), it.name) }
     }
 
+    /** 기록 등록/수정 시 새 태그명은 생성하고 기존 태그는 재사용한다. */
     @Transactional
-    override fun findOrCreateAll(names: List<String>): Set<Tag> {
+    fun findOrCreateAll(names: List<String>): Set<Tag> {
         val distinctNames = names.map { it.trim() }.filter { it.isNotBlank() }.distinct()
         if (distinctNames.isEmpty()) return emptySet()
 
@@ -39,6 +38,7 @@ class TagServiceImpl(
         val created = tagRepository.saveAll(
             distinctNames.filterNot { it in existingNames }.map { Tag(name = it) },
         )
+        log.debug("태그 확보 재사용={}건 신규={}건", existing.size, created.size)
         return (existing + created).toSet()
     }
 

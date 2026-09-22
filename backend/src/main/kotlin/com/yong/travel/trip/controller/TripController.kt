@@ -1,6 +1,6 @@
 package com.yong.travel.trip.controller
 
-import com.yong.travel.auth.security.CustomOAuth2User
+import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
@@ -47,7 +47,7 @@ class TripController(
         @RequestParam(required = false) keyword: String?,
         @RequestParam(defaultValue = "RECENT") sort: TripSort,
         @RequestParam(defaultValue = "0") page: Int,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<TripSummaryResponse> {
         val userId = when (scope) {
             TripScope.MINE, TripScope.SHARED -> requireLogin(principal)
@@ -60,14 +60,14 @@ class TripController(
     @GetMapping("/{tripId}")
     fun get(
         @PathVariable tripId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse = tripService.get(tripId, principal?.userId)
 
     /** 여행 생성. 소유자는 요청자로 고정되며 요청으로 지정할 수 없다. */
     @PostMapping
     fun create(
         @RequestBody @Valid request: TripCreateRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse = tripService.create(requireLogin(principal), request)
 
     /** 여행 기본 정보 수정. 공개 범위는 이 경로로 바꾸지 않는다. 소유자만 할 수 있다. */
@@ -75,7 +75,7 @@ class TripController(
     fun update(
         @PathVariable tripId: Long,
         @RequestBody @Valid request: TripUpdateRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse = tripService.update(tripId, requireLogin(principal), request)
 
     /** 공개 범위 변경. GROUP 이면 공유 그룹 목록도 함께 전체 교체된다. */
@@ -83,7 +83,7 @@ class TripController(
     fun changeVisibility(
         @PathVariable tripId: Long,
         @RequestBody @Valid request: TripVisibilityUpdateRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse = tripService.changeVisibility(tripId, requireLogin(principal), request)
 
     /** 커버 사진 지정·해제. `photoId` 가 null 이면 해제한다. */
@@ -91,14 +91,14 @@ class TripController(
     fun changeCover(
         @PathVariable tripId: Long,
         @RequestBody @Valid request: TripCoverUpdateRequest,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse = tripService.changeCover(tripId, requireLogin(principal), request)
 
     /** 여행 삭제. soft delete 이며 하위 기록도 함께 사라진다. */
     @DeleteMapping("/{tripId}")
     fun delete(
         @PathVariable tripId: Long,
-        @AuthenticationPrincipal principal: CustomOAuth2User?,
+        @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
         tripService.delete(tripId, requireLogin(principal))
         return ResponseEntity.noContent().build()

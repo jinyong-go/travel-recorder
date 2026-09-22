@@ -61,7 +61,8 @@ export const SCOPES = [
   { key: 'public', label: '둘러보기', requiresLogin: false, empty: '공개된 여행이 없습니다.' },
 ]
 
-// 목업 사용자. 백엔드 연동 시 /api/auth/me 응답으로 대체된다.
+// 목업 사용자 디렉터리의 1번 항목. 로그인 사용자 자신은 이제 세션에서 오므로(AuthContext)
+// 여기 값은 목업 여행·그룹의 소유자를 표시하는 데에만 쓰인다.
 //
 // email 은 초대 대상을 찾는 데에만 쓰고 화면에 노출하지 않는다 (공통 명세 §3.1).
 export const CURRENT_USER = { id: 1, name: '나', profileImageUrl: null, email: 'me@example.com' }

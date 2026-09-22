@@ -2,9 +2,11 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { SCOPES, categoryIcon } from '../data/records.js'
 import { TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
 import { useRecords } from '../context/RecordsContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import useTheme from '../hooks/useTheme.js'
 import useMapMode from '../hooks/useMapMode.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
+import HeaderAuth from '../components/HeaderAuth.jsx'
 import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import { MapPinIcon, PlusIcon, UsersIcon } from '../components/icons.jsx'
@@ -22,11 +24,9 @@ const sortTrips = (trips, sortKey) => {
   }
 }
 
-// TODO: 로그인 연동 후 실제 인증 상태로 교체
-const IS_LOGGED_IN = true
-
 export default function TripListPage() {
   const { listTripsByScope, recordsOfTrip, currentUser, receivedInvites } = useRecords()
+  const { isLoggedIn } = useAuth()
   const { themeKey, changeTheme } = useTheme()
   const { mapMode, changeMapMode } = useMapMode()
 
@@ -38,8 +38,8 @@ export default function TripListPage() {
   const pageParam = searchParams.get('page')
 
   // 비로그인은 "둘러보기" 만 볼 수 있으므로 다른 범위가 들어와도 그쪽으로 떨어뜨린다.
-  const visibleScopes = SCOPES.filter((s) => IS_LOGGED_IN || !s.requiresLogin)
-  const defaultScope = IS_LOGGED_IN ? 'mine' : 'public'
+  const visibleScopes = SCOPES.filter((s) => isLoggedIn || !s.requiresLogin)
+  const defaultScope = isLoggedIn ? 'mine' : 'public'
   const scope = visibleScopes.some((s) => s.key === scopeParam) ? scopeParam : defaultScope
 
   const sortKey = TRIP_SORT_OPTIONS.some((o) => o.key === sortParam) ? sortParam : 'recent'
@@ -75,7 +75,7 @@ export default function TripListPage() {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          {IS_LOGGED_IN && (
+          {isLoggedIn && (
             <Link
               to="/groups"
               className="header-groups-link"
@@ -87,7 +87,7 @@ export default function TripListPage() {
             >
               <UsersIcon />
               <span className="header-groups-label">그룹</span>
-              {/* 받은 초대는 그룹 목록 상단에만 있으므로, 여기까지 와야 볼 수 있다는 걸 알린다. */}
+              {/* 초대함은 그룹 목록을 거쳐 들어간다. 배지로 먼저 알리지 않으면 눈에 띄지 않는다. */}
               {receivedInvites.length > 0 && (
                 <span className="header-invite-badge">{receivedInvites.length}</span>
               )}
@@ -95,9 +95,7 @@ export default function TripListPage() {
           )}
           <SettingsMenu mapMode={mapMode} onChangeMapMode={changeMapMode} />
           <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
-          <Link to="/login" className="header-login-link">
-            로그인
-          </Link>
+          <HeaderAuth />
         </div>
       </header>
 

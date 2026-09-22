@@ -51,7 +51,83 @@
   color: #ff9a92;
 }
 
-/* 네이버 로그인 버튼은 브랜드 가이드에 따라 고정 색(#03C75A)을 쓴다. */
+/* 임시 아이디/비밀번호 로그인 폼 (명세 §2.1). 네이버 로그인 복구 시 함께 걷어낸다. */
+.login-form {
+  width: 100%;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.login-field input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  padding: 11px 12px;
+  font-size: 14px;
+}
+
+.login-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.login-submit-btn {
+  width: 100%;
+  margin-top: 4px;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  padding: 13px 22px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  background: var(--accent-strong);
+  transform: translateY(-2px);
+}
+
+.login-submit-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.login-hint {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+.login-hint code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
+/* 네이버 로그인 버튼은 브랜드 가이드에 따라 고정 색(#03C75A)을 쓴다.
+   현재 버튼은 주석 처리되어 있으나 복구 대상이므로 스타일을 남겨 둔다 (명세 §2.1). */
 .naver-login-btn {
   width: 100%;
   margin-top: 6px;

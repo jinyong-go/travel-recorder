@@ -560,6 +560,55 @@
   color: var(--accent-strong);
 }
 
+/* 헤더 로그인 사용자 영역 */
+.header-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* 프로필 사진이 없는 계정은 이름 첫 글자로 대신한다. */
+.header-user-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.header-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.header-logout-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.header-logout-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
 /* 목록으로 돌아가는 링크 — 등록/상세 화면에서 공용으로 쓴다. */
 .back-link {
   align-self: flex-start;

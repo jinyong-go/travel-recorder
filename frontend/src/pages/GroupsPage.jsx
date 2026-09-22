@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { GROUP_MEMBER_LIMIT } from '../data/groups.js'
 import { useRecords } from '../context/RecordsContext.jsx'
 import useTheme from '../hooks/useTheme.js'
@@ -7,30 +7,19 @@ import ThemeSelector from '../components/ThemeSelector.jsx'
 import { ArrowLeftIcon, MapPinIcon, PlusIcon } from '../components/icons.jsx'
 import './GroupsPage.css'
 
-const formatDate = (iso) => new Date(iso).toLocaleDateString('ko-KR')
-
 export default function GroupsPage() {
-  const { myGroups, currentUser, createGroup, receivedInvites, acceptInvite, rejectInvite } =
-    useRecords()
-  const navigate = useNavigate()
+  const { myGroups, currentUser, createGroup, receivedInvites } = useRecords()
   const { themeKey, changeTheme } = useTheme()
+  const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
+  const [memo, setMemo] = useState('')
   const [error, setError] = useState('')
-  const [inviteError, setInviteError] = useState('')
-  const [rejecting, setRejecting] = useState(null)
 
-  const handleAccept = (inviteId) => {
-    const result = acceptInvite(inviteId)
-    if (result.error === 'LIMIT') {
-      // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다 (§3.7).
-      setInviteError('그룹 정원(5명)이 가득 찼습니다. 자리가 나면 다시 수락할 수 있습니다.')
-      return
-    }
-    if (result.error) {
-      setInviteError('이미 처리되었거나 취소된 초대입니다.')
-      return
-    }
-    navigate(`/groups/${result.groupId}`)
+  const closeCreate = () => {
+    setCreating(false)
+    setName('')
+    setMemo('')
+    setError('')
   }
 
   const handleCreate = (e) => {
@@ -44,9 +33,8 @@ export default function GroupsPage() {
       setError('그룹 이름은 30자 이하로 입력해주세요.')
       return
     }
-    createGroup(trimmed)
-    setName('')
-    setError('')
+    createGroup(trimmed, memo)
+    closeCreate()
   }
 
   return (
@@ -67,37 +55,11 @@ export default function GroupsPage() {
             <ArrowLeftIcon /> 여행 목록으로
           </Link>
 
+          {/* 같은 목록을 두 화면이 각자 그리지 않도록 여기서는 건수만 알린다 (명세 §5.8.4). */}
           {receivedInvites.length > 0 && (
-            <section className="received-invites">
-              <h2 className="group-section-title">받은 초대</h2>
-              {inviteError && <p className="invite-error">{inviteError}</p>}
-              <ul className="invite-list">
-                {receivedInvites.map((invite) => (
-                  <li key={invite.id} className="invite-item">
-                    <span className="member-name">{invite.group.name}</span>
-                    <span className="invite-sent-at">
-                      {invite.invitedBy.name} 님이 초대 · {formatDate(invite.createdAt)}
-                    </span>
-                    <div className="received-invite-actions">
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        onClick={() => handleAccept(invite.id)}
-                      >
-                        수락
-                      </button>
-                      <button
-                        type="button"
-                        className="member-remove"
-                        onClick={() => setRejecting(invite)}
-                      >
-                        거절
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <Link to="/invites/received" className="invite-notice">
+              받은 초대 {receivedInvites.length}건 <span aria-hidden="true">→</span>
+            </Link>
           )}
 
           <h1 className="groups-title">공유 그룹</h1>
@@ -106,24 +68,12 @@ export default function GroupsPage() {
             수정하거나 삭제할 수는 없습니다.
           </p>
 
-          <form className="group-create-form" onSubmit={handleCreate}>
-            <label className="sr-only" htmlFor="group-name">
-              그룹 이름
-            </label>
-            <input
-              id="group-name"
-              type="text"
-              value={name}
-              maxLength={30}
-              placeholder="예: 가족, 제주 동행"
-              onChange={(e) => setName(e.target.value)}
-            />
-            <button type="submit" className="btn-primary">
+          <div className="groups-actions">
+            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
               <PlusIcon />
               그룹 만들기
             </button>
-          </form>
-          {error && <p className="field-error">{error}</p>}
+          </div>
 
           {myGroups.length === 0 ? (
             <div className="empty-state">
@@ -143,6 +93,7 @@ export default function GroupsPage() {
                       <span className="group-card-count">
                         {group.members.length}/{GROUP_MEMBER_LIMIT}명
                       </span>
+                      {group.memo && <span className="group-card-memo">{group.memo}</span>}
                     </Link>
                   </li>
                 )
@@ -152,39 +103,56 @@ export default function GroupsPage() {
         </div>
       </main>
 
-      {rejecting && (
-        <div className="modal-overlay" onClick={() => setRejecting(null)}>
+      {creating && (
+        <div className="modal-overlay" onClick={closeCreate}>
           <div
-            className="modal-panel confirm-panel"
+            className="modal-panel group-form-panel"
             role="dialog"
             aria-modal="true"
-            aria-label="초대를 거절할까요?"
+            aria-label="새 그룹 만들기"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2>초대를 거절할까요?</h2>
-            <p className="confirm-desc">
-              &apos;{rejecting.group.name}&apos; 초대가 목록에서 사라집니다. 다시 참여하려면
-              상대가 새로 초대해야 해요.
-            </p>
-            <div className="confirm-actions">
-              <button type="button" className="confirm-cancel" onClick={() => setRejecting(null)}>
-                취소
-              </button>
-              <button
-                type="button"
-                className="confirm-ok"
-                onClick={() => {
-                  rejectInvite(rejecting.id)
-                  setRejecting(null)
-                  setInviteError('')
-                }}
-              >
-                거절
-              </button>
-            </div>
+            <h2>새 그룹 만들기</h2>
+            <form className="group-form" onSubmit={handleCreate}>
+              <label htmlFor="group-name">이름</label>
+              <input
+                id="group-name"
+                type="text"
+                value={name}
+                maxLength={30}
+                autoFocus
+                placeholder="예: 가족, 제주 동행"
+                onChange={(e) => setName(e.target.value)}
+              />
+
+              <label htmlFor="group-memo">
+                메모 <span className="field-optional">(선택)</span>
+              </label>
+              <textarea
+                id="group-memo"
+                value={memo}
+                maxLength={200}
+                rows={3}
+                placeholder="예: 설 연휴 사진 공유용"
+                onChange={(e) => setMemo(e.target.value)}
+              />
+              <p className="field-hint">멤버에게도 보입니다.</p>
+
+              {error && <p className="field-error">{error}</p>}
+
+              <div className="confirm-actions">
+                <button type="button" className="confirm-cancel" onClick={closeCreate}>
+                  취소
+                </button>
+                <button type="submit" className="confirm-ok confirm-ok-safe">
+                  만들기
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
+
     </>
   )
 }
