@@ -1,12 +1,12 @@
 package com.yong.travel
 
-import com.yong.travel.auth.domain.User
-import com.yong.travel.auth.repository.UserRepository
+import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.group.domain.InviteOutcome
-import com.yong.travel.group.dto.GroupRequest
+import com.yong.travel.group.dto.GroupCreateRequest
 import com.yong.travel.group.dto.InviteHistoryRole
 import com.yong.travel.group.dto.InviteRequest
 import com.yong.travel.group.service.GroupService
@@ -99,7 +99,7 @@ class InviteHistoryTest {
         assertEquals(InviteOutcome.GROUP_DELETED, item.outcome)
         // 그룹 행이 사라져도 이름으로 무엇에 대한 초대였는지 답할 수 있어야 한다.
         assertEquals("가족", item.group.name)
-        assertTrue(item.group.deleted)
+        assertTrue(item.groupDeleted)
     }
 
     @Test
@@ -110,7 +110,7 @@ class InviteHistoryTest {
         inviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
 
-        assertFalse(historyOf(invitee, InviteHistoryRole.RECEIVED).single().group.deleted)
+        assertFalse(historyOf(invitee, InviteHistoryRole.RECEIVED).single().groupDeleted)
     }
 
     @Test
@@ -190,7 +190,7 @@ class InviteHistoryTest {
         inviteService.invite(groupId, ownerId, InviteRequest(email)).invite.id
 
     private fun newGroup(ownerId: Long): Long =
-        requireNotNull(groupService.create(ownerId, GroupRequest("가족")).id)
+        requireNotNull(groupService.create(ownerId, GroupCreateRequest("가족")).id)
 
     private fun newUser(email: String = "tester-${System.nanoTime()}@example.com"): Long = requireNotNull(
         userRepository.save(

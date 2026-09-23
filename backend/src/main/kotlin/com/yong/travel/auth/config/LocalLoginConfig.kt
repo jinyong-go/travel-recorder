@@ -1,7 +1,7 @@
 package com.yong.travel.auth.config
 
-import com.yong.travel.auth.domain.User
-import com.yong.travel.auth.repository.UserRepository
+import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.auth.security.LoginUserDetails
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean

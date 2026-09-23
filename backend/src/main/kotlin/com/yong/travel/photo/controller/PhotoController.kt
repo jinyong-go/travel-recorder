@@ -3,6 +3,7 @@ package com.yong.travel.photo.controller
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.photo.dto.PhotoResponse
+import com.yong.travel.photo.dto.toResponse
 import com.yong.travel.photo.service.PhotoService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -27,7 +28,8 @@ class PhotoController(
         @PathVariable recordId: Long,
         @RequestParam("files") files: List<MultipartFile>,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): List<PhotoResponse> = photoService.upload(recordId, requireLogin(principal), files)
+    ): List<PhotoResponse> =
+        photoService.upload(recordId, requireLogin(principal), files).map { it.toResponse() }
 
     /** 사진 삭제. 파일 본체까지 함께 지우는 물리 삭제다. */
     @DeleteMapping("/{photoId}")

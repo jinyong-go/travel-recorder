@@ -2,6 +2,7 @@ package com.yong.travel.tag.controller
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.tag.dto.TagResponse
+import com.yong.travel.tag.dto.toResponse
 import com.yong.travel.tag.service.TagService
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
@@ -20,5 +21,5 @@ class TagController(
     fun search(
         @RequestParam(required = false) keyword: String?,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): List<TagResponse> = tagService.search(keyword, principal?.userId)
+    ): List<TagResponse> = tagService.search(keyword, principal?.userId).map { it.toResponse() }
 }

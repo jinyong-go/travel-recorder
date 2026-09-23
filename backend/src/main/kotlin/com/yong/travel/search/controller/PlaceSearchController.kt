@@ -2,6 +2,7 @@ package com.yong.travel.search.controller
 
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.search.dto.PlaceSearchResultResponse
+import com.yong.travel.search.dto.toResponse
 import com.yong.travel.search.service.PlaceSearchService
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -28,5 +29,6 @@ class PlaceSearchController(
         @RequestParam(required = false) lat: Double?,
         @RequestParam(required = false) lng: Double?,
         @RequestParam(defaultValue = "0") page: Int,
-    ): PageResponse<PlaceSearchResultResponse> = placeSearchService.search(keyword, lat, lng, page)
+    ): PageResponse<PlaceSearchResultResponse> =
+        placeSearchService.search(keyword, lat, lng, page).map { it.toResponse() }
 }

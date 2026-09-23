@@ -1,11 +1,11 @@
 package com.yong.travel
 
-import com.yong.travel.auth.domain.User
-import com.yong.travel.auth.repository.UserRepository
+import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
-import com.yong.travel.group.dto.GroupRequest
+import com.yong.travel.group.dto.GroupCreateRequest
 import com.yong.travel.group.dto.InviteRequest
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.InviteService
@@ -76,12 +76,12 @@ class TripVisibilityTest {
         flush()
 
         val asOwner = tripService.get(tripId, owner)
-        assertTrue(asOwner.isOwner)
+        assertTrue(asOwner.isOwnedBy(owner))
         assertEquals(Visibility.GROUP, asOwner.visibility)
         assertEquals(listOf(groupId), asOwner.sharedGroups?.map { it.id })
 
         val asGuest = tripService.get(tripId, guest)
-        assertFalse(asGuest.isOwner)
+        assertFalse(asGuest.isOwnedBy(guest))
         assertNull(asGuest.visibility, "누구에게 공유했는지는 열람자에게 알릴 이유가 없다")
         assertNull(asGuest.sharedGroups)
         // 예산은 공개 범위를 그대로 따르는 값이라 열람자에게도 보인다 (명세 §4.3.1).
@@ -92,7 +92,7 @@ class TripVisibilityTest {
     fun `속하지 않은 그룹에는 공유할 수 없다`() {
         val owner = newUser()
         val stranger = newUser()
-        val foreignGroupId = requireNotNull(groupService.create(stranger, GroupRequest("남의 그룹")).id)
+        val foreignGroupId = requireNotNull(groupService.create(stranger, GroupCreateRequest("남의 그룹")).id)
         flush()
 
         // 403 이면 "그런 그룹이 있다" 는 뜻이 되므로 여기서도 404 다.
@@ -352,7 +352,7 @@ class TripVisibilityTest {
 
     /** 소유자 + 멤버 1명짜리 그룹을 만들고 그룹 id 를 돌려준다. */
     private fun newGroupWith(ownerId: Long, memberId: Long): Long {
-        val groupId = requireNotNull(groupService.create(ownerId, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(ownerId, GroupCreateRequest("가족")).id)
         val memberEmail = requireNotNull(userRepository.findById(memberId).orElseThrow().email)
         val invite = inviteService.invite(groupId, ownerId, InviteRequest(memberEmail))
         inviteService.accept(invite.invite.id, memberId)

@@ -1,6 +1,7 @@
 package com.yong.travel.auth.controller
 
 import com.yong.travel.auth.dto.MeResponse
+import com.yong.travel.auth.dto.toMeResponse
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.auth.service.AuthService
 import com.yong.travel.common.error.ApiException
@@ -75,6 +76,6 @@ class LocalLoginController(
         SecurityContextHolder.setContext(context)
         securityContextRepository.saveContext(context, httpRequest, httpResponse)
 
-        return authService.getCurrentUser((authentication.principal as LoginUser).userId)
+        return authService.getCurrentUser((authentication.principal as LoginUser).userId).toMeResponse()
     }
 }

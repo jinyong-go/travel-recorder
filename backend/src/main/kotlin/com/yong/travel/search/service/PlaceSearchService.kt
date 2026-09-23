@@ -4,8 +4,8 @@ import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.util.haversineKm
 import com.yong.travel.common.util.roundTo2Decimals
 import com.yong.travel.search.client.NaverLocalSearchClient
+import com.yong.travel.search.domain.PlaceCandidate
 import com.yong.travel.search.dto.NaverLocalSearchItem
-import com.yong.travel.search.dto.PlaceSearchResultResponse
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -21,12 +21,12 @@ class PlaceSearchService(
         lat: Double?,
         lng: Double?,
         page: Int,
-    ): PageResponse<PlaceSearchResultResponse> {
+    ): PageResponse<PlaceCandidate> {
         // 원본 API 는 검색어당 최대 5건만 반환한다. 후보 풀을 늘리려면 여기서 검색어 변형
         // (지역명 결합 등)으로 추가 호출한 뒤 아래 중복 제거에 함께 태운다.
         val candidates = naverLocalSearchClient.search(keyword)
             .distinctBy { it.address }
-            .map { it.toSearchResult(lat, lng) }
+            .map { it.toCandidate(lat, lng) }
 
         val sorted = if (lat != null && lng != null) {
             candidates.sortedBy { it.distanceKm ?: Double.MAX_VALUE }
@@ -49,10 +49,11 @@ class PlaceSearchService(
         )
     }
 
-    private fun NaverLocalSearchItem.toSearchResult(lat: Double?, lng: Double?): PlaceSearchResultResponse {
+    /** 원본 응답 → 후보. 좌표 환산과 HTML 태그 제거가 여기서 끝난다 (명세 §1.3). */
+    private fun NaverLocalSearchItem.toCandidate(lat: Double?, lng: Double?): PlaceCandidate {
         val longitude = (mapx.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE
         val latitude = (mapy.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE
-        return PlaceSearchResultResponse(
+        return PlaceCandidate(
             name = title.replace(HTML_TAG_REGEX, ""),
             category = category,
             address = address,

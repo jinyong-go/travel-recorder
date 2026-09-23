@@ -26,7 +26,7 @@ Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client /
 
 ```
 com.yong.travel
-  ├─ auth     인증·사용자 (config, controller, domain, dto, repository, security, service)
+  ├─ auth     인증·사용자 (config, controller, domain, dto, persistence, security, service)
   ├─ record   방문 기록
   ├─ group    공유 그룹·초대
   ├─ photo    사진 (storage 하위에 저장소 구현체)
@@ -36,6 +36,9 @@ com.yong.travel
 ```
 
 - **도메인으로 먼저 나누고, 그 안에서 계층으로 나눈다.** 계층을 최상위에 두지 않는다.
+- **JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 둔다.** `domain` 은 저장 수단을
+  모르는 도메인 개념의 자리다 — `Visibility`·`Category`·`InviteOutcome` 이 여기 있다.
+  의존 방향은 `persistence → domain` 한쪽이다.
 - 두 도메인이 함께 쓰는 것만 `common` 으로 올린다. 한 곳에서만 쓰면 그 도메인에 둔다.
 - import 는 **명시적으로 쓴다.** 와일드카드(`import ...*`)를 쓰지 않는다.
 
@@ -43,9 +46,9 @@ com.yong.travel
 
 | 계층 | 하는 일 | 하지 않는 일 |
 |---|---|---|
-| Controller | 요청 바인딩·검증(`@Valid`), 인증 principal 해석, DTO 반환 | 비즈니스 로직, 엔티티 직접 반환 |
-| Service | 비즈니스 로직, 트랜잭션 경계, 권한 판정 | HTTP 관심사(상태 코드·헤더) |
-| Repository | 데이터 접근. 동적 조건은 `Specifications` | 로직 분기 |
+| Controller | 요청 바인딩·검증(`@Valid`), 인증 principal 해석, **도메인 객체 → DTO 변환** | 비즈니스 로직, 조회 |
+| Service | 비즈니스 로직, 트랜잭션 경계, 권한 판정, **필요한 조회를 모두 끝내고 도메인 객체로 묶어 반환** | HTTP 관심사(상태 코드·헤더), 응답 모양 |
+| Persistence | 데이터 접근. 엔티티·리포지토리·`Specifications` | 로직 분기 |
 
 - **의존성은 생성자 주입**이다. 필드 주입(`@Autowired var`)을 쓰지 않는다.
 
@@ -59,7 +62,21 @@ com.yong.travel
 
 - **엔티티를 요청·응답에 직접 쓰지 않는다.** DTO로 주고받는다. DTO는 도메인별 `dto` 패키지에
   용도별 파일로 모은다 (`RecordRequests.kt`, `RecordResponses.kt`, `RecordListQuery.kt`).
-- 목록 응답은 공통 `PageResponse` 를 쓴다.
+- **서비스는 DTO 가 아니라 도메인 객체를 반환한다** (`TripDetail`, `GroupSummary`, `UserRef` …).
+  변환 함수는 `dto` 패키지에 확장 함수로 두고 컨트롤러가 부른다. 서비스가 응답 모양을 알면
+  화면이 바뀔 때마다 서비스가 끌려 들어온다.
+- **응답을 만들면서 조회하지 않는다.** 변환 함수 안에서 리포지토리를 부르면 목록에서 그대로
+  N+1 이 된다. 필요한 것은 서비스가 미리 모아 도메인 객체에 담는다 —
+  `TripShareRepository.findByTripIdIn`, `PhotoRepository.findByRecordIdInOrderByCreatedAtAsc`
+  이 그래서 있다.
+- **요청자에 따라 달라지는 값은 도메인 객체가 필드로 들지 않는다.** `isOwner`·`isAuthor` 는
+  변환 시점에 `isOwnedBy(userId)`·`isAuthoredBy(userId)` 로 정한다.
+- **가릴 값은 읽지 않는 편이 확실하다.** 소유자에게만 나가는 `visibility`·`sharedGroups` 는
+  응답에서 가리는 대신 소유자 조회일 때만 읽는다 (`TripService.sharesOf`).
+- 서비스끼리 주고받는 값은 예외다. `GroupService.requireAccessibleGroups` 와
+  `TagService.findOrCreateAll` 은 엔티티를 반환한다 — 컨트롤러로 나가는 경계가 아니라
+  다른 서비스가 연관을 걸 때 쓰기 때문이다.
+- 목록 응답은 공통 `PageResponse` 를 쓴다. 도메인 객체 페이지는 `PageResponse.map` 으로 옮긴다.
 
 ## 인가 — 가장 조심할 자리
 
@@ -71,6 +88,10 @@ com.yong.travel
   만들면 그 경로가 곧 우회로가 된다. 목록·상세·태그 자동완성 모두 해당한다.
 - **열람 권한이 없으면 `403` 이 아니라 `404`** 다. 없는 것과 응답 본문·메시지가 구분되지 않아야
   한다. 소속 여행을 못 봐서 가려지는 기록도 `RECORD_NOT_FOUND` 이지 `TRIP_NOT_FOUND` 가 아니다.
+- **그룹은 예외로 `403` 이다.** 멤버가 아닌 그룹의 조회·탈퇴는 `403`, 없는 그룹만 `404` 다.
+  그룹에서 가려지는 것은 멤버 명단이고 `403` 이 그것을 드러내지 않기 때문이다 (명세 §2.2.2).
+  단 **여행 공유 요청에 담긴 접근 불가 그룹 id 는 그대로 `404`** 다 — 그 경로는 임의의 id 를
+  넣어볼 수 있다.
 - 인증은 현재 `SecurityConfig` 가 `permitAll()` 이라 컨트롤러가 `requireLogin(principal)` 로
   직접 막는다 (`common/web/AuthSupport.kt`). **이 상태를 전제로 새 엔드포인트를 만들 때도
   `requireLogin` 을 빠뜨리지 않는다.**

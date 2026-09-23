@@ -1,27 +1,27 @@
 package com.yong.travel
 
-import com.yong.travel.auth.domain.User
-import com.yong.travel.auth.repository.UserRepository
+import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.group.dto.GroupRequest
+import com.yong.travel.group.dto.GroupCreateRequest
 import com.yong.travel.group.dto.InviteRequest
-import com.yong.travel.group.repository.GroupInviteRepository
+import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.InviteService
-import com.yong.travel.group.repository.GroupRepository
+import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.dto.RecordListQuery
 import com.yong.travel.record.dto.RecordScope
 import com.yong.travel.record.dto.TripChangeRequest
 import com.yong.travel.record.dto.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
-import com.yong.travel.trip.domain.Trip
-import com.yong.travel.trip.domain.TripShare
+import com.yong.travel.trip.persistence.Trip
+import com.yong.travel.trip.persistence.TripShare
 import com.yong.travel.trip.domain.Visibility
-import com.yong.travel.trip.repository.TripRepository
-import com.yong.travel.trip.repository.TripShareRepository
+import com.yong.travel.trip.persistence.TripRepository
+import com.yong.travel.trip.persistence.TripShareRepository
 import jakarta.persistence.EntityManager
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
@@ -87,11 +87,11 @@ class RecordVisibilityTest {
         flush()
 
         val asOwner = recordService.get(recordId, owner)
-        assertTrue(asOwner.isAuthor)
+        assertTrue(asOwner.isAuthoredBy(owner))
         assertEquals(tripId, asOwner.trip.id)
 
         val asGuest = recordService.get(recordId, null)
-        assertFalse(asGuest.isAuthor)
+        assertFalse(asGuest.isAuthoredBy(null))
         // 작성자는 기록이 아니라 여행 소유자에서 온다.
         assertEquals(owner, asGuest.author.id)
         assertEquals(tripId, recordService.get(recordId, other).trip.id)
@@ -271,7 +271,7 @@ class RecordVisibilityTest {
     fun `이메일로 보낸 초대는 받은 사람 목록에 쌓이고 수락하면 멤버가 된다`() {
         val owner = newUser()
         val invitee = newUser(email = "friend@example.com")
-        val groupId = requireNotNull(groupService.create(owner, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(owner, GroupCreateRequest("가족")).id)
 
         inviteService.invite(groupId, owner, InviteRequest("friend@example.com"))
         flush()
@@ -292,7 +292,7 @@ class RecordVisibilityTest {
     fun `이메일은 대소문자를 구분하지 않고 응답에 담기지 않는다`() {
         val owner = newUser()
         newUser(email = "Friend@Example.com")
-        val groupId = requireNotNull(groupService.create(owner, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(owner, GroupCreateRequest("가족")).id)
 
         val result = inviteService.invite(groupId, owner, InviteRequest("friend@EXAMPLE.com"))
         flush()
@@ -305,7 +305,7 @@ class RecordVisibilityTest {
     fun `대기 중인 초대가 있는 상대를 다시 초대해도 초대가 늘지 않는다`() {
         val owner = newUser()
         newUser(email = "friend@example.com")
-        val groupId = requireNotNull(groupService.create(owner, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(owner, GroupCreateRequest("가족")).id)
 
         val first = inviteService.invite(groupId, owner, InviteRequest("friend@example.com"))
         flush()
@@ -321,7 +321,7 @@ class RecordVisibilityTest {
     @Test
     fun `가입하지 않은 이메일과 이미 멤버인 상대는 초대할 수 없다`() {
         val owner = newUser(email = "owner@example.com")
-        val groupId = requireNotNull(groupService.create(owner, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(owner, GroupCreateRequest("가족")).id)
         flush()
 
         assertEquals(
@@ -340,7 +340,7 @@ class RecordVisibilityTest {
         val owner = newUser()
         newUser(email = "friend@example.com")
         val stranger = newUser()
-        val groupId = requireNotNull(groupService.create(owner, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(owner, GroupCreateRequest("가족")).id)
         val inviteId = inviteService.invite(groupId, owner, InviteRequest("friend@example.com")).invite.id
         flush()
 
@@ -355,7 +355,7 @@ class RecordVisibilityTest {
     fun `거절한 초대는 사라지고 흔적을 남기지 않아 다시 초대할 수 있다`() {
         val owner = newUser()
         val invitee = newUser(email = "friend@example.com")
-        val groupId = requireNotNull(groupService.create(owner, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(owner, GroupCreateRequest("가족")).id)
         val inviteId = inviteService.invite(groupId, owner, InviteRequest("friend@example.com")).invite.id
         flush()
 
@@ -370,7 +370,7 @@ class RecordVisibilityTest {
     fun `정원이 찬 뒤의 수락은 거부되고 초대는 남는다`() {
         val owner = newUser()
         val latecomer = newUser(email = "late@example.com")
-        val groupId = requireNotNull(groupService.create(owner, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(owner, GroupCreateRequest("가족")).id)
 
         // 대기 중인 초대는 정원을 차지하지 않으므로 정원을 넘겨 보낼 수 있다.
         val inviteId = inviteService.invite(groupId, owner, InviteRequest("late@example.com")).invite.id
@@ -391,7 +391,7 @@ class RecordVisibilityTest {
     @Test
     fun `소유자는 탈퇴할 수 없고 제외 대상도 될 수 없다`() {
         val owner = newUser()
-        val groupId = requireNotNull(groupService.create(owner, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(owner, GroupCreateRequest("가족")).id)
         flush()
 
         assertEquals(ErrorCode.FORBIDDEN, assertThrows<ApiException> { groupService.leave(groupId, owner) }.errorCode)
@@ -421,7 +421,7 @@ class RecordVisibilityTest {
 
     /** 소유자 + 멤버 1명짜리 그룹을 만들고 그룹 id 를 돌려준다. */
     private fun newGroupWith(ownerId: Long, memberId: Long): Long {
-        val groupId = requireNotNull(groupService.create(ownerId, GroupRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(ownerId, GroupCreateRequest("가족")).id)
         val memberEmail = requireNotNull(userRepository.findById(memberId).orElseThrow().email)
         val invite = inviteService.invite(groupId, ownerId, InviteRequest(memberEmail))
         inviteService.accept(invite.invite.id, memberId)

@@ -1,7 +1,7 @@
 package com.yong.travel
 
-import com.yong.travel.auth.domain.User
-import com.yong.travel.auth.repository.UserRepository
+import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.photo.service.PhotoService

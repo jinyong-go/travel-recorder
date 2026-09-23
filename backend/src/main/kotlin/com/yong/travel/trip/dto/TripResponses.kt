@@ -1,6 +1,10 @@
 package com.yong.travel.trip.dto
 
 import com.yong.travel.auth.dto.UserResponse
+import com.yong.travel.auth.dto.toResponse
+import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.trip.domain.TripDetail
+import com.yong.travel.trip.domain.TripSummary
 import com.yong.travel.trip.domain.Visibility
 import java.time.Instant
 import java.time.LocalDate
@@ -74,3 +78,48 @@ data class TripSummaryResponse(
     val sharedGroups: List<SharedGroupResponse>?,
     val createdAt: Instant,
 )
+
+private fun GroupRef.toSharedResponse() = SharedGroupResponse(id, name)
+
+/**
+ * 여행 상세 → 응답.
+ *
+ * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. `visibility` 와
+ * `sharedGroups` 는 서비스가 소유자에게만 채워 주므로 그대로 옮긴다.
+ */
+fun TripDetail.toResponse(requesterId: Long?): TripResponse =
+    TripResponse(
+        id = id,
+        name = name,
+        startDate = startDate,
+        endDate = endDate,
+        headcount = headcount,
+        budget = budget,
+        memo = memo,
+        coverPhotoUrl = coverPhotoUrl,
+        recordCount = recordCount,
+        owner = owner.toResponse(),
+        isOwner = isOwnedBy(requesterId),
+        visibility = visibility,
+        sharedGroups = sharedGroups?.map { it.toSharedResponse() },
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+
+/** 여행 목록 항목 → 응답. `isOwner` 를 여기서 정하는 이유는 [toResponse] 와 같다. */
+fun TripSummary.toSummaryResponse(requesterId: Long?): TripSummaryResponse =
+    TripSummaryResponse(
+        id = id,
+        name = name,
+        startDate = startDate,
+        endDate = endDate,
+        headcount = headcount,
+        budget = budget,
+        coverPhotoUrl = coverPhotoUrl,
+        recordCount = recordCount,
+        owner = owner.toResponse(),
+        isOwner = isOwnedBy(requesterId),
+        visibility = visibility,
+        sharedGroups = sharedGroups?.map { it.toSharedResponse() },
+        createdAt = createdAt,
+    )

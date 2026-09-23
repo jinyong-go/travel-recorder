@@ -1,6 +1,7 @@
 package com.yong.travel.auth.controller
 
 import com.yong.travel.auth.dto.MeResponse
+import com.yong.travel.auth.dto.toMeResponse
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.auth.service.AuthService
 import com.yong.travel.common.web.requireLogin
@@ -27,7 +28,7 @@ class AuthController(
      */
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal principal: LoginUser?): MeResponse =
-        authService.getCurrentUser(requireLogin(principal))
+        authService.getCurrentUser(requireLogin(principal)).toMeResponse()
 
     /** 로그아웃. 세션을 버리고 SecurityContext 를 비운다. */
     @PostMapping("/logout")

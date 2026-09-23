@@ -1,29 +1,29 @@
 package com.yong.travel.trip.service
 
-import com.yong.travel.auth.dto.toResponse
-import com.yong.travel.auth.repository.UserRepository
+import com.yong.travel.auth.domain.UserRef
+import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
+import com.yong.travel.group.domain.GroupRef
 import com.yong.travel.group.service.GroupService
-import com.yong.travel.photo.repository.PhotoRepository
+import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoStorageService
-import com.yong.travel.record.repository.TripRecordRepository
-import com.yong.travel.trip.domain.Trip
-import com.yong.travel.trip.domain.TripShare
+import com.yong.travel.record.persistence.TripRecordRepository
+import com.yong.travel.trip.persistence.Trip
+import com.yong.travel.trip.persistence.TripShare
+import com.yong.travel.trip.domain.TripDetail
+import com.yong.travel.trip.domain.TripSummary
 import com.yong.travel.trip.domain.Visibility
-import com.yong.travel.trip.dto.SharedGroupResponse
 import com.yong.travel.trip.dto.TripCoverUpdateRequest
 import com.yong.travel.trip.dto.TripCreateRequest
 import com.yong.travel.trip.dto.TripListQuery
-import com.yong.travel.trip.dto.TripResponse
 import com.yong.travel.trip.dto.TripSort
-import com.yong.travel.trip.dto.TripSummaryResponse
 import com.yong.travel.trip.dto.TripUpdateRequest
 import com.yong.travel.trip.dto.TripVisibilityUpdateRequest
-import com.yong.travel.trip.repository.TripRepository
-import com.yong.travel.trip.repository.TripShareRepository
-import com.yong.travel.trip.repository.TripSpecifications
+import com.yong.travel.trip.persistence.TripRepository
+import com.yong.travel.trip.persistence.TripShareRepository
+import com.yong.travel.trip.persistence.TripSpecifications
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -50,7 +50,7 @@ class TripService(
         query: TripListQuery,
         userId: Long?,
         pageable: Pageable,
-    ): PageResponse<TripSummaryResponse> {
+    ): PageResponse<TripSummary> {
         val groupIds = groupService.groupIdsOf(userId)
         val spec = TripSpecifications.withScope(query.scope, userId, groupIds)
             .and(TripSpecifications.withKeyword(query.keyword))
@@ -64,25 +64,28 @@ class TripService(
         val page = tripRepository.findAll(spec, PageRequest.of(pageable.pageNumber, pageable.pageSize, sort))
 
         val counts = recordCounts(*page.content.mapNotNull { it.id }.toLongArray())
-        val summaries = page.content.map { it.toSummaryResponse(userId, counts) }
+        // 공유 그룹은 소유자 본인의 항목에만 필요하다. 그 여행들만 골라 한 번에 읽는다.
+        val shares = sharesOf(page.content.filter { userId != null && it.owner.id == userId })
+        val summaries = page.content.map { it.toSummary(userId, counts, shares) }
         // 범위 판정이 쿼리 단계에 있어(명세 §7) 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
         log.debug("여행 목록 scope={} userId={} 건수={}", query.scope, userId, page.totalElements)
         return PageResponse(summaries, page.number, page.size, page.totalElements, page.totalPages)
     }
 
     /** 볼 권한이 없으면 없는 여행과 똑같이 TRIP_NOT_FOUND 로 응답한다 (존재 은닉). */
-    fun get(tripId: Long, userId: Long?): TripResponse {
+    fun get(tripId: Long, userId: Long?): TripDetail {
         val trip = findTrip(tripId)
         requireViewable(trip, userId)
-        return trip.toResponse(userId)
+        return detailOf(trip, userId)
     }
 
     /** 단건 응답의 기록 수. 목록과 같은 집계 쿼리를 한 건짜리로 쓴다. */
     private fun recordCountOf(tripId: Long): Long = recordCounts(tripId)[tripId] ?: 0L
 
     @Transactional
-    fun create(ownerId: Long, request: TripCreateRequest): TripResponse {
-        val owner = userRepository.findById(ownerId).orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
+    fun create(ownerId: Long, request: TripCreateRequest): TripDetail {
+        val owner = userRepository.findById(ownerId)
+            .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
         val trip = tripRepository.save(
             Trip(
                 owner = owner,
@@ -97,12 +100,12 @@ class TripService(
         )
         applyShares(trip, request.visibility, request.groupIds, ownerId)
         log.debug("여행 생성 tripId={} ownerId={} visibility={}", trip.id, ownerId, trip.visibility)
-        return trip.toResponse(ownerId)
+        return detailOf(trip, ownerId)
     }
 
     /** 기본 정보만 바꾼다. 공개 범위는 changeVisibility 의 몫이다. */
     @Transactional
-    fun update(tripId: Long, ownerId: Long, request: TripUpdateRequest): TripResponse {
+    fun update(tripId: Long, ownerId: Long, request: TripUpdateRequest): TripDetail {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
@@ -115,7 +118,7 @@ class TripService(
 
         log.debug("여행 수정 tripId={} ownerId={}", tripId, ownerId)
         // updatedAt 을 채우는 @PreUpdate 는 flush 시점에 돈다.
-        return tripRepository.saveAndFlush(trip).toResponse(ownerId)
+        return detailOf(tripRepository.saveAndFlush(trip), ownerId)
     }
 
     @Transactional
@@ -123,7 +126,7 @@ class TripService(
         tripId: Long,
         ownerId: Long,
         request: TripVisibilityUpdateRequest,
-    ): TripResponse {
+    ): TripDetail {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
@@ -133,7 +136,7 @@ class TripService(
         )
         trip.visibility = request.visibility
         applyShares(trip, request.visibility, request.groupIds, ownerId)
-        return tripRepository.saveAndFlush(trip).toResponse(ownerId)
+        return detailOf(tripRepository.saveAndFlush(trip), ownerId)
     }
 
     /**
@@ -145,7 +148,7 @@ class TripService(
         tripId: Long,
         ownerId: Long,
         request: TripCoverUpdateRequest,
-    ): TripResponse {
+    ): TripDetail {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
@@ -154,7 +157,7 @@ class TripService(
             photoRepository.findByIdAndTripId(it, tripId) ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
         }
         log.debug("여행 커버 변경 tripId={} ownerId={} photoId={}", tripId, ownerId, request.photoId)
-        return tripRepository.saveAndFlush(trip).toResponse(ownerId)
+        return detailOf(tripRepository.saveAndFlush(trip), ownerId)
     }
 
     /**
@@ -205,7 +208,8 @@ class TripService(
     }
 
     private fun findTrip(tripId: Long): Trip =
-        tripRepository.findById(tripId).orElseThrow { ApiException(ErrorCode.TRIP_NOT_FOUND) }
+        tripRepository.findById(tripId)
+            .orElseThrow { ApiException(ErrorCode.TRIP_NOT_FOUND) }
 
     private fun requireViewable(trip: Trip, userId: Long?) {
         if (canView(trip, userId)) return
@@ -242,40 +246,63 @@ class TripService(
             .associate { (it[0] as Number).toLong() to (it[1] as Number).toLong() }
     }
 
-    private fun sharedGroupsOf(tripId: Long): List<SharedGroupResponse> =
-        tripShareRepository.findByTripId(tripId).map {
-            SharedGroupResponse(id = requireNotNull(it.group.id), name = it.group.name)
-        }
+    /**
+     * 여행별 공유 그룹을 한 번에 읽는다.
+     *
+     * **소유자 본인의 여행만 넘겨야 한다.** 누구에게 공유했는지는 소유자만 아는 정보라
+     * (공통 명세 §3.5), 응답에서 가리는 대신 애초에 읽지 않는다.
+     */
+    private fun sharesOf(trips: List<Trip>): Map<Long, List<GroupRef>> {
+        val tripIds = trips.filter { it.visibility == Visibility.GROUP }.mapNotNull { it.id }
+        if (tripIds.isEmpty()) return emptyMap()
+        return tripShareRepository.findByTripIdIn(tripIds)
+            .groupBy({ requireNotNull(it.trip.id) }) { GroupRef(requireNotNull(it.group.id), it.group.name) }
+    }
 
     private fun Trip.coverUrl(): String? = coverPhoto?.let { photoStorageService.resolveUrl(it.storageKey) }
 
-    private fun Trip.toResponse(requesterId: Long?): TripResponse {
-        val tripId = requireNotNull(id)
-        val mine = requesterId != null && owner.id == requesterId
-        return TripResponse(
+    private fun Trip.ownerRef() = UserRef(requireNotNull(owner.id), owner.name, owner.profileImageUrl)
+
+    /**
+     * 여행 엔티티에 기록 수·커버 URL·공유 그룹을 붙여 [TripDetail] 로 만든다.
+     *
+     * 조회가 여기서 끝난다 — 응답을 만들면서 리포지토리를 다시 부르지 않기 위해 도메인 객체를
+     * 두는 것이므로, 이 함수를 지나면 더 읽을 것이 없어야 한다.
+     */
+    private fun detailOf(trip: Trip, requesterId: Long?): TripDetail {
+        val tripId = requireNotNull(trip.id)
+        val mine = requesterId != null && trip.owner.id == requesterId
+        return TripDetail(
             id = tripId,
-            name = name,
-            startDate = startDate,
-            endDate = endDate,
-            headcount = headcount,
-            budget = budget,
-            memo = memo,
-            coverPhotoUrl = coverUrl(),
+            name = trip.name,
+            startDate = trip.startDate,
+            endDate = trip.endDate,
+            headcount = trip.headcount,
+            budget = trip.budget,
+            memo = trip.memo,
+            coverPhotoUrl = trip.coverUrl(),
             recordCount = recordCountOf(tripId),
-            owner = owner.toResponse(),
-            isOwner = mine,
-            // 누구에게 공유했는지는 열람자에게 알릴 이유가 없다. budget 은 여기서 가리지 않는다.
-            visibility = if (mine) visibility else null,
-            sharedGroups = if (mine && visibility == Visibility.GROUP) sharedGroupsOf(tripId) else null,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            owner = trip.ownerRef(),
+            visibility = if (mine) trip.visibility else null,
+            sharedGroups = if (mine && trip.visibility == Visibility.GROUP) {
+                sharesOf(listOf(trip))[tripId].orEmpty()
+            } else {
+                null
+            },
+            createdAt = trip.createdAt,
+            updatedAt = trip.updatedAt,
         )
     }
 
-    private fun Trip.toSummaryResponse(requesterId: Long?, counts: Map<Long, Long>): TripSummaryResponse {
+    /** 목록 한 줄. 기록 수와 공유 그룹은 호출부가 한 번에 모아 온 것을 받는다. */
+    private fun Trip.toSummary(
+        requesterId: Long?,
+        counts: Map<Long, Long>,
+        shares: Map<Long, List<GroupRef>>,
+    ): TripSummary {
         val tripId = requireNotNull(id)
         val mine = requesterId != null && owner.id == requesterId
-        return TripSummaryResponse(
+        return TripSummary(
             id = tripId,
             name = name,
             startDate = startDate,
@@ -284,10 +311,9 @@ class TripService(
             budget = budget,
             coverPhotoUrl = coverUrl(),
             recordCount = counts[tripId] ?: 0L,
-            owner = owner.toResponse(),
-            isOwner = mine,
+            owner = ownerRef(),
             visibility = if (mine) visibility else null,
-            sharedGroups = if (mine && visibility == Visibility.GROUP) sharedGroupsOf(tripId) else null,
+            sharedGroups = if (mine && visibility == Visibility.GROUP) shares[tripId].orEmpty() else null,
             createdAt = createdAt,
         )
     }

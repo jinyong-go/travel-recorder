@@ -1,13 +1,13 @@
 package com.yong.travel
 
-import com.yong.travel.auth.domain.User
-import com.yong.travel.auth.repository.UserRepository
+import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.TripRecord
+import com.yong.travel.record.persistence.TripRecord
 import com.yong.travel.record.dto.TripRecordCreateRequest
-import com.yong.travel.record.repository.TripRecordRepository
-import com.yong.travel.trip.domain.Trip
-import com.yong.travel.trip.repository.TripRepository
+import com.yong.travel.record.persistence.TripRecordRepository
+import com.yong.travel.trip.persistence.Trip
+import com.yong.travel.trip.persistence.TripRepository
 import jakarta.validation.Validator
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

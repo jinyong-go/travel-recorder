@@ -1,27 +1,27 @@
 package com.yong.travel.group.service
 
-import com.yong.travel.auth.dto.toResponse
-import com.yong.travel.auth.repository.UserRepository
+import com.yong.travel.auth.domain.UserRef
+import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.group.domain.Group
-import com.yong.travel.group.domain.GroupInvite
-import com.yong.travel.group.domain.GroupMember
-import com.yong.travel.group.domain.InviteHistory
+import com.yong.travel.group.persistence.Group
+import com.yong.travel.group.persistence.GroupInvite
+import com.yong.travel.group.persistence.GroupMember
+import com.yong.travel.group.persistence.InviteHistory
+import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.group.domain.InviteHistoryEntry
 import com.yong.travel.group.domain.InviteOutcome
-import com.yong.travel.group.dto.GroupBriefResponse
-import com.yong.travel.group.dto.HistoryGroupResponse
-import com.yong.travel.group.dto.InviteHistoryResponse
+import com.yong.travel.group.domain.PendingInvite
+import com.yong.travel.group.domain.ReceivedInvite
+import com.yong.travel.group.domain.SentInvite
 import com.yong.travel.group.dto.InviteHistoryRole
 import com.yong.travel.group.dto.InviteRequest
-import com.yong.travel.group.dto.PendingInviteResponse
-import com.yong.travel.group.dto.ReceivedInviteResponse
-import com.yong.travel.group.dto.SentInviteResponse
-import com.yong.travel.group.repository.GroupInviteRepository
-import com.yong.travel.group.repository.GroupMemberRepository
-import com.yong.travel.group.repository.GroupRepository
-import com.yong.travel.group.repository.InviteHistoryRepository
+import com.yong.travel.group.persistence.GroupInviteRepository
+import com.yong.travel.group.persistence.GroupMemberRepository
+import com.yong.travel.group.persistence.GroupRepository
+import com.yong.travel.group.persistence.InviteHistoryRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -45,10 +45,11 @@ class InviteService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun listPending(groupId: Long, ownerId: Long, pageable: Pageable): PageResponse<PendingInviteResponse> {
+    /** 그 그룹의 대기 중인 초대 목록. 소유자만 볼 수 있다. */
+    fun listPending(groupId: Long, ownerId: Long, pageable: Pageable): PageResponse<PendingInvite> {
         requireOwner(findGroup(groupId), ownerId)
         return PageResponse.of(
-            inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, pageable).map { it.toPendingResponse() },
+            inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, pageable).map { it.toPending() },
         )
     }
 
@@ -79,14 +80,14 @@ class InviteService(
         // 중복 클릭이 실패처럼 보이지 않도록 기존 초대를 그대로 돌려준다. unique(group_id, invitee_id) 가 이를 보장한다.
         inviteRepository.findByGroupIdAndInviteeId(groupId, inviteeId)?.let {
             log.debug("초대 재사용 groupId={} inviteId={} inviteeId={}", groupId, it.id, inviteeId)
-            return InviteResult(it.toPendingResponse(), created = false)
+            return InviteResult(it.toPending(), created = false)
         }
 
         val saved = inviteRepository.save(
             GroupInvite(group = group, invitee = invitee, invitedBy = group.owner),
         )
         log.debug("초대 생성 groupId={} inviteId={} ownerId={} inviteeId={}", groupId, saved.id, ownerId, inviteeId)
-        return InviteResult(saved.toPendingResponse(), created = true)
+        return InviteResult(saved.toPending(), created = true)
     }
 
     @Transactional
@@ -101,15 +102,16 @@ class InviteService(
         resolve(invite, InviteOutcome.REVOKED)
     }
 
-    fun listReceived(userId: Long, pageable: Pageable): PageResponse<ReceivedInviteResponse> =
+    /** 내 앞으로 온 대기 초대. */
+    fun listReceived(userId: Long, pageable: Pageable): PageResponse<ReceivedInvite> =
         PageResponse.of(
-            inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, pageable).map { it.toReceivedResponse() },
+            inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, pageable).map { it.toReceived() },
         )
 
     /** 내가 보낸 대기 초대. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다 (명세 §4.8). */
-    fun listSent(userId: Long, pageable: Pageable): PageResponse<SentInviteResponse> =
+    fun listSent(userId: Long, pageable: Pageable): PageResponse<SentInvite> =
         PageResponse.of(
-            inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, pageable).map { it.toSentResponse() },
+            inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, pageable).map { it.toSent() },
         )
 
     /**
@@ -122,7 +124,7 @@ class InviteService(
         userId: Long,
         role: InviteHistoryRole,
         pageable: Pageable,
-    ): PageResponse<InviteHistoryResponse> {
+    ): PageResponse<InviteHistoryEntry> {
         val page = when (role) {
             InviteHistoryRole.RECEIVED -> historyRepository.findByInviteeIdOrderByResolvedAtDesc(userId, pageable)
             InviteHistoryRole.SENT -> historyRepository.findByInvitedByIdOrderByResolvedAtDesc(userId, pageable)
@@ -131,7 +133,7 @@ class InviteService(
             .mapNotNull { it.id }
             .toSet()
         log.debug("초대 이력 role={} userId={} 건수={}", role, userId, page.totalElements)
-        return PageResponse.of(page.map { it.toResponse(role, it.groupId in aliveGroupIds) })
+        return PageResponse.of(page.map { it.toDomain(role, it.groupId in aliveGroupIds) })
     }
 
     /**
@@ -186,7 +188,8 @@ class InviteService(
     }
 
     private fun findGroup(groupId: Long): Group =
-        groupRepository.findById(groupId).orElseThrow { ApiException(ErrorCode.GROUP_NOT_FOUND) }
+        groupRepository.findById(groupId)
+            .orElseThrow { ApiException(ErrorCode.GROUP_NOT_FOUND) }
 
     private fun requireOwner(group: Group, userId: Long) {
         if (group.owner.id != userId) {
@@ -196,7 +199,8 @@ class InviteService(
     }
 
     private fun findInvite(inviteId: Long): GroupInvite =
-        inviteRepository.findById(inviteId).orElseThrow { ApiException(ErrorCode.INVITE_NOT_FOUND) }
+        inviteRepository.findById(inviteId)
+            .orElseThrow { ApiException(ErrorCode.INVITE_NOT_FOUND) }
 
     /** 받은 본인이 아니면 없는 초대와 구분되지 않아야 한다 (명세 §2.2.2). */
     private fun requireReceivedInvite(inviteId: Long, userId: Long): GroupInvite {
@@ -208,36 +212,42 @@ class InviteService(
         return invite
     }
 
-    private fun GroupInvite.toPendingResponse() = PendingInviteResponse(
+    private fun GroupInvite.toPending() = PendingInvite(
         id = requireNotNull(id),
-        invitee = invitee.toResponse(),
+        invitee = invitee.toRef(),
         createdAt = createdAt,
     )
 
-    private fun GroupInvite.toSentResponse() = SentInviteResponse(
+    private fun GroupInvite.toSent() = SentInvite(
         id = requireNotNull(id),
-        group = GroupBriefResponse(id = requireNotNull(group.id), name = group.name),
-        invitee = invitee.toResponse(),
+        group = group.toRef(),
+        invitee = invitee.toRef(),
+        createdAt = createdAt,
+    )
+
+    private fun GroupInvite.toReceived() = ReceivedInvite(
+        id = requireNotNull(id),
+        group = group.toRef(),
+        invitedBy = invitedBy.toRef(),
         createdAt = createdAt,
     )
 
     /** 상대는 관점에 따라 갈린다 — 받은 이력이면 보냈던 사람, 보낸 이력이면 초대받았던 사람이다. */
-    private fun InviteHistory.toResponse(role: InviteHistoryRole, groupAlive: Boolean) = InviteHistoryResponse(
+    private fun InviteHistory.toDomain(role: InviteHistoryRole, groupAlive: Boolean) = InviteHistoryEntry(
         id = requireNotNull(id),
-        group = HistoryGroupResponse(id = groupId, name = groupName, deleted = !groupAlive),
+        // 그룹명은 이력에 저장된 스냅샷이다. 그룹이 지워져도 이름이 남아야 하기 때문이다 (명세 §3.1).
+        group = GroupRef(id = groupId, name = groupName),
+        groupDeleted = !groupAlive,
         counterpart = when (role) {
-            InviteHistoryRole.RECEIVED -> invitedBy.toResponse()
-            InviteHistoryRole.SENT -> invitee.toResponse()
+            InviteHistoryRole.RECEIVED -> invitedBy.toRef()
+            InviteHistoryRole.SENT -> invitee.toRef()
         },
         outcome = outcome,
         invitedAt = invitedAt,
         resolvedAt = resolvedAt,
     )
 
-    private fun GroupInvite.toReceivedResponse() = ReceivedInviteResponse(
-        id = requireNotNull(id),
-        group = GroupBriefResponse(id = requireNotNull(group.id), name = group.name),
-        invitedBy = invitedBy.toResponse(),
-        createdAt = createdAt,
-    )
+    private fun User.toRef() = UserRef(requireNotNull(id), name, profileImageUrl)
+
+    private fun Group.toRef() = GroupRef(requireNotNull(id), name)
 }

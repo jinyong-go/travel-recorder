@@ -4,9 +4,12 @@ import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
-import com.yong.travel.group.dto.GroupRequest
+import com.yong.travel.group.dto.GroupCreateRequest
 import com.yong.travel.group.dto.GroupResponse
+import com.yong.travel.group.dto.GroupUpdateRequest
 import com.yong.travel.group.dto.GroupSummaryResponse
+import com.yong.travel.group.dto.toResponse
+import com.yong.travel.group.dto.toSummaryResponse
 import com.yong.travel.group.dto.InviteRequest
 import com.yong.travel.group.dto.PendingInviteResponse
 import com.yong.travel.group.service.GroupService
@@ -34,30 +37,41 @@ class GroupController(
 
     /** 내가 소유하거나 멤버로 속한 그룹 목록. */
     @GetMapping
-    fun list(@AuthenticationPrincipal principal: LoginUser?): List<GroupSummaryResponse> =
-        groupService.list(requireLogin(principal))
+    fun list(@AuthenticationPrincipal principal: LoginUser?): List<GroupSummaryResponse> {
+        val userId = requireLogin(principal)
+        return groupService.list(userId).map { it.toSummaryResponse(userId) }
+    }
 
     /** 그룹 생성. 만든 사람이 소유자이자 첫 멤버가 된다. */
     @PostMapping
     fun create(
-        @RequestBody @Valid request: GroupRequest,
+        @RequestBody @Valid request: GroupCreateRequest,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): GroupResponse = groupService.create(requireLogin(principal), request)
+    ): GroupResponse {
+        val userId = requireLogin(principal)
+        return groupService.create(userId, request).toResponse(userId)
+    }
 
-    /** 그룹 상세 (멤버 목록 포함). 멤버가 아니면 존재도 알리지 않고 404 다. */
+    /** 그룹 상세 (멤버 목록 포함). 멤버가 아니면 403, 없는 그룹이면 404 다 (명세 §2.2.2). */
     @GetMapping("/{groupId}")
     fun get(
         @PathVariable groupId: Long,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): GroupResponse = groupService.get(groupId, requireLogin(principal))
+    ): GroupResponse {
+        val userId = requireLogin(principal)
+        return groupService.get(groupId, userId).toResponse(userId)
+    }
 
     /** 그룹 이름 변경. 소유자만 할 수 있다. */
     @PutMapping("/{groupId}")
     fun rename(
         @PathVariable groupId: Long,
-        @RequestBody @Valid request: GroupRequest,
+        @RequestBody @Valid request: GroupUpdateRequest,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): GroupResponse = groupService.rename(groupId, requireLogin(principal), request)
+    ): GroupResponse {
+        val userId = requireLogin(principal)
+        return groupService.rename(groupId, userId, request).toResponse(userId)
+    }
 
     /** 그룹 삭제. 멤버·대기 초대·공유 관계가 함께 사라진다. */
     @DeleteMapping("/{groupId}")
@@ -102,6 +116,7 @@ class GroupController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<PendingInviteResponse> =
         inviteService.listPending(groupId, requireLogin(principal), listPageRequest(page))
+            .map { it.toResponse() }
 
     /**
      * 이메일로 초대 보내기.
@@ -116,7 +131,7 @@ class GroupController(
     ): ResponseEntity<PendingInviteResponse> {
         val result = inviteService.invite(groupId, requireLogin(principal), request)
         val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
-        return ResponseEntity.status(status).body(result.invite)
+        return ResponseEntity.status(status).body(result.invite.toResponse())
     }
 
     /** 대기 중인 초대 철회. 초대 행을 지운다. */

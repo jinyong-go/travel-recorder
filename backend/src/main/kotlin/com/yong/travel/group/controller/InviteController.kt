@@ -8,6 +8,7 @@ import com.yong.travel.group.dto.InviteHistoryResponse
 import com.yong.travel.group.dto.InviteHistoryRole
 import com.yong.travel.group.dto.ReceivedInviteResponse
 import com.yong.travel.group.dto.SentInviteResponse
+import com.yong.travel.group.dto.toResponse
 import com.yong.travel.group.service.InviteService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -34,7 +35,7 @@ class InviteController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<ReceivedInviteResponse> =
-        inviteService.listReceived(requireLogin(principal), listPageRequest(page))
+        inviteService.listReceived(requireLogin(principal), listPageRequest(page)).map { it.toResponse() }
 
     /** 내가 보낸 대기 초대 목록. 그룹을 가로질러 모은다 (명세 §4.8). */
     @GetMapping("/sent")
@@ -42,7 +43,7 @@ class InviteController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<SentInviteResponse> =
-        inviteService.listSent(requireLogin(principal), listPageRequest(page))
+        inviteService.listSent(requireLogin(principal), listPageRequest(page)).map { it.toResponse() }
 
     /**
      * 끝난 초대 이력. `role` 로 받은 관점과 보낸 관점을 고르며 기본값은 받은 쪽이다.
@@ -55,7 +56,7 @@ class InviteController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<InviteHistoryResponse> =
-        inviteService.listHistory(requireLogin(principal), role, listPageRequest(page))
+        inviteService.listHistory(requireLogin(principal), role, listPageRequest(page)).map { it.toResponse() }
 
     /** 초대 수락 → 그룹 멤버가 된다. 정원이 차 있으면 409 이고 초대는 남는다. */
     @PostMapping("/{inviteId}/accept")

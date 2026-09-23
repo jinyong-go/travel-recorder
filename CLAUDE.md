@@ -160,7 +160,9 @@ fun findVisibleTrips(requester: User?, scope: Scope, pageable: Pageable): Page<T
 
 ```
 backend/   Kotlin + Spring Boot. 도메인별 패키지 (auth, record, group, photo, search, tag, common)
-           각 도메인은 controller / service / repository / domain / dto 로 나뉜다
+           각 도메인은 controller / service / domain / persistence / dto 로 나뉜다.
+           persistence 에 JPA 엔티티·리포지토리·Specifications 가 함께 있고, domain 에는
+           도메인 개념(공개 범위·카테고리 등)이 있다
 frontend/  React + Vite. components / context / config / utils / pages
 ```
 

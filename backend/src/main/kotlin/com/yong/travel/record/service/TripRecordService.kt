@@ -1,31 +1,32 @@
 package com.yong.travel.record.service
 
-import com.yong.travel.auth.dto.toResponse
+import com.yong.travel.auth.domain.UserRef
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.util.haversineKm
 import com.yong.travel.common.util.roundTo2Decimals
 import com.yong.travel.group.service.GroupService
-import com.yong.travel.photo.dto.PhotoResponse
-import com.yong.travel.photo.repository.PhotoRepository
+import com.yong.travel.photo.domain.PhotoRef
+import com.yong.travel.photo.persistence.Photo
+import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoStorageService
-import com.yong.travel.record.domain.TripRecord
+import com.yong.travel.record.domain.RecordDetail
+import com.yong.travel.record.domain.RecordSummary
 import com.yong.travel.record.dto.RecordListQuery
 import com.yong.travel.record.dto.RecordSort
 import com.yong.travel.record.dto.TripChangeRequest
 import com.yong.travel.record.dto.TripRecordCreateRequest
-import com.yong.travel.record.dto.TripRecordResponse
-import com.yong.travel.record.dto.TripRecordSummaryResponse
 import com.yong.travel.record.dto.TripRecordUpdateRequest
-import com.yong.travel.record.repository.TripRecordRepository
-import com.yong.travel.record.repository.TripRecordSpecifications
+import com.yong.travel.record.persistence.TripRecord
+import com.yong.travel.record.persistence.TripRecordRepository
+import com.yong.travel.record.persistence.TripRecordSpecifications
 import com.yong.travel.tag.service.TagService
-import com.yong.travel.trip.domain.Trip
+import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.domain.Visibility
-import com.yong.travel.trip.dto.TripRefResponse
-import com.yong.travel.trip.repository.TripRepository
-import com.yong.travel.trip.repository.TripShareRepository
+import com.yong.travel.trip.persistence.Trip
+import com.yong.travel.trip.persistence.TripRepository
+import com.yong.travel.trip.persistence.TripShareRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -51,7 +52,7 @@ class TripRecordService(
         query: RecordListQuery,
         userId: Long?,
         pageable: Pageable,
-    ): PageResponse<TripRecordSummaryResponse> {
+    ): PageResponse<RecordSummary> {
         val groupIds = groupService.groupIdsOf(userId)
         val spec = TripRecordSpecifications.withScope(query.scope, userId, groupIds)
             .and(
@@ -71,7 +72,9 @@ class TripRecordService(
         }
         val page = recordRepository.findAll(spec, PageRequest.of(pageable.pageNumber, pageable.pageSize, sort))
 
-        val summaries = page.content.map { it.toSummaryResponse(userId, query.lat, query.lng) }
+        // 사진은 항목마다 묻지 않고 페이지 전체를 한 번에 읽는다.
+        val photos = photosOf(page.content.mapNotNull { it.id })
+        val summaries = page.content.map { it.toSummary(photos, query.lat, query.lng) }
         val sorted = if (query.sort == RecordSort.DISTANCE) {
             summaries.sortedBy { it.distanceKm ?: Double.MAX_VALUE }
         } else {
@@ -87,15 +90,15 @@ class TripRecordService(
     }
 
     /** 볼 권한이 없으면 없는 기록과 똑같이 RECORD_NOT_FOUND 로 응답한다 (존재 은닉). */
-    fun get(recordId: Long, userId: Long?): TripRecordResponse {
+    fun get(recordId: Long, userId: Long?): RecordDetail {
         val record = findRecord(recordId)
         requireViewable(record, userId)
-        return record.toResponse(userId)
+        return record.toDetail()
     }
 
     /** 소속 여행은 요청자가 소유한 것이어야 한다. 아니면 TRIP_NOT_FOUND 다. */
     @Transactional
-    fun create(authorId: Long, request: TripRecordCreateRequest): TripRecordResponse {
+    fun create(authorId: Long, request: TripRecordCreateRequest): RecordDetail {
         val trip = requireOwnedTrip(request.tripId, authorId)
         val record = TripRecord(
             trip = trip,
@@ -115,7 +118,7 @@ class TripRecordService(
             "기록 생성 recordId={} tripId={} authorId={} category={}",
             saved.id, trip.id, authorId, saved.category,
         )
-        return saved.toResponse(authorId)
+        return saved.toDetail()
     }
 
     @Transactional
@@ -123,7 +126,7 @@ class TripRecordService(
         recordId: Long,
         authorId: Long,
         request: TripRecordUpdateRequest,
-    ): TripRecordResponse {
+    ): RecordDetail {
         val record = findRecord(recordId)
         requireAuthor(record, authorId)
 
@@ -140,7 +143,7 @@ class TripRecordService(
 
         log.debug("기록 수정 recordId={} authorId={}", recordId, authorId)
         // updatedAt 을 채우는 @PreUpdate 는 flush 시점에 돈다.
-        return recordRepository.saveAndFlush(record).toResponse(authorId)
+        return recordRepository.saveAndFlush(record).toDetail()
     }
 
     /**
@@ -154,7 +157,7 @@ class TripRecordService(
         recordId: Long,
         authorId: Long,
         request: TripChangeRequest,
-    ): TripRecordResponse {
+    ): RecordDetail {
         val record = findRecord(recordId)
         requireAuthor(record, authorId)
 
@@ -167,7 +170,7 @@ class TripRecordService(
             record.trip.clearCoverIfAmong(photoRepository.findIdsByRecordId(recordId))
             record.trip = newTrip
         }
-        return recordRepository.saveAndFlush(record).toResponse(authorId)
+        return recordRepository.saveAndFlush(record).toDetail()
     }
 
     /**
@@ -194,7 +197,8 @@ class TripRecordService(
      * 남의 여행에 기록을 넣을 수 없고, 403 으로 답하면 그 여행의 존재가 드러난다 (명세 §2.2).
      */
     private fun requireOwnedTrip(tripId: Long, userId: Long): Trip {
-        val trip = tripRepository.findById(tripId).orElseThrow { ApiException(ErrorCode.TRIP_NOT_FOUND) }
+        val trip = tripRepository.findById(tripId)
+            .orElseThrow { ApiException(ErrorCode.TRIP_NOT_FOUND) }
         if (trip.owner.id != userId) {
             // 응답이 "없는 여행"과 같으므로 남의 여행이라 막혔다는 사실은 이 로그에만 남는다.
             log.debug("여행 소유자 아님 tripId={} userId={} ownerId={}", tripId, userId, trip.owner.id)
@@ -204,7 +208,8 @@ class TripRecordService(
     }
 
     private fun findRecord(recordId: Long): TripRecord =
-        recordRepository.findById(recordId).orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
+        recordRepository.findById(recordId)
+            .orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
 
     private fun requireViewable(record: TripRecord, userId: Long?) {
         if (canView(record, userId)) return
@@ -245,13 +250,27 @@ class TripRecordService(
         }
     }
 
-    private fun Trip.toRef(): TripRefResponse =
-        TripRefResponse(id = requireNotNull(id), name = name)
+    /** 여러 기록의 사진을 한 번에 읽어 기록 id 로 묶는다. 가입 순서(createdAt)는 그대로 지켜진다. */
+    private fun photosOf(recordIds: List<Long>): Map<Long, List<Photo>> {
+        if (recordIds.isEmpty()) return emptyMap()
+        return photoRepository.findByRecordIdInOrderByCreatedAtAsc(recordIds)
+            .groupBy { requireNotNull(it.record.id) }
+    }
 
-    private fun TripRecord.toResponse(requesterId: Long?): TripRecordResponse {
+    private fun Photo.toRef() = PhotoRef(requireNotNull(id), photoStorageService.resolveUrl(storageKey))
+
+    private fun Trip.toRef() = TripRef(id = requireNotNull(id), name = name)
+
+    private fun Trip.ownerRef() = UserRef(requireNotNull(owner.id), owner.name, owner.profileImageUrl)
+
+    /**
+     * 기록 엔티티에 사진을 붙여 [RecordDetail] 로 만든다.
+     *
+     * 조회가 여기서 끝난다 — 이 함수를 지나면 응답을 만들며 리포지토리를 다시 부를 일이 없어야 한다.
+     */
+    private fun TripRecord.toDetail(): RecordDetail {
         val recordId = requireNotNull(id)
-        val owner = trip.owner
-        return TripRecordResponse(
+        return RecordDetail(
             id = recordId,
             trip = trip.toRef(),
             name = name,
@@ -264,24 +283,22 @@ class TripRecordService(
             longitude = longitude,
             rating = rating,
             memo = memo,
-            photos = photoRepository.findByRecordIdOrderByCreatedAtAsc(recordId)
-                .map { PhotoResponse(requireNotNull(it.id), photoStorageService.resolveUrl(it.storageKey)) },
-            author = owner.toResponse(),
-            isAuthor = requesterId != null && owner.id == requesterId,
+            photos = photoRepository.findByRecordIdOrderByCreatedAtAsc(recordId).map { it.toRef() },
+            author = trip.ownerRef(),
             createdAt = createdAt,
             updatedAt = updatedAt,
         )
     }
 
-    private fun TripRecord.toSummaryResponse(
-        requesterId: Long?,
+    /** 목록 한 줄. 사진은 호출부가 한 번에 모아 온 것을 받는다. */
+    private fun TripRecord.toSummary(
+        photos: Map<Long, List<Photo>>,
         lat: Double?,
         lng: Double?,
-    ): TripRecordSummaryResponse {
+    ): RecordSummary {
         val recordId = requireNotNull(id)
-        val owner = trip.owner
-        val photos = photoRepository.findByRecordIdOrderByCreatedAtAsc(recordId)
-        return TripRecordSummaryResponse(
+        val mine = photos[recordId].orEmpty()
+        return RecordSummary(
             id = recordId,
             trip = trip.toRef(),
             name = name,
@@ -292,10 +309,9 @@ class TripRecordService(
             longitude = longitude,
             rating = rating,
             memo = memo,
-            thumbnailUrl = photos.firstOrNull()?.let { photoStorageService.resolveUrl(it.storageKey) },
-            photoCount = photos.size.toLong(),
-            author = owner.toResponse(),
-            isAuthor = requesterId != null && owner.id == requesterId,
+            thumbnailUrl = mine.firstOrNull()?.let { photoStorageService.resolveUrl(it.storageKey) },
+            photoCount = mine.size.toLong(),
+            author = trip.ownerRef(),
             distanceKm = if (lat != null && lng != null) {
                 haversineKm(lat, lng, latitude, longitude).roundTo2Decimals()
             } else {

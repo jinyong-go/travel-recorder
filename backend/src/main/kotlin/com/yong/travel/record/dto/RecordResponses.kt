@@ -1,8 +1,13 @@
 package com.yong.travel.record.dto
 
 import com.yong.travel.auth.dto.UserResponse
+import com.yong.travel.auth.dto.toResponse
+import com.yong.travel.photo.domain.PhotoRef
 import com.yong.travel.photo.dto.PhotoResponse
 import com.yong.travel.record.domain.Category
+import com.yong.travel.record.domain.RecordDetail
+import com.yong.travel.record.domain.RecordSummary
+import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.dto.TripRefResponse
 import java.time.Instant
 
@@ -53,3 +58,55 @@ data class TripRecordSummaryResponse(
     val distanceKm: Double?,
     val createdAt: Instant,
 )
+
+private fun TripRef.toRefResponse() = TripRefResponse(id, name)
+
+private fun PhotoRef.toPhotoResponse() = PhotoResponse(id, url)
+
+/**
+ * 기록 상세 → 응답.
+ *
+ * `isAuthor` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 필드 이름은 이전 판
+ * 그대로 유지한다 (명세 §4.4.1).
+ */
+fun RecordDetail.toResponse(requesterId: Long?): TripRecordResponse =
+    TripRecordResponse(
+        id = id,
+        trip = trip.toRefResponse(),
+        name = name,
+        category = category,
+        tags = tags,
+        address = address,
+        roadAddress = roadAddress,
+        externalLink = externalLink,
+        latitude = latitude,
+        longitude = longitude,
+        rating = rating,
+        memo = memo,
+        photos = photos.map { it.toPhotoResponse() },
+        author = author.toResponse(),
+        isAuthor = isAuthoredBy(requesterId),
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+
+/** 기록 목록 항목 → 응답. `isAuthor` 를 여기서 정하는 이유는 [toResponse] 와 같다. */
+fun RecordSummary.toSummaryResponse(requesterId: Long?): TripRecordSummaryResponse =
+    TripRecordSummaryResponse(
+        id = id,
+        trip = trip.toRefResponse(),
+        name = name,
+        category = category,
+        tags = tags,
+        address = address,
+        latitude = latitude,
+        longitude = longitude,
+        rating = rating,
+        memo = memo,
+        thumbnailUrl = thumbnailUrl,
+        photoCount = photoCount,
+        author = author.toResponse(),
+        isAuthor = isAuthoredBy(requesterId),
+        distanceKm = distanceKm,
+        createdAt = createdAt,
+    )

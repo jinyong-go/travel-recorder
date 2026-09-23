@@ -3,12 +3,12 @@ package com.yong.travel.photo.service
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.photo.config.PhotoUploadProperties
-import com.yong.travel.photo.domain.Photo
-import com.yong.travel.photo.dto.PhotoResponse
-import com.yong.travel.photo.repository.PhotoRepository
+import com.yong.travel.photo.domain.PhotoRef
+import com.yong.travel.photo.persistence.Photo
+import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoStorageService
-import com.yong.travel.record.domain.TripRecord
-import com.yong.travel.record.repository.TripRecordRepository
+import com.yong.travel.record.persistence.TripRecord
+import com.yong.travel.record.persistence.TripRecordRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -30,7 +30,7 @@ class PhotoService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<PhotoResponse> {
+    fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<PhotoRef> {
         val record = findOwnRecord(recordId, requesterId)
         // 원본 파일명과 바이너리는 남기지 않는다. 건수와 크기면 업로드 추적에 충분하다.
         log.debug(
@@ -54,7 +54,7 @@ class PhotoService(
                     fileSizeBytes = stored.fileSizeBytes,
                 ),
             )
-            PhotoResponse(requireNotNull(photo.id), photoStorageService.resolveUrl(photo.storageKey))
+            PhotoRef(requireNotNull(photo.id), photoStorageService.resolveUrl(photo.storageKey))
         }
     }
 

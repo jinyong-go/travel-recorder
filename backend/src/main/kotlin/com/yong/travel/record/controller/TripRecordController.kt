@@ -13,6 +13,8 @@ import com.yong.travel.record.dto.TripRecordCreateRequest
 import com.yong.travel.record.dto.TripRecordResponse
 import com.yong.travel.record.dto.TripRecordSummaryResponse
 import com.yong.travel.record.dto.TripRecordUpdateRequest
+import com.yong.travel.record.dto.toResponse
+import com.yong.travel.record.dto.toSummaryResponse
 import com.yong.travel.record.service.TripRecordService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -62,7 +64,7 @@ class TripRecordController(
             RecordListQuery(scope, tripId, category, tag, keyword, sort, lat, lng),
             userId,
             listPageRequest(page),
-        )
+        ).map { it.toSummaryResponse(userId) }
     }
 
     /** 기록 상세 조회. 볼 수 없는 기록은 존재하지 않는 것과 같은 404 다. */
@@ -70,14 +72,20 @@ class TripRecordController(
     fun get(
         @PathVariable recordId: Long,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): TripRecordResponse = recordService.get(recordId, principal?.userId)
+    ): TripRecordResponse {
+        val userId = principal?.userId
+        return recordService.get(recordId, userId).toResponse(userId)
+    }
 
     /** 기록 등록. 소속 여행은 요청자가 소유한 것이어야 하며, 작성자는 그 여행의 소유자다. */
     @PostMapping
     fun create(
         @RequestBody @Valid request: TripRecordCreateRequest,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): TripRecordResponse = recordService.create(requireLogin(principal), request)
+    ): TripRecordResponse {
+        val userId = requireLogin(principal)
+        return recordService.create(userId, request).toResponse(userId)
+    }
 
     /** 기록 수정. 작성자만 할 수 있다. */
     @PutMapping("/{recordId}")
@@ -85,7 +93,10 @@ class TripRecordController(
         @PathVariable recordId: Long,
         @RequestBody @Valid request: TripRecordUpdateRequest,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): TripRecordResponse = recordService.update(recordId, requireLogin(principal), request)
+    ): TripRecordResponse {
+        val userId = requireLogin(principal)
+        return recordService.update(recordId, userId, request).toResponse(userId)
+    }
 
     /**
      * 소속 여행 변경. 공개 범위를 바꾸는 수단은 기록에 없다 —
@@ -96,7 +107,10 @@ class TripRecordController(
         @PathVariable recordId: Long,
         @RequestBody @Valid request: TripChangeRequest,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): TripRecordResponse = recordService.changeTrip(recordId, requireLogin(principal), request)
+    ): TripRecordResponse {
+        val userId = requireLogin(principal)
+        return recordService.changeTrip(recordId, userId, request).toResponse(userId)
+    }
 
     /** 기록 삭제. soft delete 라 행은 남고 조회에서만 사라진다. */
     @DeleteMapping("/{recordId}")

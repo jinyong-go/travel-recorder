@@ -110,6 +110,12 @@ canEdit(record) := requester == record.trip.owner
   `TRIP_NOT_FOUND` 를 내려주면 "기록은 있는데 여행을 못 본다"는 사실이 새어 나간다.
 - **열람은 되는데 수정 권한이 없는 경우만 `403` 이다.** 이때는 존재가 이미 열람으로 드러나 있으므로
   숨길 이유가 없다.
+- **그룹은 예외로, 존재를 숨기지 않는다.** 멤버가 아닌 사용자의 그룹 상세 조회·탈퇴는 `404` 가
+  아니라 `403 FORBIDDEN` 이다. 여행·기록은 가려진 대상의 내용이 곧 사생활이지만, 그룹에서
+  가려지는 것은 멤버 명단이고 그것은 `403` 에서도 드러나지 않는다. 조회와 수정이 같은 코드로
+  답하므로 id 를 훑어 얻을 수 있는 정보도 늘지 않는다.
+- **단, 여행 공유 요청에 담긴 그룹 id 는 그대로 `404 GROUP_NOT_FOUND` 다** (아래 하위 리소스 항목).
+  이 경로는 그룹 화면을 거치지 않고 임의의 id 를 넣어볼 수 있어 판단이 다르다.
 - 같은 은닉 원칙이 **하위 리소스 ID**에도 적용된다. 남의 여행 사진 ID를 커버로 지정하려 하면
   `404 PHOTO_NOT_FOUND`, 속하지 않은 그룹 ID로 공유하려 하면 `404 GROUP_NOT_FOUND` 다.
 
@@ -719,7 +725,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | PUT | `/api/groups/{id}` | 그룹 이름·메모 변경 | 소유자만 |
 | DELETE | `/api/groups/{id}` | 그룹 삭제 (멤버·대기 초대·공유 관계 함께 삭제) | 소유자만 |
 | DELETE | `/api/groups/{id}/members/{userId}` | 멤버 제외 | 소유자만 |
-| DELETE | `/api/groups/{id}/members/me` | 그룹 탈퇴. 소유자는 `403` | 멤버 본인 |
+| DELETE | `/api/groups/{id}/members/me` | 그룹 탈퇴. 소유자와 비멤버는 `403` | 멤버 본인 |
 
 **GET `/api/groups/{id}` 응답 예시**
 ```json
@@ -738,6 +744,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 }
 ```
 - 멤버 정보는 이름과 프로필 사진까지만 내려준다. **이메일은 포함하지 않는다** (공통 명세 §3.1).
+- 멤버가 아닌 사용자의 상세 조회·탈퇴는 `403 FORBIDDEN` 이다. 존재하지 않는 그룹만 `404` 다 (§2.2.2).
 - 소유자 제외 요청(`DELETE .../members/{소유자 id}`)은 `400 VALIDATION_ERROR` 다.
 - POST·PUT 요청 본문은 `{ "name": "가족", "memo": "설 연휴 사진 공유용" }` 이다. `memo` 는 생략
   가능하며 생략하면 `null` 로 저장된다. PUT 은 두 값을 함께 덮어쓰므로 **`memo` 를 빼고 보내면
@@ -909,10 +916,10 @@ interface PhotoStorageService {
 | 경로·쿼리 파라미터 타입 불일치, 필수 파라미터(`scope` 등) 누락, 본문 파싱 실패 | 400 | `VALIDATION_ERROR` |
 | 허용되지 않는 파일 형식/용량 초과 (멀티파트 단계 초과 포함) | 400 | `INVALID_FILE` |
 | 비로그인 사용자의 보호된 API 접근 | 401 | `UNAUTHENTICATED` |
-| 권한 없는 수정/삭제 시도 (열람은 가능한 경우) | 403 | `FORBIDDEN` |
+| 권한 없는 수정/삭제 시도 (열람은 가능한 경우), 멤버가 아닌 그룹의 조회·탈퇴 | 403 | `FORBIDDEN` |
 | 존재하지 않거나 **열람 권한이 없는** 여행 | 404 | `TRIP_NOT_FOUND` |
 | 존재하지 않거나 **열람 권한이 없는** 기록 | 404 | `RECORD_NOT_FOUND` |
-| 존재하지 않거나 접근 권한이 없는 그룹 | 404 | `GROUP_NOT_FOUND` |
+| 존재하지 않는 그룹, 여행 공유 요청에 담긴 접근 불가 그룹 id | 404 | `GROUP_NOT_FOUND` |
 | 존재하지 않는 사진 | 404 | `PHOTO_NOT_FOUND` |
 | 존재하지 않거나 **당사자가 아닌** 초대 | 404 | `INVITE_NOT_FOUND` |
 | 초대 대상 이메일의 가입자가 없음 | 404 | `USER_NOT_FOUND` |

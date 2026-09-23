@@ -30,7 +30,9 @@
 
 ## 디렉터리 구조
 
-도메인별 패키지 안에 `domain` / `repository` / `service` / `controller` / `dto` 계층을 두는 구조입니다.
+도메인별 패키지 안에 `domain` / `persistence` / `service` / `controller` / `dto` 계층을 두는 구조입니다.
+JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 있고, `domain` 에는 저장 수단과 무관한
+도메인 개념(`Visibility`, `Category`, `InviteOutcome`)이 있습니다.
 
 ```
 backend/
@@ -40,18 +42,21 @@ backend/
 │  │  ├─ config/SecurityConfig.kt  # 시큐리티 필터체인, CSRF, oauth2Login
 │  │  ├─ service/UserService.kt    # 네이버 프로필(response 래핑) 평탄화 + 사용자 Upsert
 │  │  ├─ security/CustomOAuth2User.kt
-│  │  └─ domain·repository·controller·dto
+│  │  └─ persistence·controller·dto
 │  ├─ trip/                        # 여행 — 기록의 상위 그룹이자 공유의 단위
-│  │  ├─ domain/Trip.kt, TripShare.kt, Visibility.kt
-│  │  ├─ repository/TripSpecifications.kt   # 공개 범위 판정 (scope 조건)
+│  │  ├─ persistence/Trip.kt, TripShare.kt
+│  │  ├─ persistence/TripSpecifications.kt  # 공개 범위 판정 (scope 조건)
+│  │  ├─ domain/Visibility.kt
 │  │  └─ service·controller·dto
 │  ├─ record/                      # 여행 기록 CRUD 및 목록 조회 (반드시 여행 하나에 속한다)
-│  │  ├─ domain/TripRecord.kt, Category.kt
-│  │  ├─ repository/TripRecordSpecifications.kt  # 소속 여행 조인 판정 + 카테고리·태그·키워드 조건
+│  │  ├─ persistence/TripRecord.kt
+│  │  ├─ persistence/TripRecordSpecifications.kt  # 소속 여행 조인 판정 + 카테고리·태그·키워드 조건
+│  │  ├─ domain/Category.kt
 │  │  └─ service·controller·dto
 │  ├─ group/                       # 공유 그룹 (조회 전용 대상 목록) 과 초대 목록
-│  │  ├─ domain/Group.kt, GroupMember.kt, GroupInvite.kt
-│  │  └─ service·controller·dto·repository
+│  │  ├─ persistence/Group.kt, GroupMember.kt, GroupInvite.kt, InviteHistory.kt
+│  │  ├─ domain/InviteOutcome.kt
+│  │  └─ service·controller·dto
 │  ├─ search/                      # 네이버 지역 검색 오픈API 연동
 │  │  ├─ client/NaverLocalSearchClient.kt
 │  │  ├─ service/PlaceSearchService.kt      # 중복 제거·거리순 정렬·페이징
@@ -181,7 +186,7 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 
 ## 데이터베이스 스키마
 
-`src/main/resources/schema.sql`이 스키마의 기준이며, 엔티티(`com.yong.travel.*.domain`)로부터 Hibernate가 생성하는 DDL에 맞춰 작성되어 있습니다.
+`src/main/resources/schema.sql`이 스키마의 기준이며, 엔티티(`com.yong.travel.*.persistence`)로부터 Hibernate가 생성하는 DDL에 맞춰 작성되어 있습니다.
 
 - 모든 프로파일이 `ddl-auto: validate`이므로, **엔티티와 `schema.sql`이 어긋나면 기동 시점에 실패합니다.** 엔티티를 바꿀 때는 `schema.sql`도 함께 고쳐야 합니다.
 - 스크립트는 `CREATE TABLE IF NOT EXISTS` 기반이고 외래키를 `CREATE TABLE` 안에 인라인으로 선언해 **재실행해도 안전**합니다. 이 때문에 테이블은 참조 순서(`users` → `tags` → `share_group` → `trips` → `trip_records` → 나머지)로 정의되어 있습니다.
