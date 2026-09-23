@@ -24,6 +24,9 @@ import org.springframework.web.filter.OncePerRequestFilter
  * 요청자 id 는 여기서 찍지 않는다. 이 필터는 보안 필터 체인 바깥이라 차단된 요청까지 남길 수
  * 있는 대신, 이 시점의 `SecurityContextHolder` 는 이미 비워져 있다. 누가 무엇을 했는지는
  * 서비스 로그가 맡는다.
+ *
+ * 레벨은 `INFO` 다. 도메인 서비스 로그(`DEBUG`)가 prod 에서 걸러지는 것과 달리, 이 한 줄은
+ * 어떤 요청이 언제 어떻게 끝났는지를 남기는 운영 기록이라 모든 프로파일에서 남아야 한다.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -42,7 +45,7 @@ class LoggingFilter : OncePerRequestFilter() {
         } finally {
             // 예외로 끝난 요청도 남아야 하므로 finally 에서 찍는다. 이 시점의 상태 코드는
             // GlobalExceptionHandler 가 이미 채운 값이다.
-            log.debug(
+            log.info(
                 "{} {}{} -> {} ({}ms)",
                 request.method,
                 request.requestURI,

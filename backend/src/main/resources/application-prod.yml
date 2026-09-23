@@ -33,3 +33,12 @@ logging:
   level:
     root: INFO
     com.yong.travel: INFO
+  file:
+    # 로그 수집기가 있는 환경이면 LOG_FILE 로 경로를 옮긴다. 사진 저장 경로와 달리 필수는 아니다.
+    name: ${LOG_FILE:./logs/travel-recorder.log}
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 14
+      # Boot 기본값은 무제한이다. 재배포 없이 도는 서버에서 디스크가 차는 것을 막는다.
+      total-size-cap: 1GB
