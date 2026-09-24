@@ -53,4 +53,6 @@ allOpen {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// 기본 프로파일(local)은 초기 데이터를 넣으므로 테스트는 전용 프로파일로 띄운다.
+	systemProperty("spring.profiles.active", "test")
 }
