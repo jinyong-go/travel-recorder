@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { SCOPES, categoryIcon } from '../data/records.js'
 import { TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
+import { fileUrl } from '../api/client.js'
 import { fetchTrips } from '../api/trips.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import useTheme from '../hooks/useTheme.js'
 import useMapMode from '../hooks/useMapMode.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
@@ -14,7 +14,6 @@ import { MapPinIcon, PlusIcon } from '../components/icons.jsx'
 
 export default function TripListPage() {
   const { isLoggedIn, status: authStatus } = useAuth()
-  const { themeKey, changeTheme } = useTheme()
   const { mapMode, changeMapMode } = useMapMode()
 
   // 범위/정렬/페이지는 URL 쿼리에 둔다. 상세에 다녀와도 목록 상태가 유지되고,
@@ -87,7 +86,7 @@ export default function TripListPage() {
         </Link>
         <div className="header-actions">
           <SettingsMenu mapMode={mapMode} onChangeMapMode={changeMapMode} />
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <ThemeSelector />
           <HeaderAuth />
         </div>
       </header>
@@ -148,7 +147,7 @@ export default function TripListPage() {
                   <li key={trip.id} className="trip-card">
                     <div className="trip-cover">
                       {trip.coverPhotoUrl ? (
-                        <img src={trip.coverPhotoUrl} alt="" className="trip-cover-img" />
+                        <img src={fileUrl(trip.coverPhotoUrl)} alt="" className="trip-cover-img" />
                       ) : (
                         // 대표 사진이 없으면 플레이스홀더를 둔다. 무엇을 보여줄지는 화면이
                         // 정한다 — 서버는 대체 이미지를 고르지 않는다 (§4.4).

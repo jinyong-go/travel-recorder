@@ -1,7 +1,16 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CATEGORIES, categoryIcon, categoryLabel } from '../data/records.js'
-import { useRecords } from '../context/RecordsContext.jsx'
+import { ApiError, fileUrl } from '../api/client.js'
+import * as recordApi from '../api/records.js'
+import {
+  CATEGORIES,
+  MEMO_MAX_LENGTH,
+  categoryIcon,
+  categoryLabel,
+  dateLabel,
+  placeOf,
+} from '../data/records.js'
+import useLatestRequest from '../hooks/useLatestRequest.js'
 import useTrip from '../hooks/useTrip.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import {
@@ -13,7 +22,6 @@ import {
 import { haversineDistanceKm } from '../utils/geo.js'
 import useMapMode from '../hooks/useMapMode.js'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
-import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import StarRatingDisplay from '../components/StarRatingDisplay.jsx'
@@ -35,19 +43,41 @@ import './RecordDetailPage.css'
 
 const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 
-// 등록 폼과 같은 제한을 쓴다 (§5.3). 두 화면이 다른 값을 쓰면 어느 쪽이 맞는지 알 수 없다.
-const MEMO_MAX_LENGTH = 1000
+/** 수정 초안의 사진 하나를 그릴 주소. 이미 올라간 사진은 서버 URL, 새로 고른 파일은 미리보기다. */
+const photoSrc = (photo) => photo.previewUrl ?? fileUrl(photo.url)
 
 export default function RecordDetailPage() {
   const { recordId } = useParams()
   const navigate = useNavigate()
-  const { findRecord, currentUser, deleteRecord, updateRecord } = useRecords()
-  const { themeKey, changeTheme } = useTheme()
   const { isEmbed } = useMapMode()
   const { location: referenceLocation } = useReferenceLocation()
 
-  const record = findRecord(recordId)
-  const isAuthor = record != null && record.authorId === currentUser.id
+  // 'loading' | 'ready' | 'missing' | 'error'. 404 는 없는 기록과 볼 수 없는 기록을 구분하지 않는다.
+  const [record, setRecord] = useState(null)
+  const [recordStatus, setRecordStatus] = useState('loading')
+
+  const beginRequest = useLatestRequest()
+
+  // 저장 뒤 다시 읽기도 이 함수를 쓴다. 가장 최근 요청의 응답만 그린다.
+  const loadRecord = useCallback(async () => {
+    const isLatest = beginRequest()
+    try {
+      const result = await recordApi.fetchRecord(recordId)
+      if (!isLatest()) return
+      setRecord(result)
+      setRecordStatus('ready')
+    } catch (err) {
+      if (!isLatest()) return
+      setRecordStatus(err instanceof ApiError && err.status === 404 ? 'missing' : 'error')
+    }
+  }, [recordId, beginRequest])
+
+  useEffect(() => {
+    setRecordStatus('loading')
+    loadRecord()
+  }, [loadRecord])
+
+  const isAuthor = record?.isAuthor ?? false
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
@@ -63,13 +93,18 @@ export default function RecordDetailPage() {
   const [searchOpen, setSearchOpen] = useState(false)
   // 지울 사진의 위치. 0번도 지울 수 있으므로 없음은 null 로 구분한다.
   const [removingPhotoIndex, setRemovingPhotoIndex] = useState(null)
+  // 저장·삭제 요청이 나가 있는 동안 버튼을 막는다.
+  const [busy, setBusy] = useState(false)
+  // 저장은 됐지만 사진 단계 일부가 실패했을 때의 안내 (공통 명세 §6.2 와 같은 원칙).
+  const [saveNotice, setSaveNotice] = useState('')
+  const [deleteError, setDeleteError] = useState('')
 
-  // 공개 범위는 기록이 아니라 소속 여행이 갖는다 (공통 명세 §3.5). 기록은 아직 목업이라
-  // 판정 근거가 없으므로, 소속 여행을 서버에 물어 404 면 기록도 볼 수 없는 것으로 본다.
-  const { trip, status: tripStatus } = useTrip(record?.tripId)
+  // 공개 범위는 소속 여행의 값이고 작성자(= 여행 소유자)에게만 보여준다 (명세 §5.6).
+  // 기록 응답에는 없으므로 작성자일 때만 여행을 읽는다. 열람자에게는 내려오지도 않는다.
+  const { trip } = useTrip(isAuthor ? record.trip.id : null)
 
-  if (record && (tripStatus === 'loading' || tripStatus === 'error')) {
-    const loading = tripStatus === 'loading'
+  if (recordStatus === 'loading' || recordStatus === 'error') {
+    const loading = recordStatus === 'loading'
     return (
       <main className="detail-page">
         <div className="detail-missing">
@@ -80,7 +115,7 @@ export default function RecordDetailPage() {
     )
   }
 
-  if (!record || tripStatus !== 'ready') {
+  if (recordStatus === 'missing') {
     // 없는 기록과 볼 권한이 없는 기록을 구분해 보여주지 않는다.
     // 문구가 달라지는 순간 그 차이만으로 비공개 기록의 존재가 드러난다.
     return (
@@ -96,42 +131,55 @@ export default function RecordDetailPage() {
     )
   }
 
-  const photos = record.photos ?? []
+  const photos = record.photos
+  const place = placeOf(record)
   // 소유자에게만 채워지는 값이다. 열람자에게는 null 이다 (backend §4.3.1).
-  const sharedGroups = trip.sharedGroups ?? []
+  const sharedGroups = trip?.sharedGroups ?? []
+  // 서버는 저장하지 않는 값이다. 기준 위치는 이 브라우저의 것이다 (§5.5).
+  const distanceKm = haversineDistanceKm(referenceLocation, place.location)
 
   const handleMapClick = () => {
     if (isEmbed) {
       setMapOpen(true)
     } else {
-      window.open(buildMapsSearchUrl(record), '_blank', 'noopener,noreferrer')
+      window.open(buildMapsSearchUrl(place), '_blank', 'noopener,noreferrer')
     }
   }
 
-  const handleDelete = () => {
-    deleteRecord(record.id)
-    navigate(`/trips/${trip.id}`)
+  const handleDelete = async () => {
+    setBusy(true)
+    try {
+      await recordApi.deleteRecord(record.id)
+      navigate(`/trips/${record.trip.id}`)
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : '기록을 삭제하지 못했습니다.')
+      setBusy(false)
+    }
+  }
+
+  /** 새로 고른 사진의 미리보기 URL 을 해제한다. 저장·취소 어느 쪽으로 끝나도 부른다. */
+  const releasePreviews = (draft) =>
+    draft.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl))
+
+  const cancelEdit = () => {
+    releasePreviews(photosDraft)
+    setEditing(false)
   }
 
   const startEdit = () => {
-    setPlaceDraft({
-      name: record.name,
-      address: record.address,
-      region: record.region,
-      location: record.location,
-      link: record.externalLink,
-    })
+    setPlaceDraft(place)
     setCategoryDraft(record.category)
     setRatingDraft(record.rating)
     setMemoDraft(record.memo ?? '')
     setPhotosDraft(photos)
     setEditError('')
+    setSaveNotice('')
     setPhotoErrors([])
     setEditing(true)
   }
 
   /** 장소·카테고리·평점·메모·사진을 한 번에 반영한다. 하나라도 검증에 걸리면 아무것도 바꾸지 않는다. */
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!placeDraft) {
       setEditError('장소를 검색해 선택해주세요.')
       return
@@ -149,45 +197,87 @@ export default function RecordDetailPage() {
       return
     }
 
-    const patch = {
-      name: placeDraft.name,
-      address: placeDraft.address,
-      region: placeDraft.region ?? placeDraft.address,
-      externalLink: placeDraft.link,
-      category: categoryDraft,
-      rating: ratingDraft,
-      memo: memoDraft.trim(),
-      photos: photosDraft,
+    setBusy(true)
+    setEditError('')
+
+    // 1단계: 기록 본문. 전체 갱신이라 입력칸이 없는 태그·도로명주소도 기존 값을 실어 보낸다.
+    // 여기서 실패하면 아무것도 바뀌지 않았으므로 수정 폼을 그대로 둔다.
+    try {
+      await recordApi.updateRecord(record.id, {
+        name: placeDraft.name,
+        category: categoryDraft,
+        tags: record.tags,
+        address: placeDraft.address,
+        roadAddress: placeDraft.roadAddress ?? null,
+        externalLink: placeDraft.link ?? null,
+        latitude: placeDraft.location.lat,
+        longitude: placeDraft.location.lng,
+        rating: ratingDraft,
+        memo: memoDraft.trim() || null,
+      })
+    } catch (err) {
+      setEditError(err instanceof ApiError ? err.message : '기록을 저장하지 못했습니다.')
+      setBusy(false)
+      return
     }
-    // 장소가 바뀌면 거리도 다시 잰다. 기준 위치는 이 브라우저의 것이다 (§5.5).
-    // 좌표 없는 기록(목업에 검색 결과가 없는 장소)을 카테고리만 고치는 경우가 있으므로
-    // 좌표가 있을 때만 손댄다. 없는 좌표로 거리를 계산하면 화면이 통째로 깨진다.
-    if (placeDraft.location) {
-      patch.location = placeDraft.location
-      patch.distanceKm = haversineDistanceKm(referenceLocation, placeDraft.location)
+
+    // 2단계: 사진. 본문은 이미 저장됐으므로 여기서 실패해도 되돌리지 않고, 무엇이 안 됐는지만
+    // 알린다. 다시 읽은 화면이 실제 남은 사진을 보여준다 (공통 명세 §6.2 와 같은 원칙).
+    const failures = []
+    const removed = photos.filter((p) => !photosDraft.some((d) => d.id === p.id))
+    for (const photo of removed) {
+      try {
+        await recordApi.deletePhoto(record.id, photo.id)
+      } catch {
+        failures.push('사진 삭제')
+        break
+      }
     }
-    updateRecord(record.id, patch)
+    const added = photosDraft.filter((p) => p.file)
+    if (added.length > 0) {
+      try {
+        await recordApi.uploadPhotos(
+          record.id,
+          added.map((p) => p.file),
+        )
+      } catch {
+        failures.push('사진 업로드')
+      }
+    }
+
+    releasePreviews(photosDraft)
+    await loadRecord()
     setEditing(false)
+    setBusy(false)
+    if (failures.length > 0) {
+      setSaveNotice(`기록은 저장했지만 ${failures.join('·')}에 실패했습니다. 수정에서 다시 시도해주세요.`)
+    }
   }
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files ?? [])
-    // 이미 올라간 사진은 URL 만 남아 용량을 알 수 없다. 합계 검사는 이번에 고른 파일만 대상으로 한다.
-    const { accepted, errors: rejected } = validatePhotoFiles(files)
+    // 이미 올라간 사진은 다시 보내지 않으므로 합계 검사는 이번에 새로 고른 파일만 대상으로 한다.
+    const selectedBytes = photosDraft.reduce((sum, p) => sum + (p.file?.size ?? 0), 0)
+    const { accepted, errors: rejected } = validatePhotoFiles(files, selectedBytes)
     setPhotoErrors(rejected)
     if (accepted.length > 0) {
-      // TODO(백엔드 연동): 저장 시 POST /api/records/{id}/photos 로 올린다.
-      // 지금은 미리보기 URL 을 그대로 기록에 넣는다.
-      setPhotosDraft((prev) => [...prev, ...accepted.map((file) => URL.createObjectURL(file))])
+      setPhotosDraft((prev) => [
+        ...prev,
+        ...accepted.map((file) => ({ file, previewUrl: URL.createObjectURL(file) })),
+      ])
     }
     // 같은 파일을 연이어 고를 수 있도록 값을 비운다.
     e.target.value = ''
   }
 
-  // TODO(백엔드 연동): 저장 시 DELETE /api/photos/{photoId}.
+  /** 초안에서만 뺀다. 이미 올라간 사진은 저장을 눌러야 서버에서 지워진다. */
   const handlePhotoRemove = () => {
     setPhotoErrors([])
-    setPhotosDraft((prev) => prev.filter((_, i) => i !== removingPhotoIndex))
+    setPhotosDraft((prev) => {
+      const target = prev[removingPhotoIndex]
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((_, i) => i !== removingPhotoIndex)
+    })
     setRemovingPhotoIndex(null)
   }
 
@@ -199,15 +289,15 @@ export default function RecordDetailPage() {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <ThemeSelector />
           <HeaderAuth />
         </div>
       </header>
 
       <main className="detail-page">
         <div className="detail-inner">
-          <Link to={`/trips/${trip.id}`} className="back-link">
-            <ArrowLeftIcon /> {trip.name}
+          <Link to={`/trips/${record.trip.id}`} className="back-link">
+            <ArrowLeftIcon /> {record.trip.name}
           </Link>
 
           {/* 기록 내용은 카드 하나에 모은다. 소속 여행과 삭제만 따로 둔다. */}
@@ -301,9 +391,13 @@ export default function RecordDetailPage() {
                   ))}
                   {photosDraft.length > 0 && (
                     <ul className="detail-photo-grid">
-                      {photosDraft.map((src, i) => (
-                        <li key={src} className="detail-photo-item">
-                          <img src={src} alt={`${record.name} 사진 ${i + 1}`} loading="lazy" />
+                      {photosDraft.map((photo, i) => (
+                        <li key={photo.id ?? photo.previewUrl} className="detail-photo-item">
+                          <img
+                            src={photoSrc(photo)}
+                            alt={`${record.name} 사진 ${i + 1}`}
+                            loading="lazy"
+                          />
                           <button
                             type="button"
                             className="detail-photo-remove"
@@ -324,11 +418,12 @@ export default function RecordDetailPage() {
                   <button
                     type="button"
                     className="btn-secondary"
-                    onClick={() => setEditing(false)}
+                    onClick={cancelEdit}
+                    disabled={busy}
                   >
                     취소
                   </button>
-                  <button type="button" className="btn-primary" onClick={handleSave}>
+                  <button type="button" className="btn-primary" onClick={handleSave} disabled={busy}>
                     저장
                   </button>
                 </div>
@@ -342,7 +437,7 @@ export default function RecordDetailPage() {
                       {categoryLabel(record.category)}
                     </span>
                     <h1 className="detail-name">{record.name}</h1>
-                    <p className="detail-region">{record.address ?? record.region}</p>
+                    <p className="detail-region">{record.address}</p>
                   </div>
                   {isAuthor && (
                     <button type="button" className="btn-secondary" onClick={startEdit}>
@@ -351,6 +446,12 @@ export default function RecordDetailPage() {
                   )}
                 </div>
 
+                {saveNotice && (
+                  <p className="field-error" role="status">
+                    {saveNotice}
+                  </p>
+                )}
+
                 <dl className="detail-meta">
                   <div className="detail-meta-item">
                     <dt>평점</dt>
@@ -358,7 +459,7 @@ export default function RecordDetailPage() {
                   </div>
                   <div className="detail-meta-item">
                     <dt>거리</dt>
-                    <dd>{record.distanceKm.toFixed(1)}km</dd>
+                    <dd>{distanceKm.toFixed(1)}km</dd>
                   </div>
                   <div className="detail-meta-item">
                     <dt>작성자</dt>
@@ -367,7 +468,7 @@ export default function RecordDetailPage() {
                   <div className="detail-meta-item">
                     <dt>등록일</dt>
                     <dd>
-                      {record.createdAt}
+                      {dateLabel(record.createdAt)}
                       {record.updatedAt !== record.createdAt && ' (수정됨)'}
                     </dd>
                   </div>
@@ -384,9 +485,13 @@ export default function RecordDetailPage() {
                     <p className="detail-empty">등록된 사진이 없습니다.</p>
                   ) : (
                     <ul className="detail-photo-grid">
-                      {photos.map((src, i) => (
-                        <li key={src} className="detail-photo-item">
-                          <img src={src} alt={`${record.name} 사진 ${i + 1}`} loading="lazy" />
+                      {photos.map((photo, i) => (
+                        <li key={photo.id} className="detail-photo-item">
+                          <img
+                            src={fileUrl(photo.url)}
+                            alt={`${record.name} 사진 ${i + 1}`}
+                            loading="lazy"
+                          />
                         </li>
                       ))}
                     </ul>
@@ -414,9 +519,9 @@ export default function RecordDetailPage() {
           <section className="detail-section">
             <h2 className="detail-section-title">소속 여행</h2>
             <p className="detail-trip-link">
-              <Link to={`/trips/${trip.id}`}>{trip.name}</Link>
+              <Link to={`/trips/${record.trip.id}`}>{record.trip.name}</Link>
             </p>
-            {isAuthor && (
+            {trip && (
               <p className="detail-visibility-current">
                 이 여행의 공개 범위 <VisibilityBadge visibility={trip.visibility} />
                 {trip.visibility === 'GROUP' && sharedGroups.length > 0 && (
@@ -444,7 +549,13 @@ export default function RecordDetailPage() {
       </main>
 
       {confirmingDelete && (
-        <div className="modal-overlay" onClick={() => setConfirmingDelete(false)}>
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setConfirmingDelete(false)
+            setDeleteError('')
+          }}
+        >
           <div
             className="modal-panel confirm-panel"
             role="dialog"
@@ -456,6 +567,7 @@ export default function RecordDetailPage() {
             <p className="confirm-desc">
               삭제하면 목록과 공유 대상 모두에게서 사라집니다. 되돌릴 수 없어요.
             </p>
+            {deleteError && <p className="field-error">{deleteError}</p>}
             <div className="confirm-actions">
               <button
                 type="button"
@@ -464,7 +576,7 @@ export default function RecordDetailPage() {
               >
                 취소
               </button>
-              <button type="button" className="confirm-ok" onClick={handleDelete}>
+              <button type="button" className="confirm-ok" onClick={handleDelete} disabled={busy}>
                 삭제
               </button>
             </div>
@@ -513,7 +625,7 @@ export default function RecordDetailPage() {
         />
       )}
 
-      {mapOpen && <PlaceMapModal place={record} onClose={() => setMapOpen(false)} />}
+      {mapOpen && <PlaceMapModal place={place} onClose={() => setMapOpen(false)} />}
     </>
   )
 }

@@ -1,0 +1,14 @@
+/* 기록 등록 모달 (명세 §5.3). 폼 자체의 스타일은 RegisterRecordPage.css 를 그대로 쓴다. */
+.record-register-panel {
+  max-width: 600px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  text-align: left;
+  gap: 14px;
+}
+
+/* 페이지에서는 카드였지만 모달 안에서는 패널이 이미 카드다. 테두리를 한 겹만 남긴다. */
+.record-register-panel .register-form {
+  border: none;
+  padding: 0;
+}

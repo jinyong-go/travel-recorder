@@ -21,16 +21,16 @@ import com.yong.travel.record.persistence.TripRecordRepository
 import com.yong.travel.record.persistence.TripRecordSpecifications
 import com.yong.travel.tag.service.TagService
 import com.yong.travel.trip.domain.Trip
-import com.yong.travel.trip.domain.Visibility
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripRepository
-import com.yong.travel.trip.persistence.TripShareRepository
+import com.yong.travel.trip.service.TripService
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -43,7 +43,7 @@ class TripRecordService(
     private val photoRepository: PhotoRepository,
     private val photoStorageService: PhotoStorageService,
     private val groupService: GroupService,
-    private val tripShareRepository: TripShareRepository,
+    private val tripService: TripService,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -53,8 +53,16 @@ class TripRecordService(
         userId: Long?,
         pageable: Pageable,
     ): Page<RecordSummary> {
-        val groupIds = groupService.groupIdsOf(userId)
-        val spec = TripRecordSpecifications.withScope(query.scope, userId, groupIds)
+        // tripId 로 좁히면 그 여행을 볼 수 있는지 먼저 판정한다. scope 유무와 무관하게 못 보면
+        // 없는 여행과 같은 404 다 (명세 §4.4.1).
+        query.tripId?.let { tripService.requireViewable(it, userId) }
+
+        // scope 가 없으면 tripId 가 있다는 뜻이고(컨트롤러가 보장), 그 여행을 볼 수 있음은 위에서
+        // 확인했다. 볼 수 있는 여행의 하위 기록은 전부 보이므로 범위 조건을 더하지 않는다 (공통 명세 §3.5).
+        val scopeSpec = query.scope
+            ?.let { TripRecordSpecifications.withScope(it, userId, groupService.groupIdsOf(userId)) }
+            ?: Specification.unrestricted()
+        val spec = scopeSpec
             .and(
                 TripRecordSpecifications.withFilters(
                     query.tripId,
@@ -68,6 +76,8 @@ class TripRecordService(
         // 거리만 저장된 값이 아니라 요청 좌표에 따라 매번 달라져 페이지 안에서 재정렬한다.
         val sort = when (query.sort) {
             RecordSort.RECENT, RecordSort.DISTANCE -> Sort.by(Sort.Direction.DESC, "createdAt")
+            // 여행 상세는 여행을 따라가며 읽으므로 등록순이다 (명세 §4.4.1).
+            RecordSort.OLDEST -> Sort.by(Sort.Direction.ASC, "createdAt")
             RecordSort.RATING -> Sort.by(Sort.Direction.DESC, "rating").and(Sort.by(Sort.Direction.DESC, "createdAt"))
         }
         val page = recordRepository.findAll(spec, PageRequest.of(pageable.pageNumber, pageable.pageSize, sort))
@@ -224,21 +234,8 @@ class TripRecordService(
         throw ApiException(ErrorCode.RECORD_NOT_FOUND)
     }
 
-    /**
-     * 기록을 볼 수 있는지는 **전적으로 소속 여행이 정한다** (명세 §3.5).
-     *
-     * 내 여행이거나, 전체 공개 여행이거나, 내가 속한 그룹으로 공유된 여행이거나 셋 중 하나다.
-     */
-    private fun canView(record: TripRecordEntity, userId: Long?): Boolean {
-        val trip = record.trip
-        if (userId != null && trip.owner.id == userId) return true
-        if (trip.visibility == Visibility.PUBLIC) return true
-        if (trip.visibility != Visibility.GROUP || userId == null) return false
-
-        val groupIds = groupService.groupIdsOf(userId)
-        return groupIds.isNotEmpty() &&
-            tripShareRepository.existsByTripIdAndGroupIdIn(requireNotNull(trip.id), groupIds)
-    }
+    /** 기록을 볼 수 있는지는 **전적으로 소속 여행이 정한다** (명세 §3.5). 판정식은 여행 서비스에 하나만 둔다. */
+    private fun canView(record: TripRecordEntity, userId: Long?): Boolean = tripService.canView(record.trip, userId)
 
     /** 고칠 수 있는 사람은 여행 소유자뿐이다. 기록에는 작성자 컬럼이 없다 (명세 §3.1). */
     private fun requireAuthor(record: TripRecordEntity, userId: Long) {

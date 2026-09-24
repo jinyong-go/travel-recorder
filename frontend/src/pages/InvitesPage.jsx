@@ -2,9 +2,7 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client.js'
 import * as api from '../api/groups.js'
-import { useGroups } from '../context/GroupsContext.jsx'
 import usePagedList from '../hooks/usePagedList.js'
-import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
@@ -34,8 +32,6 @@ const OUTCOME_LABEL = {
 
 export default function InvitesPage({ tab }) {
   const navigate = useNavigate()
-  const { themeKey, changeTheme } = useTheme()
-  const { reloadGroups } = useGroups()
   const [inviteError, setInviteError] = useState('')
   const [rejecting, setRejecting] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -57,11 +53,12 @@ export default function InvitesPage({ tab }) {
     setInviteError('')
   }
 
-  /** 대기·이력·그룹 목록이 함께 바뀐다. 초대 하나가 끝나면 세 곳을 모두 다시 읽는다. */
+  /**
+   * 대기·이력이 함께 바뀐다. 초대 하나가 끝나면 둘 다 다시 읽는다. 받은 탭이면 헤더 배지는
+   * 대기 목록의 건수를 그대로 쓰므로 따라서 바뀐다.
+   */
   const refreshAll = async () => {
-    pending.reload()
-    history.reload()
-    await reloadGroups()
+    await Promise.all([pending.reload(), history.reload()])
   }
 
   const handleAccept = async (invite) => {
@@ -118,8 +115,10 @@ export default function InvitesPage({ tab }) {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
-          <HeaderAuth />
+          <ThemeSelector />
+          {/* 받은 탭의 대기 목록이 곧 받은 초대 목록이라 그 건수를 넘겨 헤더가 같은 요청을
+              다시 보내지 않게 한다. 보낸 탭에서는 헤더가 직접 읽는다. */}
+          <HeaderAuth receivedCount={tab === 'received' ? (pending.total ?? 0) : undefined} />
         </div>
       </header>
 

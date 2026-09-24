@@ -210,6 +210,16 @@ class TripService(
         tripRepository.findById(tripId)
             .orElseThrow { ApiException(ErrorCode.TRIP_NOT_FOUND) }
 
+    /**
+     * 여행을 볼 수 있는지 판정만 한다. 못 보면 없는 여행과 같은 TRIP_NOT_FOUND 다.
+     *
+     * 기록 목록을 `tripId` 로 좁힐 때 기록 서비스가 부른다 (명세 §4.4.1). 여행 상세 조회와 같은
+     * 판정을 거쳐야 목록으로 우회해 여행의 존재를 떠볼 수 없다.
+     */
+    fun requireViewable(tripId: Long, userId: Long?) {
+        requireViewable(findTrip(tripId), userId)
+    }
+
     private fun requireViewable(trip: TripEntity, userId: Long?) {
         if (canView(trip, userId)) return
         // 존재 은닉 때문에 응답이 "없음"과 같다. 왜 가려졌는지는 이 로그에만 드러난다 (명세 §2.2).
@@ -218,8 +228,13 @@ class TripService(
         throw ApiException(ErrorCode.TRIP_NOT_FOUND)
     }
 
-    /** 내 여행이거나, 전체 공개이거나, 내가 속한 그룹으로 공유됐거나 셋 중 하나다 (명세 §2.2). */
-    private fun canView(trip: TripEntity, userId: Long?): Boolean {
+    /**
+     * 내 여행이거나, 전체 공개이거나, 내가 속한 그룹으로 공유됐거나 셋 중 하나다 (명세 §2.2).
+     *
+     * 기록의 열람도 전적으로 소속 여행이 정하므로(명세 §3.5) 기록 서비스가 이 판정을 그대로 쓴다.
+     * 판정식이 두 곳에 있으면 한쪽만 고쳐졌을 때 여행과 기록의 공개 범위가 어긋난다.
+     */
+    fun canView(trip: TripEntity, userId: Long?): Boolean {
         if (userId != null && trip.owner.id == userId) return true
         if (trip.visibility == Visibility.PUBLIC) return true
         if (trip.visibility != Visibility.GROUP || userId == null) return false

@@ -12,6 +12,7 @@ import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.domain.RecordListQuery
 import com.yong.travel.record.domain.RecordScope
+import com.yong.travel.record.domain.RecordSort
 import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
 import com.yong.travel.trip.persistence.TripEntity
@@ -232,10 +233,54 @@ class RecordVisibilityTest {
         val recordId = newRecord(privateTripId)
         flush()
 
-        // 볼 수 없는 여행의 id 를 찍어도 오류가 아니라 빈 목록이다 (명세 §4.4.1).
-        assertTrue(list(RecordScope.PUBLIC, stranger, privateTripId).isEmpty())
-        assertTrue(list(RecordScope.MINE, stranger, privateTripId).isEmpty())
+        // 볼 수 없는 여행의 id 를 찍으면 scope 와 무관하게 없는 여행과 같은 404 다 (명세 §4.4.1).
+        listOf(RecordScope.PUBLIC, RecordScope.MINE, null).forEach { scope ->
+            val error = assertThrows<ApiException> { list(scope, stranger, privateTripId) }
+            assertEquals(ErrorCode.TRIP_NOT_FOUND, error.errorCode)
+        }
         assertEquals(listOf(recordId), list(RecordScope.MINE, owner, privateTripId))
+    }
+
+    @Test
+    fun `볼 수 있는 여행이라도 scope 가 어긋나면 빈 목록이다`() {
+        val owner = newUser()
+        val stranger = newUser()
+        val publicTripId = newTrip(owner, Visibility.PUBLIC)
+        newRecord(publicTripId)
+        flush()
+
+        assertTrue(list(RecordScope.MINE, stranger, publicTripId).isEmpty())
+    }
+
+    @Test
+    fun `scope 없이 tripId 만 주면 볼 수 있는 여행의 하위 기록 전부다`() {
+        val owner = newUser()
+        val member = newUser()
+        val stranger = newUser()
+        val groupId = newGroupWith(owner, member)
+        val groupTripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val groupRecordId = newRecord(groupTripId)
+        val publicTripId = newTrip(owner, Visibility.PUBLIC)
+        val publicRecordId = newRecord(publicTripId)
+        flush()
+
+        assertEquals(listOf(groupRecordId), list(null, member, groupTripId))
+        assertEquals(listOf(groupRecordId), list(null, owner, groupTripId))
+        assertEquals(listOf(publicRecordId), list(null, null, publicTripId))
+        assertEquals(ErrorCode.TRIP_NOT_FOUND, assertThrows<ApiException> { list(null, stranger, groupTripId) }.errorCode)
+        assertEquals(ErrorCode.TRIP_NOT_FOUND, assertThrows<ApiException> { list(null, null, groupTripId) }.errorCode)
+    }
+
+    @Test
+    fun `등록순 정렬은 먼저 만든 기록이 앞선다`() {
+        val owner = newUser()
+        val tripId = newTrip(owner)
+        val first = newRecord(tripId, name = "첫 번째")
+        val second = newRecord(tripId, name = "두 번째")
+        flush()
+
+        assertEquals(listOf(first, second), list(null, owner, tripId, RecordSort.OLDEST))
+        assertEquals(listOf(second, first), list(null, owner, tripId, RecordSort.RECENT))
     }
 
     @Test
@@ -401,8 +446,13 @@ class RecordVisibilityTest {
     /** 목록 검증은 첫 페이지만 본다. 페이지 크기는 서버가 정하므로(명세 §4.1) 테스트도 그 값을 그대로 쓴다. */
     private fun firstPage() = PageRequest.of(0, DEFAULT_PAGE_SIZE)
 
-    private fun list(scope: RecordScope, userId: Long?, tripId: Long? = null): List<Long> =
-        recordService.list(RecordListQuery(scope, tripId), userId, PageRequest.of(0, 10)).content.map { it.id }
+    private fun list(
+        scope: RecordScope?,
+        userId: Long?,
+        tripId: Long? = null,
+        sort: RecordSort = RecordSort.RECENT,
+    ): List<Long> =
+        recordService.list(RecordListQuery(scope, tripId, sort = sort), userId, PageRequest.of(0, 10)).content.map { it.id }
 
     /** 이메일은 계정마다 고유해야 한다 (users.email 유니크). 초대 대상 조회에 쓰이는 값이라 필요하면 직접 지정한다. */
     private fun newUser(email: String = "tester-${System.nanoTime()}@example.com"): Long = requireNotNull(

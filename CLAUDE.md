@@ -176,8 +176,8 @@ frontend/  React + Vite. components / context / config / utils / pages
 - **백엔드는 여행(Trip) 계층으로 전환되었다.** `Trip → TripRecord` 2계층이고 공개 범위와
   공유 관계는 `Trip` 에만 있다. `/api/trips` 6개가 구현되어 있으며, 기록 조회는 항상 소속
   여행을 조인해 판정한다.
-- **프론트엔드가 백엔드 API를 호출하지 않는다.** 목업 데이터로 동작한다. 화면은 여행 계층을
-  이미 반영하고 있어 연동만 남았다. 상세는 frontend §10.
+- **프론트엔드는 장소 검색을 뺀 전부를 백엔드 API 로 동작한다.** 서버 데이터는 쓰는 화면이
+  직접 조회하며, 전역 컨텍스트는 `AuthContext` 하나다. 장소 검색만 목업이다. 상세는 frontend §10.
 - **`SecurityConfig` 가 `permitAll()` 로 열려 있다.** 인증은 컨트롤러가 `requireLogin` 으로
   직접 막는다 (backend §8.1).
 - **스키마 마이그레이션 도구가 없다.** `schema.sql` 을 새로 써서 여행 계층을 반영했으므로

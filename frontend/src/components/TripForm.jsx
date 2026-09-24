@@ -30,7 +30,6 @@ export default function TripForm({
   initialTrip,
   submitLabel,
   showVisibility = false,
-  groups,
   submitting = false,
   onSubmit,
   onCancel,
@@ -168,7 +167,6 @@ export default function TripForm({
           <VisibilitySelect
             value={visibility}
             onChange={setVisibility}
-            groups={groups}
             selectedGroupIds={sharedGroupIds}
             onChangeGroups={setSharedGroupIds}
             onCreateGroupClick={onCreateGroupClick}

@@ -28,15 +28,19 @@ src/
   pages/       라우트 단위 화면 (XxxPage.jsx)
   components/  재사용 UI (PascalCase.jsx)
   hooks/       공용 훅 (useXxx.js)
-  context/     전역 상태 (XxxContext.jsx)
+  context/     전역 상태 (XxxContext.jsx) — 지금은 AuthContext 하나
   config/      설정·환경변수 (camelCase.js)
   utils/       순수 함수 (camelCase.js)
-  data/        목업 데이터 — API 연동 시 걷어낼 자리
+  data/        화면 표기용 값·함수와 남은 목업(장소 검색)
 ```
 
 - **라우트가 생기면 `pages/`, 재사용이 두 번째 생기면 `components/`** 로 옮긴다.
   처음부터 컴포넌트로 빼지 않는다.
 - 훅은 실제로 두 화면 이상에서 쓸 때 `hooks/` 로 올린다. 한 화면 전용이면 그 파일에 둔다.
+  예외는 외부 SDK 로더다 (`useNaverMapsSdk`) — 문서당 한 번만 스크립트를 넣는 전역 로더라
+  그리는 컴포넌트와 역할이 달라 따로 둔다.
+- 한 화면 안에서 부모와 자식 모달이 같은 훅 상태를 봐야 하면 자식이 다시 부르지 말고 부모가
+  결과를 prop 으로 넘긴다 (`RecordRegisterModal` 의 `reference`). 따로 부르면 상태가 갈라진다.
 
 ## 컴포넌트
 
@@ -54,7 +58,7 @@ src/
 
 - **유틸·설정·컨텍스트·API 모듈은 named export**다 (`export const`, `export function`).
   한 파일이 값을 여럿 내보내므로 default 를 쓸 자리가 없다 — `config/uploadLimits.js` 는 8개,
-  `context/GroupsContext.jsx` 는 프로바이더와 훅 둘, `api/groups.js` 는 엔드포인트마다 하나다.
+  `context/AuthContext.jsx` 는 프로바이더와 훅 둘, `api/groups.js` 는 엔드포인트마다 하나다.
 - props 는 시그니처에서 구조 분해하고 기본값을 그 자리에 둔다.
 - 조건부 렌더링이 3단 이상 중첩되면 이른 반환으로 펼친다.
 
@@ -68,14 +72,24 @@ src/
 
 ## 상태
 
-- **서버 상태는 `GroupsContext`**(그룹·초대)가, **목업 상태는 `RecordsContext`**(여행·기록)가
-  들고 있다. 화면 전용 상태만 `useState` 로 둔다.
+- **서버 데이터는 쓰는 화면이 직접 조회한다.** 전역 컨텍스트는 로그인 상태(`AuthContext`) 하나다.
+  여러 화면이 같은 조회를 하면 훅으로 모은다 (`useTrip`). 한 컴포넌트만 쓰는 조회는 그 컴포넌트가
+  직접 한다 — 공유 그룹 목록은 공개 범위 선택(`VisibilitySelect`)이 "그룹 공유" 를 골랐을 때만 읽는다. 서버 데이터를 컨텍스트에
+  캐시하지 않는다 — 쓰기마다 캐시를 비우는 호출이 흩어지고, 하나라도 빠뜨리면 다른 화면이 낡는다.
+- 같은 화면의 두 컴포넌트가 같은 값을 쓰면, 이미 조회한 쪽이 prop 으로 넘기고 다른 쪽은 조회를
+  건너뛴다 (`HeaderAuth` 의 `receivedCount`). 전역 이벤트나 컨텍스트로 돌리지 않는다.
+- 조회를 effect 밖(다시 읽기·더 보기)에서도 부르면 `useLatestRequest` 로 늦게 도착한 이전 응답을
+  버린다. effect 안에서만 부르면 `cancelled` 플래그로 충분하다.
+- **개발 모드에서 조회가 두 번씩 나가는 것은 StrictMode 때문이다.** 의도적으로 유지한다 — 정리를
+  빠뜨린 effect 를 드러내 준다. 프로덕션에서는 한 번이다.
 - **서버 상태에 낙관적 갱신을 하지 않는다.** 정원 판정처럼 서버만 아는 규칙이 있어(공통 명세 §3.7)
   먼저 그려 두었다가 되돌리면 그 사이 화면이 거짓말을 한다. 쓰기가 성공하면 다시 읽는다.
-- 페이지 단위 목록은 `usePagedList` 를 쓴다. "더 보기"가 필요한 다섯 목록이 같은 모양이다.
+- 페이지 단위 목록은 `usePagedList` 를 쓴다. "더 보기"가 필요한 목록(초대 다섯 곳, 여행 상세의
+  하위 기록)이 같은 모양이다.
 - **전역 상태 라이브러리를 새로 넣지 않는다.** Context로 부족해지면 먼저 논의한다.
 - 사용자 선택(테마, 기준 위치, 지도 표시 방식)은 로컬 저장소에 보관하고 전용 훅으로 감싼다
-  (`useTheme`, `useReferenceLocation`, `useMapMode`).
+  (`useReferenceLocation`, `useMapMode`). 테마는 토글 버튼 하나만 바꾸므로 `ThemeSelector` 가
+  직접 들고, 첫 적용은 `main.jsx` 가 렌더링 전에 한다.
 - 목록의 범위·필터·정렬·페이지는 **쿼리 파라미터로 유지**한다. 상세에서 돌아와도 목록 상태가
   보존되어야 한다.
 
@@ -111,10 +125,8 @@ src/
 
 ## 현재 상태
 
-**인증과 그룹·초대는 백엔드를 호출하고, 여행·기록·사진·태그는 아직 목업이다.** 목업 쪽은
-`src/data/` 와 `RecordsContext` 로 동작하며 공개 범위 판정도 컨텍스트에서 서버와 같은 규칙으로
-계산한다. **판정 규칙을 고칠 때는 서버와 어긋나지 않는지 확인한다** — 다만 실제 차단 책임은
-서버에 있다.
+**장소 검색을 뺀 전부가 백엔드를 호출한다.** 장소 검색 모달만 `src/data/placeSearchResults.js`
+목업에서 고른다 (명세 §10.2). 공개 범위 판정은 전부 서버가 하며, 화면은 `404` 를 "없음"으로
+그릴 뿐 판정식을 따로 갖지 않는다.
 
-**목업 여행의 `sharedGroupIds` 는 `MOCK_GROUPS` 의 id 를 가리킨다.** 그룹 화면이 쓰는 서버 id 와
-다른 체계이므로, 여행 화면의 `myGroups` 만 목업을 본다 (명세 §10.2). 섞지 않는다.
+서버가 주는 파일 URL(`/api/files/...`)은 백엔드 기준 경로이므로 `fileUrl()` 로 감싸 쓴다.

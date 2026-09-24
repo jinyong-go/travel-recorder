@@ -21,12 +21,16 @@ enum class RecordScope {
 
 enum class RecordSort {
     RECENT,
+
+    /** 등록순. 여행 상세의 하위 기록이 쓴다 (명세 §4.4.1). */
+    OLDEST,
     RATING,
     DISTANCE,
 }
 
 data class RecordListQuery(
-    val scope: RecordScope,
+    /** null 이면 `tripId` 가 반드시 있고, 그 여행의 하위 기록 전부다 (명세 §4.4.1). */
+    val scope: RecordScope?,
 
     /** 특정 여행의 하위 기록으로 한정한다. 여행 상세 화면이 이 경우다 (명세 §4.4.1). */
     val tripId: Long? = null,

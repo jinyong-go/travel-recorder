@@ -1,6 +1,8 @@
 package com.yong.travel.record.presentation
 
 import com.yong.travel.auth.security.LoginUser
+import com.yong.travel.common.error.ApiException
+import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
@@ -32,13 +34,14 @@ class TripRecordController(
     /**
      * 기록 목록 조회.
      *
-     * `scope` 는 필수다. "무엇을 보는 목록인지" 가 화면마다 다르고, 기본값을 두면
-     * 실수로 넓은 범위를 조회하는 쪽이 조용히 기본이 되기 때문이다.
-     * MINE/SHARED 는 로그인해야 하며, 비로그인은 PUBLIC 만 조회할 수 있다.
+     * `scope` 는 `tripId` 가 없으면 필수다. "무엇을 보는 목록인지" 가 화면마다 다르고, 기본값을
+     * 두면 실수로 넓은 범위를 조회하는 쪽이 조용히 기본이 되기 때문이다. `tripId` 만 주면 그 여행의
+     * 하위 기록이다 — 열람자는 남의 여행이 공유인지 공개인지 몰라 scope 를 고를 수 없다 (명세 §4.4.1).
+     * MINE/SHARED 는 로그인해야 하며, 비로그인은 PUBLIC 과 tripId 조회만 할 수 있다.
      */
     @GetMapping
     fun list(
-        @RequestParam scope: RecordScope,
+        @RequestParam(required = false) scope: RecordScope?,
         @RequestParam(required = false) tripId: Long?,
         @RequestParam(required = false) category: Category?,
         @RequestParam(required = false) tag: String?,
@@ -49,9 +52,12 @@ class TripRecordController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<TripRecordSummaryResponse> {
+        if (scope == null && tripId == null) {
+            throw ApiException(ErrorCode.VALIDATION_ERROR, "scope 와 tripId 중 하나는 있어야 합니다.")
+        }
         val userId = when (scope) {
             RecordScope.MINE, RecordScope.SHARED -> requireLogin(principal)
-            RecordScope.PUBLIC -> principal?.userId
+            RecordScope.PUBLIC, null -> principal?.userId
         }
         val records = recordService.list(
             RecordListQuery(scope, tripId, category, tag, keyword, sort, lat, lng),

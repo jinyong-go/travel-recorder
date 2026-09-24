@@ -554,17 +554,23 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 | 파라미터 | 값 | 설명 |
 |---|---|---|
-| `scope` | `mine` \| `shared` \| `public` | **필수.** 조회 범위 (§4.1) |
+| `scope` | `mine` \| `shared` \| `public` | 조회 범위 (§4.1). **`tripId` 가 없으면 필수**, 있으면 생략할 수 있다 |
 | `tripId` | 정수 | 특정 여행의 하위 기록으로 한정. 여행 상세 화면이 이 경우다 |
 | `category` | `SIGHT`\|`SHOPPING`\|`FOOD` | 생략 시 전체 |
 | `tag`, `keyword` | 문자열 | 태그 일치, 장소명·주소 부분 일치 |
-| `sort` | `recent`(기본) \| `rating` \| `distance` | `rating` 은 기록의 평점 기준 |
+| `sort` | `recent`(기본) \| `oldest` \| `rating` \| `distance` | `oldest` 는 등록순(여행 상세), `rating` 은 기록의 평점 기준 |
 | `lat`, `lng` | 실수 | `sort=distance` 일 때 필수. 요청자의 기준 위치 |
 | `page` | 정수 | 0-base, 기본 `0`. 페이지 크기는 10 고정 (§4.1) |
 
 - **범위 판정은 모두 소속 여행을 조인해서 한다** (§2.2, §4.1). 기록 테이블만 봐서는 판정할 수 없다.
-- `tripId` 로 지정한 여행을 볼 수 없으면 `404 TRIP_NOT_FOUND` 다. `scope` 와 `tripId` 가
-  어긋나면(예: `scope=mine` 인데 타인의 공개 여행) 오류가 아니라 **빈 목록**을 반환한다.
+- `tripId` 로 지정한 여행을 볼 수 없으면 `scope` 유무와 관계없이 `404 TRIP_NOT_FOUND` 다. 여행
+  상세 조회(§4.3)와 같은 판정이다.
+- **`tripId` 만 주고 `scope` 를 생략하면** 그 여행의 하위 기록 전부다. 열람자는 남의 여행이
+  공유인지 공개인지 모르므로(`visibility` 는 소유자에게만 내려간다) 화면이 `scope` 를 고를 수 없다.
+  볼 수 있는 여행이면 하위 기록도 전부 볼 수 있으므로(공통 명세 §3.5) 권한이 넓어지지 않는다.
+- `scope` 와 `tripId` 를 함께 주었는데 어긋나면(예: `scope=mine` 인데 타인의 공개 여행) 오류가 아니라
+  **빈 목록**을 반환한다.
+- `scope` 와 `tripId` 가 둘 다 없으면 `400 VALIDATION_ERROR` 다.
 - **응답에 `visibility` 와 공유 그룹 목록은 포함하지 않는다.** 그 값은 여행에 있으므로
   `GET /api/trips/{id}` 로 조회한다.
 

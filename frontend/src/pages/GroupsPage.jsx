@@ -1,17 +1,56 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../api/client.js'
-import { createGroup as createGroupApi } from '../api/groups.js'
-import { useGroups } from '../context/GroupsContext.jsx'
-import useTheme from '../hooks/useTheme.js'
+import {
+  createGroup as createGroupApi,
+  fetchGroups,
+  fetchReceivedInvites,
+} from '../api/groups.js'
+import useLatestRequest from '../hooks/useLatestRequest.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import { ArrowLeftIcon, MapPinIcon, PlusIcon } from '../components/icons.jsx'
 import './GroupsPage.css'
 
 export default function GroupsPage() {
-  const { groups, status, receivedCount, reloadGroups } = useGroups()
-  const { themeKey, changeTheme } = useTheme()
+  const [groups, setGroups] = useState([])
+  // 'loading' | 'ready' | 'error'
+  const [status, setStatus] = useState('loading')
+  const beginRequest = useLatestRequest()
+
+  // 그룹을 만든 뒤에도 다시 부른다. 가장 최근 요청의 응답만 그린다.
+  const reloadGroups = useCallback(async () => {
+    const isLatest = beginRequest()
+    setStatus('loading')
+    try {
+      const result = await fetchGroups()
+      if (!isLatest()) return
+      setGroups(result)
+      setStatus('ready')
+    } catch {
+      // 사유를 나누지 않는다. 목록을 못 받았다는 사실만 화면에 필요하다.
+      if (isLatest()) setStatus('error')
+    }
+  }, [beginRequest])
+
+  useEffect(() => {
+    reloadGroups()
+  }, [reloadGroups])
+
+  /** 받은 초대 알림 줄의 건수 (명세 §5.8.1). 못 읽으면 알림 줄을 그리지 않을 뿐이다. */
+  const [receivedCount, setReceivedCount] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    fetchReceivedInvites(0)
+      .then((result) => {
+        if (!cancelled) setReceivedCount(result.totalElements)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [memo, setMemo] = useState('')
@@ -60,8 +99,9 @@ export default function GroupsPage() {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
-          <HeaderAuth />
+          <ThemeSelector />
+          {/* 알림 줄에 쓰려고 이미 받은 건수다. 헤더가 같은 요청을 다시 보내지 않게 넘긴다. */}
+          <HeaderAuth receivedCount={receivedCount} />
         </div>
       </header>
 

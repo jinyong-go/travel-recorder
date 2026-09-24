@@ -2,9 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client.js'
 import * as api from '../api/groups.js'
-import { useGroups } from '../context/GroupsContext.jsx'
+import useLatestRequest from '../hooks/useLatestRequest.js'
 import usePagedList from '../hooks/usePagedList.js'
-import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import { ArrowLeftIcon, MapPinIcon, PlusIcon } from '../components/icons.jsx'
@@ -29,8 +28,6 @@ const LOAD_ERROR = {
 export default function GroupDetailPage() {
   const { groupId } = useParams()
   const navigate = useNavigate()
-  const { reloadGroups } = useGroups()
-  const { themeKey, changeTheme } = useTheme()
 
   const [group, setGroup] = useState(null)
   const [loadError, setLoadError] = useState(null)
@@ -39,15 +36,21 @@ export default function GroupDetailPage() {
   const [confirming, setConfirming] = useState(null)
   const [busy, setBusy] = useState(false)
 
+  const beginRequest = useLatestRequest()
+
+  // 그룹 A 에서 B 로 바로 옮기면 A 의 응답이 늦게 올 수 있다. 가장 최근 요청의 응답만 그린다.
   const loadGroup = useCallback(async () => {
+    const isLatest = beginRequest()
     setLoadError(null)
     try {
-      setGroup(await api.fetchGroup(groupId))
+      const result = await api.fetchGroup(groupId)
+      if (isLatest()) setGroup(result)
     } catch (err) {
+      if (!isLatest()) return
       setGroup(null)
       setLoadError(err instanceof ApiError ? err.code : 'UNKNOWN')
     }
-  }, [groupId])
+  }, [groupId, beginRequest])
 
   useEffect(() => {
     loadGroup()
@@ -145,8 +148,6 @@ export default function GroupDetailPage() {
       return
     }
 
-    // 목록의 멤버 수·역할이 함께 바뀌므로 그룹 목록도 다시 읽는다.
-    await reloadGroups()
     setConfirming(null)
     setBusy(false)
     if (confirming === 'delete' || confirming === 'leave') {
@@ -182,7 +183,7 @@ export default function GroupDetailPage() {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <ThemeSelector />
           <HeaderAuth />
         </div>
       </header>

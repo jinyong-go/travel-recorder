@@ -2,14 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client.js'
 import { createTrip } from '../api/trips.js'
-import { useGroups } from '../context/GroupsContext.jsx'
 import TripForm from '../components/TripForm.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
 import './RegisterRecordPage.css'
 
 export default function TripRegisterPage() {
   const navigate = useNavigate()
-  const { groups } = useGroups()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -40,7 +38,6 @@ export default function TripRegisterPage() {
           <TripForm
             submitLabel="여행 만들기"
             showVisibility
-            groups={groups}
             submitting={submitting}
             onSubmit={handleSubmit}
             onCancel={() => navigate('/trips')}

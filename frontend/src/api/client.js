@@ -37,6 +37,12 @@ export function clearCsrfToken() {
   csrfToken = null
 }
 
+/**
+ * 서버가 주는 파일 URL(`/api/files/...`)을 화면에서 쓸 수 있는 주소로 바꾼다. 경로가 백엔드
+ * 기준인데 화면은 다른 오리진에서 뜨므로 앞에 백엔드 주소를 붙인다. 없으면 null 이다.
+ */
+export const fileUrl = (path) => (path ? `${API_BASE_URL}${path}` : null)
+
 let unauthorizedHandler = null
 
 /**
@@ -59,7 +65,9 @@ export function setUnauthorizedHandler(handler) {
  */
 export async function apiFetch(path, { method = 'GET', body, withStatus = false } = {}) {
   const headers = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  // 사진 업로드는 멀티파트다. 경계(boundary)는 브라우저가 정하므로 Content-Type 을 비워 둔다.
+  const isForm = body instanceof FormData
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
 
   // 토큰이 없는 것은 부팅 조회가 실패했거나 로그인·로그아웃 직후다. 여기서 받지 않으면
   // 새로고침 전까지 모든 쓰기가 403 이 된다.
@@ -72,7 +80,7 @@ export async function apiFetch(path, { method = 'GET', body, withStatus = false 
     method,
     headers,
     credentials: 'include',
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined || isForm ? body : JSON.stringify(body),
   })
 
   // 204 와 빈 본문을 구분하지 않고 null 로 통일한다. 호출부가 매번 확인할 것이 하나 줄어든다.

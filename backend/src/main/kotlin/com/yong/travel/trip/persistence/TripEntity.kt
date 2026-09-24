@@ -81,8 +81,10 @@ class TripEntity(
     var createdAt: Instant = Instant.now()
         protected set
 
+    // 만든 직후에는 수정 시각이 생성 시각과 같아야 한다. 따로 now() 를 부르면 몇 µs 어긋나
+    // 새로 만든 행도 "수정됨" 으로 보인다.
     @Column(nullable = false)
-    var updatedAt: Instant = Instant.now()
+    var updatedAt: Instant = createdAt
         protected set
 
     /** soft delete 시각. null 이면 살아 있는 행이다 (@SQLRestriction 으로 조회에서 자동 제외). */

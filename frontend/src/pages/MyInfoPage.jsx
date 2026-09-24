@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
-import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
@@ -14,7 +13,6 @@ import './MyInfoPage.css'
  */
 export default function MyInfoPage() {
   const { user } = useAuth()
-  const { themeKey, changeTheme } = useTheme()
 
   return (
     <>
@@ -24,7 +22,7 @@ export default function MyInfoPage() {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <ThemeSelector />
           <HeaderAuth />
         </div>
       </header>

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { CATEGORIES, categoryIcon } from '../data/records.js'
 import { fetchTrips } from '../api/trips.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import { MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
@@ -33,7 +32,6 @@ const FEATURES = [
 const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 
 export default function LandingPage() {
-  const { themeKey, changeTheme } = useTheme()
   const { status } = useAuth()
   // 랜딩은 비로그인도 보는 화면이므로 전체 공개 여행만 센다. 건수만 필요해 첫 페이지의
   // totalElements 를 쓴다. 받기 전이나 실패했을 때는 문장을 그리지 않는다 — 0건으로 보이면 거짓이다.
@@ -58,7 +56,7 @@ export default function LandingPage() {
           여행 지도 <span className="by-yong">by YONG</span>
         </h1>
         <div className="header-actions">
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <ThemeSelector />
           <HeaderAuth />
         </div>
       </header>

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 // 네이버 OAuth 복구 시 아래 import 를 되살린다 (명세 §2.1).
 // import { NAVER_LOGIN_URL } from '../config/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
 import './LoginPage.css'
@@ -15,7 +14,6 @@ const ERROR_MESSAGES = {
 }
 
 export default function LoginPage() {
-  const { themeKey, changeTheme } = useTheme()
   const [searchParams] = useSearchParams()
   const { login } = useAuth()
   const navigate = useNavigate()
@@ -64,7 +62,7 @@ export default function LoginPage() {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <ThemeSelector />
         </div>
       </header>
 

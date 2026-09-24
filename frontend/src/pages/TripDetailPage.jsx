@@ -1,18 +1,19 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { categoryIcon, categoryLabel } from '../data/records.js'
+import { categoryIcon, categoryLabel, dateLabel, placeOf } from '../data/records.js'
 import { budgetLabel, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
-import { ApiError } from '../api/client.js'
+import { ApiError, fileUrl } from '../api/client.js'
+import { fetchTripRecords } from '../api/records.js'
 import * as tripApi from '../api/trips.js'
-import { useRecords } from '../context/RecordsContext.jsx'
-import { useGroups } from '../context/GroupsContext.jsx'
+import usePagedList from '../hooks/usePagedList.js'
+import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import useTrip from '../hooks/useTrip.js'
-import useTheme from '../hooks/useTheme.js'
 import useMapMode from '../hooks/useMapMode.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
+import RecordRegisterModal from '../components/RecordRegisterModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import VisibilitySelect from '../components/VisibilitySelect.jsx'
 import TripForm from '../components/TripForm.jsx'
@@ -56,14 +57,26 @@ const groupKey = (ids) => [...ids].sort((a, b) => a - b).join(',')
 /**
  * 불러온 여행을 그린다. 수정·공개 범위 변경은 서버 응답으로 `onTripChange` 를 불러 갈아 끼운다.
  *
- * 하위 기록은 아직 목업이라 `recordsOfTrip` 에서 온다 (명세 §10.2).
+ * 하위 기록은 등록순으로 한 페이지씩 읽어 "더 보기"로 이어 붙인다 (명세 §5.2.1). 여행지 수는
+ * 목록 길이가 아니라 여행의 `recordCount` 다 — 목록은 아직 다 읽지 않았을 수 있다.
  */
 function TripDetailView({ trip, onTripChange }) {
   const navigate = useNavigate()
-  const { recordsOfTrip, removeRecordsOfTrip } = useRecords()
-  const { groups } = useGroups()
-  const { themeKey, changeTheme } = useTheme()
   const { isEmbed } = useMapMode()
+  // 등록 모달과 같은 상태를 써야 모달에서 위치를 지정했을 때 이 화면의 거리도 바뀐다.
+  const reference = useReferenceLocation()
+  const referenceLocation = reference.location
+  const isOwner = trip.isOwner
+
+  // 기준 위치가 바뀌면 거리가 달라지므로 처음부터 다시 읽는다.
+  const loadRecords = useCallback(
+    (page) => fetchTripRecords(trip.id, referenceLocation, page),
+    [trip.id, referenceLocation],
+  )
+  const records = usePagedList(loadRecords)
+  const [registerOpen, setRegisterOpen] = useState(false)
+  // 사진만 올리지 못한 채 등록된 기록. 재업로드하러 갈 수 있게 링크를 남긴다 (명세 §5.3).
+  const [photoFailedRecord, setPhotoFailedRecord] = useState(null)
 
   const sharedGroups = trip.sharedGroups ?? []
   const [mapModalRecord, setMapModalRecord] = useState(null)
@@ -79,8 +92,7 @@ function TripDetailView({ trip, onTripChange }) {
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
 
-  const isOwner = trip.isOwner
-  const tripRecords = recordsOfTrip(trip.id)
+  const recordCount = trip.recordCount
   const visibilityChanged =
     visibilityDraft !== trip.visibility ||
     (visibilityDraft === 'GROUP' && groupKey(groupDraft) !== groupKey(sharedGroups.map((g) => g.id)))
@@ -88,10 +100,23 @@ function TripDetailView({ trip, onTripChange }) {
   const errorText = (err, fallback) => (err instanceof ApiError ? err.message : fallback)
 
   const handleMapButtonClick = (record) => {
+    const place = placeOf(record)
     if (isEmbed) {
-      setMapModalRecord(record)
+      setMapModalRecord(place)
     } else {
-      window.open(buildMapsSearchUrl(record), '_blank', 'noopener,noreferrer')
+      window.open(buildMapsSearchUrl(place), '_blank', 'noopener,noreferrer')
+    }
+  }
+
+  /** 등록 후 목록과 여행지 수를 다시 읽는다. 낙관적으로 붙이지 않는다 — 서버가 정한 순서·거리를 따른다. */
+  const handleRecordCreated = async (record, { photoFailed }) => {
+    setRegisterOpen(false)
+    setPhotoFailedRecord(photoFailed ? record : null)
+    records.reload()
+    try {
+      onTripChange(await tripApi.fetchTrip(trip.id))
+    } catch {
+      // 여행지 수만 늦게 맞춰진다. 다음에 화면에 들어오면 다시 읽는다.
     }
   }
 
@@ -113,12 +138,11 @@ function TripDetailView({ trip, onTripChange }) {
     }
   }
 
-  /** 서버에서 지운 뒤에만 목업 하위 기록을 걷어낸다. 실패했는데 기록만 사라지면 안 된다. */
   const handleDelete = async () => {
     setBusy(true)
     try {
+      // 하위 기록은 서버가 함께 지운다 (공통 명세 §3.9).
       await tripApi.deleteTrip(trip.id)
-      removeRecordsOfTrip(trip.id)
       navigate('/trips')
     } catch (err) {
       setActionError(errorText(err, '여행을 삭제하지 못했습니다.'))
@@ -138,7 +162,7 @@ function TripDetailView({ trip, onTripChange }) {
           : updated.visibility === 'GROUP' && updated.sharedGroups.length > 0
             ? '선택한 그룹에만 보입니다'
             : '이제 나만 볼 수 있습니다'
-      setSavedMessage(`여행지 ${tripRecords.length}곳이 ${where}.`)
+      setSavedMessage(`여행지 ${recordCount}곳이 ${where}.`)
     } catch (err) {
       setSavedMessage(errorText(err, '공개 범위를 바꾸지 못했습니다.'))
     } finally {
@@ -159,7 +183,7 @@ function TripDetailView({ trip, onTripChange }) {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <ThemeSelector />
           <HeaderAuth />
         </div>
       </header>
@@ -174,7 +198,7 @@ function TripDetailView({ trip, onTripChange }) {
             <h1 className="detail-name">{trip.name}</h1>
             <p className="trip-detail-period">
               {tripPeriodLabel(trip)} ({tripDurationLabel(trip)}) · 인원 {trip.headcount}명 ·
-              여행지 {tripRecords.length}곳
+              여행지 {recordCount}곳
             </p>
             <p className="trip-detail-owner">
               by {isOwner ? '나' : trip.owner.name}
@@ -209,7 +233,6 @@ function TripDetailView({ trip, onTripChange }) {
                   <VisibilitySelect
                     value={visibilityDraft}
                     onChange={setVisibilityDraft}
-                    groups={groups}
                     selectedGroupIds={groupDraft}
                     onChangeGroups={setGroupDraft}
                     onCreateGroupClick={() => navigate('/groups')}
@@ -252,26 +275,47 @@ function TripDetailView({ trip, onTripChange }) {
 
           <section className="detail-section">
             <div className="trip-records-head">
-              <h2 className="detail-section-title">여행지 {tripRecords.length}곳</h2>
+              <h2 className="detail-section-title">여행지 {recordCount}곳</h2>
               {isOwner && (
-                <Link to={`/records/register?tripId=${trip.id}`} className="btn-secondary">
+                <button type="button" className="btn-secondary" onClick={() => setRegisterOpen(true)}>
                   <PlusIcon />
                   여행지 추가
-                </Link>
+                </button>
               )}
             </div>
 
-            {tripRecords.length === 0 ? (
+            {photoFailedRecord && (
+              <p className="field-error" role="status">
+                사진을 올리지 못했습니다.{' '}
+                <Link to={`/records/${photoFailedRecord.id}`}>기록 상세</Link>에서 다시 올려주세요.
+              </p>
+            )}
+
+            {records.status === 'error' ? (
+              <div className="empty-state">
+                여행지를 불러오지 못했습니다.{' '}
+                <button type="button" className="link-button" onClick={records.reload}>
+                  다시 시도
+                </button>
+              </div>
+            ) : records.status === 'loading' && records.items.length === 0 ? (
+              <div className="empty-state">여행지를 불러오는 중이에요…</div>
+            ) : records.items.length === 0 ? (
               <div className="empty-state">
                 아직 등록된 여행지가 없습니다.
                 {isOwner && ' 다녀온 곳을 추가해보세요.'}
               </div>
             ) : (
               <ul className="place-grid">
-                {tripRecords.map((record) => (
+                {records.items.map((record) => (
                   <li key={record.id} className="place-card">
                     <div className="place-thumb">
-                      <span className="place-thumb-icon">{categoryIcon(record.category)}</span>
+                      {/* 첫 사진이 있으면 그것을, 없으면 카테고리 아이콘을 둔다 (명세 §4.5). */}
+                      {record.thumbnailUrl ? (
+                        <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
+                      ) : (
+                        <span className="place-thumb-icon">{categoryIcon(record.category)}</span>
+                      )}
                       <span className="place-category-badge">{categoryLabel(record.category)}</span>
                     </div>
                     <div className="place-body">
@@ -280,11 +324,13 @@ function TripDetailView({ trip, onTripChange }) {
                           {record.name}
                         </Link>
                       </h3>
-                      <p className="place-region">{record.region}</p>
+                      <p className="place-region">{record.address}</p>
                       <div className="place-meta">
                         <span className="place-rating">★ {record.rating.toFixed(1)}</span>
-                        <span className="place-distance">{record.distanceKm.toFixed(1)}km</span>
-                        <span className="place-date">{record.createdAt}</span>
+                        {record.distanceKm != null && (
+                          <span className="place-distance">{record.distanceKm.toFixed(1)}km</span>
+                        )}
+                        <span className="place-date">{dateLabel(record.createdAt)}</span>
                       </div>
                       {record.memo && <p className="place-memo">{record.memo}</p>}
                       <button
@@ -299,6 +345,11 @@ function TripDetailView({ trip, onTripChange }) {
                   </li>
                 ))}
               </ul>
+            )}
+            {records.hasNext && (
+              <button type="button" className="link-button" onClick={records.loadMore}>
+                더 보기
+              </button>
             )}
           </section>
           {isOwner && (
@@ -327,7 +378,7 @@ function TripDetailView({ trip, onTripChange }) {
             <h2>이 여행을 삭제할까요?</h2>
             {/* 하위 기록이 함께 지워진다는 사실과 건수를 반드시 문구에 담는다 (공통 명세 §3.9). */}
             <p className="confirm-desc">
-              이 여행과 여행지 {tripRecords.length}곳의 기록이 함께 삭제됩니다. 되돌릴 수 없어요.
+              이 여행과 여행지 {recordCount}곳의 기록이 함께 삭제됩니다. 되돌릴 수 없어요.
             </p>
             {actionError && <p className="field-error">{actionError}</p>}
             <div className="confirm-actions">
@@ -384,6 +435,15 @@ function TripDetailView({ trip, onTripChange }) {
 
       {mapModalRecord && (
         <PlaceMapModal place={mapModalRecord} onClose={() => setMapModalRecord(null)} />
+      )}
+
+      {registerOpen && (
+        <RecordRegisterModal
+          trip={trip}
+          reference={reference}
+          onClose={() => setRegisterOpen(false)}
+          onCreated={handleRecordCreated}
+        />
       )}
     </>
   )

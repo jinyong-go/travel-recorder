@@ -29,6 +29,7 @@ class EnumParamBindingTest {
             "/api/trips?scope=public&sort=startDate",
             "/api/records?scope=public",
             "/api/records?scope=public&sort=recent",
+            "/api/records?scope=public&sort=oldest",
             "/api/records?scope=public&category=FOOD",
         ).forEach { url ->
             mockMvc.perform(get(url)).andExpect(status().isOk)
@@ -47,6 +48,13 @@ class EnumParamBindingTest {
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
 
         mockMvc.perform(get("/api/trips?scope=public&sort=distance"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+    }
+
+    @Test
+    fun `기록 목록은 scope 와 tripId 가 둘 다 없으면 400 VALIDATION_ERROR 다`() {
+        mockMvc.perform(get("/api/records"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }

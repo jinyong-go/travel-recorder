@@ -17,7 +17,7 @@
 | 빌드 도구 | Vite (`@vitejs/plugin-react`) | ^8.3 |
 | 린터 | Oxlint | ^1.81 |
 | 스타일 | 순수 CSS (CSS 변수 기반 테마) | — |
-| 상태 관리 | React Context + Hooks (`RecordsContext`) | — |
+| 상태 관리 | React Context(`AuthContext`) + 화면별 조회 훅 | — |
 
 - 별도의 CSS 프레임워크나 상태 관리 라이브러리(Redux 등)는 사용하지 않습니다.
 - 요구 Node.js 버전: **20 이상** (Vite 8 기준, 개발 환경 검증 버전 Node 24 / npm 12)
@@ -30,37 +30,46 @@ frontend/
 │  ├─ favicon.svg              # 서비스 파비콘
 │  └─ icons.svg                # SVG 스프라이트
 ├─ src/
-│  ├─ main.jsx                 # 엔트리 (BrowserRouter 마운트)
-│  ├─ App.jsx                  # 라우트 정의 + RecordsProvider
+│  ├─ main.jsx                 # 엔트리 (BrowserRouter 마운트, 저장된 테마 첫 적용)
+│  ├─ App.jsx                  # 라우트 정의 + AuthProvider
 │  ├─ index.css / App.css      # 전역 스타일, 테마 변수
 │  ├─ pages/
 │  │  ├─ LandingPage.jsx       # 인덱스/랜딩 (/)
-│  │  ├─ LoginPage.jsx         # 로그인 (/login, 네이버 OAuth 진입점)
+│  │  ├─ LoginPage.jsx         # 로그인 (/login, 임시 아이디/비밀번호)
 │  │  ├─ TripListPage.jsx      # 여행 목록 (/trips, 범위 탭·정렬·페이지네이션)
 │  │  ├─ TripRegisterPage.jsx  # 여행 만들기 (/trips/new)
-│  │  ├─ TripDetailPage.jsx    # 여행 상세 (/trips/:tripId, 하위 기록·공개 범위·정보 수정·삭제)
+│  │  ├─ TripDetailPage.jsx    # 여행 상세 (/trips/:tripId, 하위 기록·기록 등록 모달·공개 범위·수정·삭제)
 │  │  ├─ RecordDetailPage.jsx  # 기록 상세·수정 (/records/:recordId)
-│  │  ├─ RegisterRecordPage.jsx # 기록 등록 (/records/register, 소속 여행 선택)
-│  │  ├─ GroupsPage.jsx        # 공유 그룹 목록·생성, 받은 초대 (/groups)
+│  │  ├─ GroupsPage.jsx        # 공유 그룹 목록·생성, 받은 초대 알림 (/groups)
 │  │  ├─ GroupDetailPage.jsx   # 그룹 상세 — 멤버·이메일 초대·삭제 (/groups/:groupId)
+│  │  ├─ InvitesPage.jsx       # 초대함 받은/보낸 탭 (/invites/received, /invites/sent)
+│  │  ├─ MyInfoPage.jsx        # 내 정보 (/me)
 │  │  └─ NotFoundPage.jsx      # 404 (그 외 모든 경로)
-│  │                           # /records 로 들어온 요청은 /trips 로 보낸다
+│  │                           # /records, /records/register 로 들어온 요청은 /trips 로 보낸다
 │  ├─ components/
-│  │  ├─ PlaceSearchModal.jsx  # 장소 검색 모달 (10건 페이징, 거리순 정렬)
+│  │  ├─ HeaderAuth.jsx        # 헤더 인증 영역·계정 메뉴·받은 초대 배지
+│  │  ├─ RequireAuth.jsx       # 로그인이 필요한 라우트 보호
+│  │  ├─ RecordRegisterModal.jsx # 기록 등록 모달 (여행 상세에서 열림)
+│  │  ├─ PlaceSearchModal.jsx  # 장소 검색 모달 (목업 결과, 거리순 정렬)
 │  │  ├─ PlaceMapModal.jsx     # 지도 모달 (목록·상세 공용)
 │  │  ├─ NaverMapView.jsx      # 네이버 지도 SDK v3 렌더링 + 마커
 │  │  ├─ StarRatingInput.jsx   # 평점 입력 (0.5점 단위)
 │  │  ├─ StarRatingDisplay.jsx # 평점 표시 (읽기 전용)
-│  │  ├─ TripForm.jsx          # 여행 입력 폼 (만들기·정보 수정 공용, 공개 범위는 제외)
-│  │  ├─ VisibilitySelect.jsx  # 공개 범위 선택 + 공유 그룹 다중 선택 (여행 전용)
+│  │  ├─ TripForm.jsx          # 여행 입력 폼 (만들기·정보 수정 공용, 공개 범위는 만들기만)
+│  │  ├─ VisibilitySelect.jsx  # 공개 범위 선택 + 공유 그룹 다중 선택 (그룹 목록을 직접 조회)
 │  │  ├─ VisibilityBadge.jsx   # 공개 범위 배지 (소유자에게만 노출, 아이콘+텍스트)
 │  │  ├─ SettingsMenu.jsx      # 지도 표시 방식 설정
-│  │  ├─ ThemeSelector.jsx     # 라이트/다크 테마 토글
+│  │  ├─ ThemeSelector.jsx     # 라이트/다크 테마 토글 (테마 상태를 직접 보관)
 │  │  └─ icons.jsx             # 아이콘 컴포넌트
-│  ├─ context/RecordsContext.jsx       # 여행·기록·그룹·초대 전역 상태 + 공개 범위 판정
+│  ├─ api/
+│  │  ├─ client.js                     # 공통 fetch 래퍼·CSRF 토큰·파일 URL
+│  │  └─ trips.js · records.js · groups.js # 엔드포인트별 호출
+│  ├─ context/AuthContext.jsx          # 로그인 상태 (유일한 전역 상태)
 │  ├─ hooks/
+│  │  ├─ useTrip.js                    # 여행 하나 조회 (여행 상세·기록 상세)
+│  │  ├─ usePagedList.js               # 페이지 단위 목록 + 더 보기
+│  │  ├─ useLatestRequest.js           # 늦게 도착한 이전 응답 버리기
 │  │  ├─ useReferenceLocation.js       # 기준 위치(Geolocation/수동/기본값) 훅
-│  │  ├─ useTheme.js                   # 라이트/다크 테마 상태 (테마 토글이 있는 화면 공용)
 │  │  ├─ useNaverMapsSdk.js            # 네이버 지도 SDK 스크립트 로드 상태
 │  │  └─ useMapMode.js                 # 지도 표시 방식 상태 (지도 버튼이 있는 화면 공용)
 │  ├─ config/
@@ -68,7 +77,7 @@ frontend/
 │  │  ├─ mapSettings.js                # 지도 표시 방식·지도 URL 생성
 │  │  ├─ uploadLimits.js               # 사진 용량·형식 제한 및 검증
 │  │  └─ referenceLocation.js          # 기준 위치 저장/조회, 기본값(서울역)
-│  ├─ data/                            # 백엔드 연동 전 목업 데이터 (trips·records·groups)
+│  ├─ data/                            # 화면 표기용 값·함수(records·trips)와 장소 검색 목업
 │  ├─ theme/themes.js                  # 라이트/다크 테마 정의 및 로컬 저장
 │  └─ utils/geo.js                     # 하버사인 거리 계산
 ├─ index.html
