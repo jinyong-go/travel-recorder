@@ -1,4 +1,4 @@
-package com.yong.travel.record.dto
+package com.yong.travel.record.presentation
 
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.domain.TripRecordCreateCommand

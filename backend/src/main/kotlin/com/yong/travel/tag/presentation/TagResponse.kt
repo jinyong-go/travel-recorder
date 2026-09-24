@@ -1,4 +1,4 @@
-package com.yong.travel.tag.dto
+package com.yong.travel.tag.presentation
 
 import com.yong.travel.tag.domain.Tag
 

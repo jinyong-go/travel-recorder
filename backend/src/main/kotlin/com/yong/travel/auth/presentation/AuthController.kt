@@ -1,7 +1,5 @@
-package com.yong.travel.auth.controller
+package com.yong.travel.auth.presentation
 
-import com.yong.travel.auth.dto.MeResponse
-import com.yong.travel.auth.dto.toMeResponse
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.auth.service.AuthService
 import com.yong.travel.common.web.requireLogin

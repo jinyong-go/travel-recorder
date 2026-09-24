@@ -6,10 +6,10 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.photo.service.PhotoService
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.dto.TripRecordCreateRequest
+import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
 import com.yong.travel.trip.domain.Visibility
-import com.yong.travel.trip.dto.TripCreateRequest
+import com.yong.travel.trip.presentation.TripCreateRequest
 import com.yong.travel.trip.service.TripService
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Test

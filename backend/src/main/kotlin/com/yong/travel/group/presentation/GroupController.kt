@@ -1,17 +1,9 @@
-package com.yong.travel.group.controller
+package com.yong.travel.group.presentation
 
 import com.yong.travel.auth.security.LoginUser
-import com.yong.travel.common.dto.PageResponse
+import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
-import com.yong.travel.group.dto.GroupCreateRequest
-import com.yong.travel.group.dto.GroupResponse
-import com.yong.travel.group.dto.GroupUpdateRequest
-import com.yong.travel.group.dto.GroupSummaryResponse
-import com.yong.travel.group.dto.toResponse
-import com.yong.travel.group.dto.toSummaryResponse
-import com.yong.travel.group.dto.InviteRequest
-import com.yong.travel.group.dto.PendingInviteResponse
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.InviteService
 import jakarta.validation.Valid

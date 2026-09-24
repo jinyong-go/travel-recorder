@@ -1,8 +1,6 @@
-package com.yong.travel.tag.controller
+package com.yong.travel.tag.presentation
 
 import com.yong.travel.auth.security.LoginUser
-import com.yong.travel.tag.dto.TagResponse
-import com.yong.travel.tag.dto.toResponse
 import com.yong.travel.tag.service.TagService
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping

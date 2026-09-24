@@ -1,7 +1,7 @@
-package com.yong.travel.trip.dto
+package com.yong.travel.trip.presentation
 
-import com.yong.travel.auth.dto.UserResponse
-import com.yong.travel.auth.dto.toResponse
+import com.yong.travel.auth.presentation.UserResponse
+import com.yong.travel.auth.presentation.toResponse
 import com.yong.travel.group.domain.Group
 import com.yong.travel.trip.domain.TripDetail
 import com.yong.travel.trip.domain.TripSummary

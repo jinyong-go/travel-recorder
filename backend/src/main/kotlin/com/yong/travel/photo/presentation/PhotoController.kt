@@ -1,9 +1,7 @@
-package com.yong.travel.photo.controller
+package com.yong.travel.photo.presentation
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.web.requireLogin
-import com.yong.travel.photo.dto.PhotoResponse
-import com.yong.travel.photo.dto.toResponse
 import com.yong.travel.photo.service.PhotoService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity

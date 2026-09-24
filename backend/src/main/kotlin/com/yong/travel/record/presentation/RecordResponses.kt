@@ -1,14 +1,14 @@
-package com.yong.travel.record.dto
+package com.yong.travel.record.presentation
 
-import com.yong.travel.auth.dto.UserResponse
-import com.yong.travel.auth.dto.toResponse
+import com.yong.travel.auth.presentation.UserResponse
+import com.yong.travel.auth.presentation.toResponse
 import com.yong.travel.photo.domain.Photo
-import com.yong.travel.photo.dto.PhotoResponse
+import com.yong.travel.photo.presentation.PhotoResponse
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.domain.RecordDetail
 import com.yong.travel.record.domain.RecordSummary
 import com.yong.travel.trip.domain.Trip
-import com.yong.travel.trip.dto.TripRefResponse
+import com.yong.travel.trip.presentation.TripRefResponse
 import java.time.Instant
 
 /**

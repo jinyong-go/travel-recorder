@@ -30,7 +30,7 @@
 
 ## 디렉터리 구조
 
-도메인별 패키지 안에 `domain` / `persistence` / `service` / `controller` / `dto` 계층을 두는 구조입니다.
+도메인별 패키지 안에 `presentation` / `service` / `domain` / `persistence` 계층을 두는 구조입니다.
 JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 있고, `domain` 에는 저장 수단과 무관한
 도메인 개념(`Visibility`, `Category`, `InviteOutcome`)이 있습니다.
 
@@ -42,25 +42,25 @@ backend/
 │  │  ├─ config/SecurityConfig.kt  # 시큐리티 필터체인, CSRF, oauth2Login
 │  │  ├─ service/UserService.kt    # 네이버 프로필(response 래핑) 평탄화 + 사용자 Upsert
 │  │  ├─ security/CustomOAuth2User.kt
-│  │  └─ persistence·controller·dto
+│  │  └─ persistence·presentation
 │  ├─ trip/                        # 여행 — 기록의 상위 그룹이자 공유의 단위
 │  │  ├─ persistence/TripEntity.kt, TripShareEntity.kt
 │  │  ├─ persistence/TripSpecifications.kt  # 공개 범위 판정 (scope 조건)
 │  │  ├─ domain/Visibility.kt
-│  │  └─ service·controller·dto
+│  │  └─ service·presentation
 │  ├─ record/                      # 여행 기록 CRUD 및 목록 조회 (반드시 여행 하나에 속한다)
 │  │  ├─ persistence/TripRecordEntity.kt
 │  │  ├─ persistence/TripRecordSpecifications.kt  # 소속 여행 조인 판정 + 카테고리·태그·키워드 조건
 │  │  ├─ domain/Category.kt
-│  │  └─ service·controller·dto
+│  │  └─ service·presentation
 │  ├─ group/                       # 공유 그룹 (조회 전용 대상 목록) 과 초대 목록
 │  │  ├─ persistence/GroupEntity.kt, GroupMemberEntity.kt, GroupInviteEntity.kt, InviteHistoryEntity.kt
 │  │  ├─ domain/InviteOutcome.kt
-│  │  └─ service·controller·dto
+│  │  └─ service·presentation
 │  ├─ search/                      # 네이버 지역 검색 오픈API 연동
 │  │  ├─ client/NaverLocalSearchClient.kt
 │  │  ├─ service/PlaceSearchService.kt      # 중복 제거·거리순 정렬·페이징
-│  │  └─ controller/PlaceSearchController.kt  # GET /api/places/search (저장 단위가 아니라 외부 조회)
+│  │  └─ presentation/PlaceSearchController.kt  # GET /api/places/search (저장 단위가 아니라 외부 조회)
 │  ├─ tag/                         # 태그 조회 (볼 수 있는 기록에 쓰인 태그로 제한)
 │  ├─ photo/                       # 사진 업로드·삭제
 │  │  ├─ config/                   # 업로드 제한·저장소 설정 (@ConfigurationProperties)
@@ -72,7 +72,7 @@ backend/
 │     ├─ web/EnumParams.kt         # scope=mine 같은 소문자 enum 파라미터 변환
 │     ├─ web/PageSupport.kt        # 목록 페이지 크기(서버 고정) 처리
 │     ├─ util/GeoUtils.kt          # 하버사인 거리 계산
-│     └─ dto/PageResponse.kt       # 공통 페이지 응답
+│     └─ presentation/PageResponse.kt  # 공통 페이지 응답
 ├─ src/main/resources/
 │  ├─ application.yml             # 공통 설정
 │  ├─ application-local.yml       # 로컬 (H2 in-memory, PostgreSQL 호환 모드)

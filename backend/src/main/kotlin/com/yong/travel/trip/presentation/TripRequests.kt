@@ -1,4 +1,4 @@
-package com.yong.travel.trip.dto
+package com.yong.travel.trip.presentation
 
 import com.yong.travel.trip.domain.TripCreateCommand
 import com.yong.travel.trip.domain.TripUpdateCommand

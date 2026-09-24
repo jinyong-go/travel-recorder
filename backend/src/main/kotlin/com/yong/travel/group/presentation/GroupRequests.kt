@@ -1,4 +1,4 @@
-package com.yong.travel.group.dto
+package com.yong.travel.group.presentation
 
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank

@@ -8,14 +8,14 @@ import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.InviteService
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.dto.TripRecordCreateRequest
+import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
 import com.yong.travel.trip.domain.Visibility
-import com.yong.travel.trip.dto.TripCreateRequest
+import com.yong.travel.trip.presentation.TripCreateRequest
 import com.yong.travel.trip.domain.TripListQuery
 import com.yong.travel.trip.domain.TripScope
 import com.yong.travel.trip.domain.TripSort
-import com.yong.travel.trip.dto.TripUpdateRequest
+import com.yong.travel.trip.presentation.TripUpdateRequest
 import com.yong.travel.trip.service.TripService
 import jakarta.persistence.EntityManager
 import jakarta.validation.Validator

@@ -1,20 +1,13 @@
-package com.yong.travel.record.controller
+package com.yong.travel.record.presentation
 
 import com.yong.travel.auth.security.LoginUser
-import com.yong.travel.common.dto.PageResponse
+import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.domain.RecordListQuery
 import com.yong.travel.record.domain.RecordScope
 import com.yong.travel.record.domain.RecordSort
-import com.yong.travel.record.dto.TripChangeRequest
-import com.yong.travel.record.dto.TripRecordCreateRequest
-import com.yong.travel.record.dto.TripRecordResponse
-import com.yong.travel.record.dto.TripRecordSummaryResponse
-import com.yong.travel.record.dto.TripRecordUpdateRequest
-import com.yong.travel.record.dto.toResponse
-import com.yong.travel.record.dto.toSummaryResponse
 import com.yong.travel.record.service.TripRecordService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity

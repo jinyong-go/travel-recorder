@@ -1,4 +1,4 @@
-package com.yong.travel.auth.dto
+package com.yong.travel.auth.presentation
 
 import com.yong.travel.auth.domain.MyProfile
 import com.yong.travel.auth.domain.User

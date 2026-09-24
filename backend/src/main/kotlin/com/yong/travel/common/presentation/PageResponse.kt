@@ -1,4 +1,4 @@
-package com.yong.travel.common.dto
+package com.yong.travel.common.presentation
 
 import org.springframework.data.domain.Page
 

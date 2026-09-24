@@ -1,8 +1,6 @@
-package com.yong.travel.search.controller
+package com.yong.travel.search.presentation
 
-import com.yong.travel.common.dto.PageResponse
-import com.yong.travel.search.dto.PlaceSearchResultResponse
-import com.yong.travel.search.dto.toResponse
+import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.search.service.PlaceSearchService
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping

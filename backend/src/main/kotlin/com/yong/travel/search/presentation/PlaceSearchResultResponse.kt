@@ -1,4 +1,4 @@
-package com.yong.travel.search.dto
+package com.yong.travel.search.presentation
 
 import com.yong.travel.search.domain.PlaceCandidate
 

@@ -1,7 +1,5 @@
-package com.yong.travel.auth.controller
+package com.yong.travel.auth.presentation
 
-import com.yong.travel.auth.dto.MeResponse
-import com.yong.travel.auth.dto.toMeResponse
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.auth.service.AuthService
 import com.yong.travel.common.error.ApiException
@@ -24,8 +22,8 @@ import org.springframework.web.bind.annotation.RestController
 /**
  * 네이버 OAuth 가 준비되기 전까지 쓰는 임시 로그인 API (명세 §2.1).
  *
- * OAuth 복구 시 이 파일과 `LocalLoginConfig` 를 들어내면 된다. 요청 DTO 를 dto 패키지가 아니라
- * 여기에 둔 것도 같은 이유다 — 임시 코드를 한 파일에 모아 둔다.
+ * OAuth 복구 시 이 파일과 `LocalLoginConfig` 를 들어내면 된다. 요청 DTO 를 `*Requests.kt` 가
+ * 아니라 여기에 둔 것도 같은 이유다 — 임시 코드를 한 파일에 모아 둔다.
  *
  * `LocalLoginConfig` 와 같은 프로파일 조건을 건다. 조건이 어긋나면 주입할
  * `AuthenticationManager` 가 없어 기동이 실패한다.

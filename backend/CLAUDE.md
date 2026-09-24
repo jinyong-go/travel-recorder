@@ -26,24 +26,26 @@ Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client /
 
 ```
 com.yong.travel
-  ├─ auth     인증·사용자 (config, controller, domain, dto, persistence, security, service)
+  ├─ auth     인증·사용자 (config, presentation, service, domain, persistence, security)
   ├─ record   방문 기록
   ├─ group    공유 그룹·초대
   ├─ photo    사진 (storage 하위에 저장소 구현체)
   ├─ search   장소 검색 (client 하위에 외부 API 호출)
   ├─ tag      태그
-  └─ common   config · dto(PageResponse) · error · util(GeoUtils) · web(AuthSupport)
+  └─ common   config · presentation(PageResponse) · error · util(GeoUtils) · web(AuthSupport)
 ```
 
 - **도메인으로 먼저 나누고, 그 안에서 계층으로 나눈다.** 계층을 최상위에 두지 않는다.
+- **`presentation` 에 컨트롤러와 요청·응답 DTO 를 함께 둔다.** 하위 패키지로 나누지 않고 파일
+  이름(`*Controller`, `*Requests`, `*Responses`)으로 구분한다.
 - **JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 둔다.** 엔티티 클래스는 `*Entity`
   로 끝난다 (`TripEntity`). `domain` 은 저장 수단을 모르는 도메인 개념의 자리다 — `Visibility`·
   `Category`·`InviteOutcome`, 서비스가 주고받는 도메인 객체(`Trip`·`TripDetail`), 입력(`TripCreateCommand`),
   조회 조건(`TripListQuery`) 이 여기 있다.
-- **의존 방향은 `controller·dto → service → persistence → domain` 이다.** 모든 계층이 `domain` 을
+- **의존 방향은 `presentation → service → persistence → domain` 이다.** 모든 계층이 `domain` 을
   알고, `domain` 은 아무것도 모른다.
-  - 컨트롤러·dto 는 `persistence` 를 모른다. 엔티티를 받거나 돌려주는 변환 함수를 dto 에 두지 않는다.
-  - 서비스·persistence 는 `dto` 를 모른다. 요청 DTO·`PageResponse` 를 서비스 시그니처에 쓰지 않는다.
+  - `presentation` 은 `persistence` 를 모른다. 엔티티를 받거나 돌려주는 변환 함수를 두지 않는다.
+  - 서비스·persistence 는 `presentation` 을 모른다. 요청 DTO·`PageResponse` 를 서비스 시그니처에 쓰지 않는다.
   - 외부 API 응답 모델은 그 API 를 부르는 `client` 에 둔다 (`NaverLocalSearchItem`).
 - 두 도메인이 함께 쓰는 것만 `common` 으로 올린다. 한 곳에서만 쓰면 그 도메인에 둔다.
 - import 는 **명시적으로 쓴다.** 와일드카드(`import ...*`)를 쓰지 않는다.
@@ -66,13 +68,13 @@ com.yong.travel
   )
   ```
 
-- **엔티티를 요청·응답에 직접 쓰지 않는다.** DTO로 주고받는다. DTO는 도메인별 `dto` 패키지에
+- **엔티티를 요청·응답에 직접 쓰지 않는다.** DTO로 주고받는다. DTO는 도메인별 `presentation` 패키지에
   용도별 파일로 모은다 (`RecordRequests.kt`, `RecordResponses.kt`).
 - **서비스는 요청 DTO 를 받지 않는다.** 필드가 많은 생성·수정은 `domain` 의 `*Command`
   (`TripCreateCommand`) 로, 한두 개짜리 입력은 파라미터로 받는다 (`changeCover(tripId, ownerId, photoId)`).
   요청 DTO 의 `toCommand()` 가 옮겨 담는다. Bean Validation 은 요청 DTO 에만 건다.
 - **서비스는 DTO 가 아니라 도메인 객체를 반환한다** (`TripDetail`, `GroupSummary`, `User` …).
-  변환 함수는 `dto` 패키지에 확장 함수로 두고 컨트롤러가 부른다. 서비스가 응답 모양을 알면
+  변환 함수는 응답 DTO 파일에 확장 함수로 두고 컨트롤러가 부른다. 서비스가 응답 모양을 알면
   화면이 바뀔 때마다 서비스가 끌려 들어온다.
 - **응답을 만들면서 조회하지 않는다.** 변환 함수 안에서 리포지토리를 부르면 목록에서 그대로
   N+1 이 된다. 필요한 것은 서비스가 미리 모아 도메인 객체에 담는다 —

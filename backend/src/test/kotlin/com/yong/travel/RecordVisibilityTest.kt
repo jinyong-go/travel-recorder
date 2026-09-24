@@ -12,7 +12,7 @@ import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.domain.RecordListQuery
 import com.yong.travel.record.domain.RecordScope
-import com.yong.travel.record.dto.TripRecordCreateRequest
+import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity

@@ -1,4 +1,4 @@
-package com.yong.travel.photo.dto
+package com.yong.travel.photo.presentation
 
 import com.yong.travel.photo.domain.Photo
 
