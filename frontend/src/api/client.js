@@ -21,6 +21,16 @@ const readCookie = (name) =>
 
 const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 
+let unauthorizedHandler = null
+
+/**
+ * `401` 응답을 받았을 때 부를 함수를 등록한다. `AuthContext` 만 쓴다 (명세 §2.1).
+ * client 가 컨텍스트를 import 하면 순환 의존이 생기므로, 거꾸로 등록받는다.
+ */
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler
+}
+
 /**
  * 백엔드 호출 공통 래퍼. 응답 본문이 있으면 JSON 으로 돌려주고, 실패하면 `ApiError` 를 던진다.
  *
@@ -52,6 +62,7 @@ export async function apiFetch(path, { method = 'GET', body, withStatus = false 
   const payload = text ? JSON.parse(text) : null
 
   if (!response.ok) {
+    if (response.status === 401) unauthorizedHandler?.()
     throw new ApiError({ ...(payload ?? {}), status: response.status })
   }
   return withStatus ? { data: payload, status: response.status } : payload

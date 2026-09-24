@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { CATEGORIES, categoryIcon } from '../data/records.js'
 import { useRecords } from '../context/RecordsContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
@@ -33,6 +34,7 @@ const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 export default function LandingPage() {
   const { themeKey, changeTheme } = useTheme()
   const { listTripsByScope } = useRecords()
+  const { status } = useAuth()
   // 랜딩은 비로그인도 보는 화면이므로 전체 공개 여행만 센다.
   const publicTrips = listTripsByScope('public')
 
@@ -57,21 +59,22 @@ export default function LandingPage() {
             <br />
             지도처럼 모아 두세요
           </h2>
-          {/* 네이버 로그인 복구 시 원문으로 되돌린다 (명세 §2.1):
-              "네이버 계정으로 로그인해 여행지를 등록하고, …" */}
           <p className="landing-sub">
-            로그인하고 여행지를 등록해, 카테고리와 별점으로 정리된 나만의 여행 기록을 만들어
-            보세요.
+            여행지를 등록해, 카테고리와 별점으로 정리된 나만의 여행 기록을 만들어 보세요.
           </p>
 
           <div className="landing-cta">
             <Link to="/trips?scope=public" className="landing-cta-primary">
               여행지 둘러보기
             </Link>
-            {/* 네이버 로그인 복구 시 "네이버로 시작하기" 로 되돌린다 (명세 §2.1). */}
-            <Link to="/login" className="landing-cta-secondary">
-              로그인하고 시작하기
-            </Link>
+            {/* 네이버 로그인 복구 시 "네이버로 시작하기" 로 되돌린다 (명세 §2.1).
+                이미 로그인했으면 보이지 않는다. 확인 중에도 그리지 않는다 — 먼저 그리면
+                로그인한 사용자에게 한 번 깜빡인다 (헤더 로그인 링크와 같은 이유). */}
+            {status === 'anonymous' && (
+              <Link to="/login" className="landing-cta-secondary">
+                로그인하고 시작하기
+              </Link>
+            )}
           </div>
 
           <p className="landing-stat">

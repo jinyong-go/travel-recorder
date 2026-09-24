@@ -1,0 +1,134 @@
+/* 헤더 로그인 링크 */
+.header-login-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.header-login-link:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+/* 계정 메뉴 — 프로필 버튼과 그 아래 드롭다운 */
+.account-menu {
+  position: relative;
+}
+
+.account-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 4px 12px 4px 4px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.account-menu-btn:hover,
+.account-menu-btn[aria-expanded='true'] {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.header-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* 프로필 사진이 없는 계정은 이름 첫 글자로 대신한다. */
+.header-user-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.header-user-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 받은 초대 건수. 이름이 숨는 좁은 화면에서도 남아야 해서 아바타 옆에 붙인다. */
+.header-invite-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-strong);
+  color: var(--surface);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.account-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  z-index: 30;
+}
+
+.account-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-menu-item:hover,
+.account-menu-item:focus-visible {
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+}
+
+.account-menu-divider {
+  margin: 6px 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 480px) {
+  .account-menu-btn .header-user-name {
+    display: none;
+  }
+}

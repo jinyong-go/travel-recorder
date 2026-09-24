@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { ApiError, apiFetch } from '../api/client.js'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ApiError, apiFetch, setUnauthorizedHandler } from '../api/client.js'
 
 const AuthContext = createContext(null)
 
@@ -9,12 +10,40 @@ const AuthContext = createContext(null)
  * 부팅 시 `GET /api/auth/me` 로 세션을 확인한다. 새로고침해도 로그인이 유지되는 것은
  * 이 조회 덕분이며(명세 §2.1), 이 요청이 XSRF 토큰 쿠키도 함께 받아 와 이후 쓰기 요청의
  * 전제를 만든다 (공통 명세 §6.1).
+ *
+ * 로그인 상태에서 받은 `401` 은 세션 만료로 보고 로그인 화면으로 보낸다 (명세 §2.1).
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   // loading 을 따로 두는 이유는 비로그인과 "아직 모름" 이 다르기 때문이다.
   // 구분하지 않으면 새로고침 직후 로그인 상태가 잠깐 비로그인으로 보인다.
   const [status, setStatus] = useState('loading')
+  const navigate = useNavigate()
+
+  // 만료 핸들러는 한 번만 등록하므로 최신 status 를 ref 로 읽는다.
+  const statusRef = useRef(status)
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      // 부팅 시 본인 정보 조회와 로그인 요청의 401 은 만료가 아니다.
+      // 로그인 상태였을 때만 만료로 본다 (명세 §2.1).
+      if (statusRef.current !== 'authenticated') return
+      // 동시에 나간 요청 여럿이 401 을 받아도 한 번만 처리한다.
+      statusRef.current = 'anonymous'
+      setUser(null)
+      setStatus('anonymous')
+      // useLocation 을 쓰면 화면을 옮길 때마다 프로바이더가 다시 그려지므로 window.location 을 읽는다.
+      const { pathname, search } = window.location
+      navigate('/login?error=session_expired', {
+        replace: true,
+        state: { from: pathname + search },
+      })
+    })
+    return () => setUnauthorizedHandler(null)
+  }, [navigate])
 
   useEffect(() => {
     let cancelled = false

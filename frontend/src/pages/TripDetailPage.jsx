@@ -7,6 +7,7 @@ import useTheme from '../hooks/useTheme.js'
 import useMapMode from '../hooks/useMapMode.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
+import HeaderAuth from '../components/HeaderAuth.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import VisibilitySelect from '../components/VisibilitySelect.jsx'
@@ -108,6 +109,7 @@ export default function TripDetailPage() {
         </Link>
         <div className="header-actions">
           <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <HeaderAuth />
         </div>
       </header>
 

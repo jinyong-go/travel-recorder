@@ -6,6 +6,7 @@ import { useGroups } from '../context/GroupsContext.jsx'
 import usePagedList from '../hooks/usePagedList.js'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
+import HeaderAuth from '../components/HeaderAuth.jsx'
 import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
 import './GroupsPage.css'
 import './InvitesPage.css'
@@ -118,6 +119,7 @@ export default function InvitesPage({ tab }) {
         </Link>
         <div className="header-actions">
           <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
+          <HeaderAuth />
         </div>
       </header>
 

@@ -20,7 +20,7 @@ export function GroupsProvider({ children }) {
   // 'loading' | 'ready' | 'error' — 비로그인은 조회 자체를 하지 않으므로 'ready' 에 빈 목록이다.
   const [status, setStatus] = useState('loading')
 
-  /** 받은 초대 건수. 그룹 목록과 여행 목록의 알림 줄이 이 값만 쓴다 (명세 §5.8.1). */
+  /** 받은 초대 건수. 그룹 목록의 알림 줄과 헤더 계정 메뉴가 이 값만 쓴다 (명세 §5.8.1). */
   const [receivedCount, setReceivedCount] = useState(0)
 
   const reloadGroups = useCallback(async () => {

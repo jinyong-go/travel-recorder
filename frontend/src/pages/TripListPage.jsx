@@ -1,7 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { SCOPES, categoryIcon } from '../data/records.js'
 import { TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
-import { useGroups } from '../context/GroupsContext.jsx'
 import { useRecords } from '../context/RecordsContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import useTheme from '../hooks/useTheme.js'
@@ -10,7 +9,7 @@ import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
-import { MapPinIcon, PlusIcon, UsersIcon } from '../components/icons.jsx'
+import { MapPinIcon, PlusIcon } from '../components/icons.jsx'
 
 const PAGE_SIZE = 10
 
@@ -27,8 +26,6 @@ const sortTrips = (trips, sortKey) => {
 
 export default function TripListPage() {
   const { listTripsByScope, recordsOfTrip, currentUser } = useRecords()
-  // 초대 건수만 서버에서 온다. 여행·기록은 아직 목업이다 (명세 §10.2).
-  const { receivedCount } = useGroups()
   const { isLoggedIn } = useAuth()
   const { themeKey, changeTheme } = useTheme()
   const { mapMode, changeMapMode } = useMapMode()
@@ -78,24 +75,6 @@ export default function TripListPage() {
           여행 지도 <span className="by-yong">by YONG</span>
         </Link>
         <div className="header-actions">
-          {isLoggedIn && (
-            <Link
-              to="/groups"
-              className="header-groups-link"
-              aria-label={
-                receivedCount > 0
-                  ? `공유 그룹 관리 (받은 초대 ${receivedCount}건)`
-                  : '공유 그룹 관리'
-              }
-            >
-              <UsersIcon />
-              <span className="header-groups-label">그룹</span>
-              {/* 초대함은 그룹 목록을 거쳐 들어간다. 배지로 먼저 알리지 않으면 눈에 띄지 않는다. */}
-              {receivedCount > 0 && (
-                <span className="header-invite-badge">{receivedCount}</span>
-              )}
-            </Link>
-          )}
           <SettingsMenu mapMode={mapMode} onChangeMapMode={changeMapMode} />
           <ThemeSelector themeKey={themeKey} onChange={changeTheme} />
           <HeaderAuth />
@@ -215,10 +194,13 @@ export default function TripListPage() {
             </div>
           )}
 
-          <Link to="/trips/new" className="register-fab">
-            <PlusIcon />
-            <span className="register-fab-label">여행 만들기</span>
-          </Link>
+          {/* 비로그인에게는 할 수 없는 일을 보여 주지 않는다 (명세 §2.2). */}
+          {isLoggedIn && (
+            <Link to="/trips/new" className="register-fab">
+              <PlusIcon />
+              <span className="register-fab-label">여행 만들기</span>
+            </Link>
+          )}
         </section>
       </main>
     </>
