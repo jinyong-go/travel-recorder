@@ -6,7 +6,7 @@ package com.yong.travel.trip.domain
  * 기간·인원·예산을 매 기록마다 반복해 싣지 않는다 — 필요하면 여행 상세를 따로 조회한다
  * (명세 §4.4.1).
  */
-data class TripRef(
+data class Trip(
     val id: Long,
     val name: String,
 )

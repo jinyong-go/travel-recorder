@@ -1,16 +1,16 @@
 package com.yong.travel.group.service
 
-import com.yong.travel.auth.domain.UserRef
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.domain.User
+import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.group.persistence.Group
-import com.yong.travel.group.persistence.GroupInvite
-import com.yong.travel.group.persistence.GroupMember
-import com.yong.travel.group.persistence.InviteHistory
-import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.group.persistence.GroupEntity
+import com.yong.travel.group.persistence.GroupInviteEntity
+import com.yong.travel.group.persistence.GroupMemberEntity
+import com.yong.travel.group.persistence.InviteHistoryEntity
+import com.yong.travel.group.domain.Group
 import com.yong.travel.group.domain.InviteHistoryEntry
 import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.domain.PendingInvite
@@ -84,7 +84,7 @@ class InviteService(
         }
 
         val saved = inviteRepository.save(
-            GroupInvite(group = group, invitee = invitee, invitedBy = group.owner),
+            GroupInviteEntity(group = group, invitee = invitee, invitedBy = group.owner),
         )
         log.debug("초대 생성 groupId={} inviteId={} ownerId={} inviteeId={}", groupId, saved.id, ownerId, inviteeId)
         return InviteResult(saved.toPending(), created = true)
@@ -149,13 +149,13 @@ class InviteService(
 
         // 정원 검사와 멤버 입력 사이에 다른 수락이 끼어들지 못하도록 그룹 행을 잠그고 읽는다 (명세 §4.8).
         val group = groupRepository.findByIdForUpdate(groupId) ?: throw ApiException(ErrorCode.INVITE_NOT_FOUND)
-        if (groupMemberRepository.countByGroupId(groupId) >= Group.MEMBER_LIMIT) {
+        if (groupMemberRepository.countByGroupId(groupId) >= GroupEntity.MEMBER_LIMIT) {
             // 초대 행은 남는다. 자리가 나면 같은 초대로 다시 수락한다 (공통 명세 §3.7).
             log.debug("초대 수락 거부 inviteId={} groupId={} userId={} 사유=정원초과", inviteId, groupId, userId)
             throw ApiException(ErrorCode.GROUP_MEMBER_LIMIT_EXCEEDED)
         }
 
-        groupMemberRepository.save(GroupMember(group = group, user = invite.invitee))
+        groupMemberRepository.save(GroupMemberEntity(group = group, user = invite.invitee))
         resolve(invite, InviteOutcome.ACCEPTED)
     }
 
@@ -177,8 +177,8 @@ class InviteService(
      * 초대 행을 지우는 경로를 이 하나로 모은다. 지우기만 하고 이력을 빠뜨린 경로가 생기면
      * 이력이 조용히 비고, 그 누락은 조회 시점에 드러나지 않는다 (명세 §3.1).
      */
-    private fun resolve(invite: GroupInvite, outcome: InviteOutcome) {
-        historyRepository.save(InviteHistory.from(invite, outcome))
+    private fun resolve(invite: GroupInviteEntity, outcome: InviteOutcome) {
+        historyRepository.save(InviteHistoryEntity.from(invite, outcome))
         inviteRepository.delete(invite)
         // 네 가지 종료가 모두 이 지점을 지난다. 여기 한 줄이면 끝난 초대를 빠짐없이 따라갈 수 있다.
         log.debug(
@@ -187,23 +187,23 @@ class InviteService(
         )
     }
 
-    private fun findGroup(groupId: Long): Group =
+    private fun findGroup(groupId: Long): GroupEntity =
         groupRepository.findById(groupId)
             .orElseThrow { ApiException(ErrorCode.GROUP_NOT_FOUND) }
 
-    private fun requireOwner(group: Group, userId: Long) {
+    private fun requireOwner(group: GroupEntity, userId: Long) {
         if (group.owner.id != userId) {
             log.debug("그룹 소유자 아님 groupId={} userId={} ownerId={}", group.id, userId, group.owner.id)
             throw ApiException(ErrorCode.FORBIDDEN)
         }
     }
 
-    private fun findInvite(inviteId: Long): GroupInvite =
+    private fun findInvite(inviteId: Long): GroupInviteEntity =
         inviteRepository.findById(inviteId)
             .orElseThrow { ApiException(ErrorCode.INVITE_NOT_FOUND) }
 
     /** 받은 본인이 아니면 없는 초대와 구분되지 않아야 한다 (명세 §2.2.2). */
-    private fun requireReceivedInvite(inviteId: Long, userId: Long): GroupInvite {
+    private fun requireReceivedInvite(inviteId: Long, userId: Long): GroupInviteEntity {
         val invite = findInvite(inviteId)
         if (invite.invitee.id != userId) {
             log.debug("초대 접근 차단 inviteId={} userId={} inviteeId={}", inviteId, userId, invite.invitee.id)
@@ -212,42 +212,42 @@ class InviteService(
         return invite
     }
 
-    private fun GroupInvite.toPending() = PendingInvite(
+    private fun GroupInviteEntity.toPending() = PendingInvite(
         id = requireNotNull(id),
-        invitee = invitee.toRef(),
+        invitee = invitee.toDomain(),
         createdAt = createdAt,
     )
 
-    private fun GroupInvite.toSent() = SentInvite(
+    private fun GroupInviteEntity.toSent() = SentInvite(
         id = requireNotNull(id),
-        group = group.toRef(),
-        invitee = invitee.toRef(),
+        group = group.toDomain(),
+        invitee = invitee.toDomain(),
         createdAt = createdAt,
     )
 
-    private fun GroupInvite.toReceived() = ReceivedInvite(
+    private fun GroupInviteEntity.toReceived() = ReceivedInvite(
         id = requireNotNull(id),
-        group = group.toRef(),
-        invitedBy = invitedBy.toRef(),
+        group = group.toDomain(),
+        invitedBy = invitedBy.toDomain(),
         createdAt = createdAt,
     )
 
     /** 상대는 관점에 따라 갈린다 — 받은 이력이면 보냈던 사람, 보낸 이력이면 초대받았던 사람이다. */
-    private fun InviteHistory.toDomain(role: InviteHistoryRole, groupAlive: Boolean) = InviteHistoryEntry(
+    private fun InviteHistoryEntity.toDomain(role: InviteHistoryRole, groupAlive: Boolean) = InviteHistoryEntry(
         id = requireNotNull(id),
         // 그룹명은 이력에 저장된 스냅샷이다. 그룹이 지워져도 이름이 남아야 하기 때문이다 (명세 §3.1).
-        group = GroupRef(id = groupId, name = groupName),
+        group = Group(id = groupId, name = groupName),
         groupDeleted = !groupAlive,
         counterpart = when (role) {
-            InviteHistoryRole.RECEIVED -> invitedBy.toRef()
-            InviteHistoryRole.SENT -> invitee.toRef()
+            InviteHistoryRole.RECEIVED -> invitedBy.toDomain()
+            InviteHistoryRole.SENT -> invitee.toDomain()
         },
         outcome = outcome,
         invitedAt = invitedAt,
         resolvedAt = resolvedAt,
     )
 
-    private fun User.toRef() = UserRef(requireNotNull(id), name, profileImageUrl)
+    private fun UserEntity.toDomain() = User(requireNotNull(id), name, profileImageUrl)
 
-    private fun Group.toRef() = GroupRef(requireNotNull(id), name)
+    private fun GroupEntity.toDomain() = Group(requireNotNull(id), name)
 }

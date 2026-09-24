@@ -62,7 +62,7 @@ com.yong.travel
 
 - **엔티티를 요청·응답에 직접 쓰지 않는다.** DTO로 주고받는다. DTO는 도메인별 `dto` 패키지에
   용도별 파일로 모은다 (`RecordRequests.kt`, `RecordResponses.kt`, `RecordListQuery.kt`).
-- **서비스는 DTO 가 아니라 도메인 객체를 반환한다** (`TripDetail`, `GroupSummary`, `UserRef` …).
+- **서비스는 DTO 가 아니라 도메인 객체를 반환한다** (`TripDetail`, `GroupSummary`, `User` …).
   변환 함수는 `dto` 패키지에 확장 함수로 두고 컨트롤러가 부른다. 서비스가 응답 모양을 알면
   화면이 바뀔 때마다 서비스가 끌려 들어온다.
 - **응답을 만들면서 조회하지 않는다.** 변환 함수 안에서 리포지토리를 부르면 목록에서 그대로

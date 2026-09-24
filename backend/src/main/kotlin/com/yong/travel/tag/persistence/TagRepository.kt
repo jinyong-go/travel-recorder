@@ -1,13 +1,13 @@
 package com.yong.travel.tag.persistence
 
-import com.yong.travel.tag.persistence.Tag
+import com.yong.travel.tag.persistence.TagEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
-interface TagRepository : JpaRepository<Tag, Long> {
+interface TagRepository : JpaRepository<TagEntity, Long> {
 
-    fun findByNameIn(names: Collection<String>): List<Tag>
+    fun findByNameIn(names: Collection<String>): List<TagEntity>
 
     /**
      * 자동완성 후보를 "요청자가 볼 수 있는 기록에 쓰인 태그" 로 제한한다.
@@ -21,7 +21,7 @@ interface TagRepository : JpaRepository<Tag, Long> {
      */
     @Query(
         """
-        select distinct t from TripRecord r
+        select distinct t from TripRecordEntity r
         join r.trip p
         join r.tags t
         where (:keyword is null or lower(t.name) like lower(concat('%', :keyword, '%')))
@@ -31,7 +31,7 @@ interface TagRepository : JpaRepository<Tag, Long> {
             or (
               p.visibility = com.yong.travel.trip.domain.Visibility.GROUP
               and exists (
-                select 1 from TripShare s
+                select 1 from TripShareEntity s
                 where s.trip = p and s.group.id in :groupIds
               )
             )
@@ -43,5 +43,5 @@ interface TagRepository : JpaRepository<Tag, Long> {
         @Param("keyword") keyword: String?,
         @Param("userId") userId: Long,
         @Param("groupIds") groupIds: Collection<Long>,
-    ): List<Tag>
+    ): List<TagEntity>
 }

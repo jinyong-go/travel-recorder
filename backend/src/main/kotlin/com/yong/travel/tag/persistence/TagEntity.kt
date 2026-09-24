@@ -10,7 +10,7 @@ import jakarta.persistence.UniqueConstraint
 
 @Entity
 @Table(name = "tags", uniqueConstraints = [UniqueConstraint(columnNames = ["name"])])
-class Tag(
+class TagEntity(
     @Column(nullable = false)
     var name: String,
 ) {

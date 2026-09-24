@@ -1,6 +1,6 @@
 package com.yong.travel.trip.persistence
 
-import com.yong.travel.group.persistence.Group
+import com.yong.travel.group.persistence.GroupEntity
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
@@ -24,14 +24,14 @@ import jakarta.persistence.UniqueConstraint
     name = "trip_shares",
     uniqueConstraints = [UniqueConstraint(columnNames = ["trip_id", "group_id"])],
 )
-class TripShare(
+class TripShareEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_id", nullable = false)
-    var trip: Trip,
+    var trip: TripEntity,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
-    var group: Group,
+    var group: GroupEntity,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

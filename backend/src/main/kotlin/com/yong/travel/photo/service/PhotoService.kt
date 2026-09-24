@@ -3,11 +3,11 @@ package com.yong.travel.photo.service
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.photo.config.PhotoUploadProperties
-import com.yong.travel.photo.domain.PhotoRef
-import com.yong.travel.photo.persistence.Photo
+import com.yong.travel.photo.domain.Photo
+import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoStorageService
-import com.yong.travel.record.persistence.TripRecord
+import com.yong.travel.record.persistence.TripRecordEntity
 import com.yong.travel.record.persistence.TripRecordRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -30,7 +30,7 @@ class PhotoService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<PhotoRef> {
+    fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<Photo> {
         val record = findOwnRecord(recordId, requesterId)
         // 원본 파일명과 바이너리는 남기지 않는다. 건수와 크기면 업로드 추적에 충분하다.
         log.debug(
@@ -46,7 +46,7 @@ class PhotoService(
             }
             val stored = photoStorageService.store(file)
             val photo = photoRepository.save(
-                Photo(
+                PhotoEntity(
                     record = record,
                     storageKey = stored.storageKey,
                     originalFileName = stored.originalFileName,
@@ -54,7 +54,7 @@ class PhotoService(
                     fileSizeBytes = stored.fileSizeBytes,
                 ),
             )
-            PhotoRef(requireNotNull(photo.id), photoStorageService.resolveUrl(photo.storageKey))
+            Photo(requireNotNull(photo.id), photoStorageService.resolveUrl(photo.storageKey))
         }
     }
 
@@ -75,11 +75,11 @@ class PhotoService(
 
     /**
      * 기록을 먼저 조회해 soft delete 된 기록의 사진은 404 로 막는다.
-     * (Photo 는 soft delete 대상이 아니라 삭제된 기록의 사진 행이 그대로 남아 있다.)
+     * (PhotoEntity 는 soft delete 대상이 아니라 삭제된 기록의 사진 행이 그대로 남아 있다.)
      *
      * 남의 기록이면 403 이 아니라 404 다 — 작성자가 아닌 사람에게는 그 기록의 존재 자체를 알리지 않는다.
      */
-    private fun findOwnRecord(recordId: Long, requesterId: Long): TripRecord {
+    private fun findOwnRecord(recordId: Long, requesterId: Long): TripRecordEntity {
         val record = recordRepository.findById(recordId)
             .orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
         if (record.trip.owner.id != requesterId) {

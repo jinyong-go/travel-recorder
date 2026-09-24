@@ -1,10 +1,10 @@
 package com.yong.travel.photo.dto
 
-import com.yong.travel.photo.domain.PhotoRef
+import com.yong.travel.photo.domain.Photo
 
 data class PhotoResponse(
     val id: Long,
     val url: String,
 )
 
-fun PhotoRef.toResponse(): PhotoResponse = PhotoResponse(id, url)
+fun Photo.toResponse(): PhotoResponse = PhotoResponse(id, url)

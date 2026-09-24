@@ -1,6 +1,6 @@
 package com.yong.travel.group.domain
 
-import com.yong.travel.auth.domain.UserRef
+import com.yong.travel.auth.domain.User
 import java.time.Instant
 
 /**
@@ -11,6 +11,6 @@ import java.time.Instant
  */
 data class PendingInvite(
     val id: Long,
-    val invitee: UserRef,
+    val invitee: User,
     val createdAt: Instant,
 )

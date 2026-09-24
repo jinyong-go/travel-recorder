@@ -1,6 +1,6 @@
 package com.yong.travel.group.persistence
 
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -25,19 +25,19 @@ import java.time.Instant
     name = "group_invite",
     uniqueConstraints = [UniqueConstraint(columnNames = ["group_id", "invitee_id"])],
 )
-class GroupInvite(
+class GroupInviteEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
-    var group: Group,
+    var group: GroupEntity,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invitee_id", nullable = false)
-    var invitee: User,
+    var invitee: UserEntity,
 
     /** 보낸 사람 = 초대 시점의 그룹 소유자. 소유자는 바뀌지 않지만 받은 사람에게 보여 줄 이름이라 따로 갖는다. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invited_by", nullable = false)
-    var invitedBy: User,
+    var invitedBy: UserEntity,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

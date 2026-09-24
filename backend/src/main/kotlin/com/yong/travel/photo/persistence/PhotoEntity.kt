@@ -1,6 +1,6 @@
 package com.yong.travel.photo.persistence
 
-import com.yong.travel.record.persistence.TripRecord
+import com.yong.travel.record.persistence.TripRecordEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -20,10 +20,10 @@ import java.time.Instant
  */
 @Entity
 @Table(name = "photos")
-class Photo(
+class PhotoEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "record_id", nullable = false)
-    var record: TripRecord,
+    var record: TripRecordEntity,
 
     /** 저장소 내 상대 경로(파일시스템) 또는 향후 S3 object key. */
     @Column(nullable = false)

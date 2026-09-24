@@ -1,6 +1,6 @@
 package com.yong.travel.group.domain
 
-import com.yong.travel.auth.domain.UserRef
+import com.yong.travel.auth.domain.User
 import java.time.Instant
 
 /**
@@ -9,7 +9,7 @@ import java.time.Instant
  */
 data class SentInvite(
     val id: Long,
-    val group: GroupRef,
-    val invitee: UserRef,
+    val group: Group,
+    val invitee: User,
     val createdAt: Instant,
 )

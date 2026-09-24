@@ -2,7 +2,7 @@ package com.yong.travel.trip.dto
 
 import com.yong.travel.auth.dto.UserResponse
 import com.yong.travel.auth.dto.toResponse
-import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.group.domain.Group
 import com.yong.travel.trip.domain.TripDetail
 import com.yong.travel.trip.domain.TripSummary
 import com.yong.travel.trip.domain.Visibility
@@ -79,7 +79,7 @@ data class TripSummaryResponse(
     val createdAt: Instant,
 )
 
-private fun GroupRef.toSharedResponse() = SharedGroupResponse(id, name)
+private fun Group.toSharedResponse() = SharedGroupResponse(id, name)
 
 /**
  * 여행 상세 → 응답.

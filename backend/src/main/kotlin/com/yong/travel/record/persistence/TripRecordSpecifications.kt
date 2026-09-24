@@ -1,13 +1,13 @@
 package com.yong.travel.record.persistence
 
-import com.yong.travel.auth.persistence.User
-import com.yong.travel.group.persistence.Group
+import com.yong.travel.auth.persistence.UserEntity
+import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.persistence.TripRecord
+import com.yong.travel.record.persistence.TripRecordEntity
 import com.yong.travel.record.dto.RecordScope
-import com.yong.travel.tag.persistence.Tag
-import com.yong.travel.trip.persistence.Trip
-import com.yong.travel.trip.persistence.TripShare
+import com.yong.travel.tag.persistence.TagEntity
+import com.yong.travel.trip.persistence.TripEntity
+import com.yong.travel.trip.persistence.TripShareEntity
 import com.yong.travel.trip.domain.Visibility
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
@@ -27,15 +27,15 @@ object TripRecordSpecifications {
      * 공개 범위 판정을 조회 쿼리에 실어 보내는 것이 핵심이다. 전부 읽어 온 뒤 애플리케이션에서
      * 걸러 내면 페이지네이션 건수가 어긋나고, 거르는 걸 한 번 빠뜨리는 순간 곧바로 정보 유출이 된다.
      *
-     * 조인 자체가 삭제 필터 역할도 한다 — Trip 의 @SQLRestriction 덕에 삭제된 여행의 기록은
+     * 조인 자체가 삭제 필터 역할도 한다 — TripEntity 의 @SQLRestriction 덕에 삭제된 여행의 기록은
      * 조인 단계에서 함께 사라진다.
      *
      * @param userId 비로그인이면 null. 이 경우 PUBLIC 만 조회된다.
      * @param groupIds 요청자가 속한 그룹 id 목록
      */
-    fun withScope(scope: RecordScope, userId: Long?, groupIds: List<Long>): Specification<TripRecord> =
+    fun withScope(scope: RecordScope, userId: Long?, groupIds: List<Long>): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
-            val trip = root.join<TripRecord, Trip>("trip")
+            val trip = root.join<TripRecordEntity, TripEntity>("trip")
             when (scope) {
                 RecordScope.MINE ->
                     if (userId == null) cb.disjunction() else cb.equal(ownerId(trip), userId)
@@ -69,11 +69,11 @@ object TripRecordSpecifications {
         category: Category?,
         tag: String?,
         keyword: String?,
-    ): Specification<TripRecord> =
+    ): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
             val predicates = mutableListOf<Predicate>()
 
-            tripId?.let { predicates.add(cb.equal(root.get<Trip>("trip").get<Long>("id"), it)) }
+            tripId?.let { predicates.add(cb.equal(root.get<TripEntity>("trip").get<Long>("id"), it)) }
 
             category?.let { predicates.add(cb.equal(root.get<Category>("category"), it)) }
 
@@ -89,28 +89,28 @@ object TripRecordSpecifications {
 
             tag?.takeIf { it.isNotBlank() }?.let {
                 query?.distinct(true)
-                val tagJoin = root.join<TripRecord, Tag>("tags")
+                val tagJoin = root.join<TripRecordEntity, TagEntity>("tags")
                 predicates.add(cb.equal(tagJoin.get<String>("name"), it.trim()))
             }
 
             cb.and(*predicates.toTypedArray())
         }
 
-    private fun ownerId(trip: Join<TripRecord, Trip>) =
-        trip.get<User>("owner").get<Long>("id")
+    private fun ownerId(trip: Join<TripRecordEntity, TripEntity>) =
+        trip.get<UserEntity>("owner").get<Long>("id")
 
     private fun sharedWithGroups(
-        trip: Join<TripRecord, Trip>,
+        trip: Join<TripRecordEntity, TripEntity>,
         query: CriteriaQuery<*>?,
         cb: CriteriaBuilder,
         groupIds: List<Long>,
     ): Subquery<Long> {
         val sub = requireNotNull(query).subquery(Long::class.java)
-        val share = sub.from(TripShare::class.java)
+        val share = sub.from(TripShareEntity::class.java)
         sub.select(cb.literal(1L))
         sub.where(
-            cb.equal(share.get<Trip>("trip"), trip),
-            share.get<Group>("group").get<Long>("id").`in`(groupIds),
+            cb.equal(share.get<TripEntity>("trip"), trip),
+            share.get<GroupEntity>("group").get<Long>("id").`in`(groupIds),
         )
         return sub
     }

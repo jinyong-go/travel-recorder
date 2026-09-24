@@ -1,12 +1,12 @@
 package com.yong.travel.group.service
 
-import com.yong.travel.auth.domain.UserRef
+import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.group.persistence.Group
-import com.yong.travel.group.persistence.GroupMember
-import com.yong.travel.group.persistence.InviteHistory
+import com.yong.travel.group.persistence.GroupEntity
+import com.yong.travel.group.persistence.GroupMemberEntity
+import com.yong.travel.group.persistence.InviteHistoryEntity
 import com.yong.travel.group.domain.GroupDetail
 import com.yong.travel.group.domain.GroupSummary
 import com.yong.travel.group.domain.InviteOutcome
@@ -75,10 +75,10 @@ class GroupService(
         val owner = userRepository.findById(userId)
             .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
         val group = groupRepository.save(
-            Group(owner = owner, name = request.name.trim(), memo = request.memo.blankToNull()),
+            GroupEntity(owner = owner, name = request.name.trim(), memo = request.memo.blankToNull()),
         )
         // 소유자도 멤버 행을 가진다. 인원 계산과 조회 권한 판정을 한 경로로 모으기 위해서다.
-        val ownerMember = groupMemberRepository.save(GroupMember(group = group, user = owner))
+        val ownerMember = groupMemberRepository.save(GroupMemberEntity(group = group, user = owner))
         log.debug("그룹 생성 groupId={} ownerId={}", group.id, userId)
 
         // 방금 만든 멤버가 전부라 다시 읽지 않는다. detailOf 를 쓰면 flush 순서에 기대게 된다.
@@ -89,7 +89,7 @@ class GroupService(
             memo = group.memo,
             owner = member,
             members = listOf(member),
-            memberLimit = Group.MEMBER_LIMIT,
+            memberLimit = GroupEntity.MEMBER_LIMIT,
         )
     }
 
@@ -131,7 +131,7 @@ class GroupService(
 
         tripShareRepository.deleteByGroupId(groupId)
         val pending = groupInviteRepository.findByGroupId(groupId)
-        inviteHistoryRepository.saveAll(pending.map { InviteHistory.from(it, InviteOutcome.GROUP_DELETED) })
+        inviteHistoryRepository.saveAll(pending.map { InviteHistoryEntity.from(it, InviteOutcome.GROUP_DELETED) })
         log.debug("그룹 삭제 groupId={} ownerId={} 이력으로_넘긴_대기초대={}건", groupId, userId, pending.size)
         groupInviteRepository.deleteByGroupId(groupId)
         groupMemberRepository.deleteByGroupId(groupId)
@@ -199,7 +199,7 @@ class GroupService(
      * 여행을 이 그룹들에 공유해도 되는지 확인하고 그룹 엔티티를 돌려준다.
      *
      * 여기만 도메인 객체가 아니라 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 `TripService`
-     * 가 `TripShare` 행을 만들 때 쓰는 서비스 간 호출이라, 도메인 객체로 감싸면 곧바로 엔티티를
+     * 가 `TripShareEntity` 행을 만들 때 쓰는 서비스 간 호출이라, 도메인 객체로 감싸면 곧바로 엔티티를
      * 다시 찾아야 한다.
      *
      * @param groupIds 공유 대상 그룹 id 목록. 중복은 무시한다
@@ -208,7 +208,7 @@ class GroupService(
      * @throws ApiException `GROUP_NOT_FOUND` — 요청자가 속하지 않은 그룹이 하나라도 섞였을 때.
      *         `FORBIDDEN` 이 아닌 것은 그룹의 존재를 알리지 않기 위해서다 (존재 은닉)
      */
-    fun requireAccessibleGroups(groupIds: Collection<Long>, userId: Long): List<Group> {
+    fun requireAccessibleGroups(groupIds: Collection<Long>, userId: Long): List<GroupEntity> {
         val distinct = groupIds.distinct()
         if (distinct.isEmpty()) return emptyList()
 
@@ -221,12 +221,12 @@ class GroupService(
     }
 
     // 그룹 단건 조회. 없으면 GROUP_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다.
-    private fun findGroup(groupId: Long): Group =
+    private fun findGroup(groupId: Long): GroupEntity =
         groupRepository.findById(groupId)
             .orElseThrow { ApiException(ErrorCode.GROUP_NOT_FOUND) }
 
     // 소유자만 통과시킨다. rename·delete·removeMember 가 같은 관문을 쓴다.
-    private fun requireOwner(group: Group, userId: Long) {
+    private fun requireOwner(group: GroupEntity, userId: Long) {
         if (group.owner.id != userId) {
             log.debug("그룹 소유자 아님 groupId={} userId={} ownerId={}", group.id, userId, group.owner.id)
             throw ApiException(ErrorCode.FORBIDDEN)
@@ -237,13 +237,13 @@ class GroupService(
     private fun String?.blankToNull(): String? = this?.trim()?.takeIf { it.isNotBlank() }
 
     // 목록용. 명단 대신 건수만 센다.
-    private fun Group.toSummary() = GroupSummary(
+    private fun GroupEntity.toSummary() = GroupSummary(
         id = requireNotNull(id),
         name = name,
         memo = memo,
         ownerId = requireNotNull(owner.id),
         memberCount = groupMemberRepository.countByGroupId(requireNotNull(id)),
-        memberLimit = Group.MEMBER_LIMIT,
+        memberLimit = GroupEntity.MEMBER_LIMIT,
     )
 
     /**
@@ -252,7 +252,7 @@ class GroupService(
      * 명단 조회가 여기 한 번뿐이라 이후로는 추가 조회가 없다 — 응답을 만들면서 리포지토리를 다시
      * 부르지 않기 위해 도메인 객체를 두는 것이므로, 이 함수를 지나면 조회가 끝나 있어야 한다.
      */
-    private fun detailOf(group: Group): GroupDetail {
+    private fun detailOf(group: GroupEntity): GroupDetail {
         val groupId = requireNotNull(group.id)
         val ownerId = requireNotNull(group.owner.id)
         val members = groupMemberRepository.findByGroupIdOrderByJoinedAtAsc(groupId).map { it.toDomain() }
@@ -264,13 +264,13 @@ class GroupService(
             owner = members.firstOrNull { it.user.id == ownerId }
                 ?: error("그룹 ${'$'}groupId 의 소유자 멤버 행이 없다"),
             members = members,
-            memberLimit = Group.MEMBER_LIMIT,
+            memberLimit = GroupEntity.MEMBER_LIMIT,
         )
     }
 
     // 멤버 행 → 도메인. 이름과 프로필 사진까지만 담는다 (공통 명세 §3.1).
-    private fun GroupMember.toDomain() = GroupDetail.Member(
-        user = UserRef(requireNotNull(user.id), user.name, user.profileImageUrl),
+    private fun GroupMemberEntity.toDomain() = GroupDetail.Member(
+        user = User(requireNotNull(user.id), user.name, user.profileImageUrl),
         joinedAt = joinedAt,
     )
 }

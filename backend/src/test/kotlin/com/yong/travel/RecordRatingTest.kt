@@ -1,12 +1,12 @@
 package com.yong.travel
 
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.persistence.TripRecord
+import com.yong.travel.record.persistence.TripRecordEntity
 import com.yong.travel.record.dto.TripRecordCreateRequest
 import com.yong.travel.record.persistence.TripRecordRepository
-import com.yong.travel.trip.persistence.Trip
+import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripRepository
 import jakarta.validation.Validator
 import org.junit.jupiter.api.Test
@@ -50,11 +50,11 @@ class RecordRatingTest {
     @Test
     fun `DTO 검증을 우회해도 DB CHECK 제약이 0_5 단위가 아닌 값을 막는다`() {
         val user = userRepository.save(
-            User(provider = "naver", providerId = "provider-1", email = "t@example.com", name = "테스터"),
+            UserEntity(provider = "naver", providerId = "provider-1", email = "t@example.com", name = "테스터"),
         )
         // 기록은 여행 없이 저장될 수 없다 (trip_id NOT NULL).
         val trip = tripRepository.save(
-            Trip(
+            TripEntity(
                 owner = user,
                 name = "테스트 여행",
                 startDate = LocalDate.of(2026, 9, 5),
@@ -65,7 +65,7 @@ class RecordRatingTest {
 
         assertFailsWith<DataIntegrityViolationException> {
             recordRepository.saveAndFlush(
-                TripRecord(
+                TripRecordEntity(
                     trip = trip,
                     name = "테스트 기록",
                     category = Category.FOOD,

@@ -1,6 +1,6 @@
 package com.yong.travel.group.persistence
 
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -24,14 +24,14 @@ import java.time.Instant
     name = "group_member",
     uniqueConstraints = [UniqueConstraint(columnNames = ["group_id", "user_id"])],
 )
-class GroupMember(
+class GroupMemberEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
-    var group: Group,
+    var group: GroupEntity,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    var user: User,
+    var user: UserEntity,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

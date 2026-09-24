@@ -1,7 +1,7 @@
 package com.yong.travel.trip.persistence
 
-import com.yong.travel.auth.persistence.User
-import com.yong.travel.photo.persistence.Photo
+import com.yong.travel.auth.persistence.UserEntity
+import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.trip.domain.Visibility
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -30,10 +30,10 @@ import java.time.LocalDate
 @Entity
 @Table(name = "trips")
 @SQLRestriction("deleted_at is null")
-class Trip(
+class TripEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
-    var owner: User,
+    var owner: UserEntity,
 
     @Column(nullable = false, length = 50)
     var name: String,
@@ -75,7 +75,7 @@ class Trip(
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cover_photo_id")
-    var coverPhoto: Photo? = null
+    var coverPhoto: PhotoEntity? = null
 
     @Column(nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()

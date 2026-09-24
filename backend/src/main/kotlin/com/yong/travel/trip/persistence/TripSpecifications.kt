@@ -1,9 +1,9 @@
 package com.yong.travel.trip.persistence
 
-import com.yong.travel.auth.persistence.User
-import com.yong.travel.group.persistence.Group
-import com.yong.travel.trip.persistence.Trip
-import com.yong.travel.trip.persistence.TripShare
+import com.yong.travel.auth.persistence.UserEntity
+import com.yong.travel.group.persistence.GroupEntity
+import com.yong.travel.trip.persistence.TripEntity
+import com.yong.travel.trip.persistence.TripShareEntity
 import com.yong.travel.trip.domain.Visibility
 import com.yong.travel.trip.dto.TripScope
 import jakarta.persistence.criteria.CriteriaBuilder
@@ -23,7 +23,7 @@ object TripSpecifications {
      * @param userId 비로그인이면 null. 이 경우 PUBLIC 만 조회된다.
      * @param groupIds 요청자가 속한 그룹 id 목록
      */
-    fun withScope(scope: TripScope, userId: Long?, groupIds: List<Long>): Specification<Trip> =
+    fun withScope(scope: TripScope, userId: Long?, groupIds: List<Long>): Specification<TripEntity> =
         Specification { root, query, cb ->
             when (scope) {
                 TripScope.MINE ->
@@ -48,27 +48,27 @@ object TripSpecifications {
         }
 
     /** 여행 이름 부분 일치. 기록 목록과 달리 주소는 보지 않는다 — 여행은 주소를 갖지 않는다. */
-    fun withKeyword(keyword: String?): Specification<Trip> =
+    fun withKeyword(keyword: String?): Specification<TripEntity> =
         Specification { root, _, cb ->
             val trimmed = keyword?.trim()?.takeIf { it.isNotEmpty() }
                 ?: return@Specification cb.conjunction()
             cb.like(root.get("name"), "%$trimmed%")
         }
 
-    private fun ownerId(root: Root<Trip>) = root.get<User>("owner").get<Long>("id")
+    private fun ownerId(root: Root<TripEntity>) = root.get<UserEntity>("owner").get<Long>("id")
 
     private fun sharedWithGroups(
-        root: Root<Trip>,
+        root: Root<TripEntity>,
         query: CriteriaQuery<*>?,
         cb: CriteriaBuilder,
         groupIds: List<Long>,
     ): Subquery<Long> {
         val sub = requireNotNull(query).subquery(Long::class.java)
-        val share = sub.from(TripShare::class.java)
+        val share = sub.from(TripShareEntity::class.java)
         sub.select(cb.literal(1L))
         sub.where(
-            cb.equal(share.get<Trip>("trip"), root),
-            share.get<Group>("group").get<Long>("id").`in`(groupIds),
+            cb.equal(share.get<TripEntity>("trip"), root),
+            share.get<GroupEntity>("group").get<Long>("id").`in`(groupIds),
         )
         return sub
     }

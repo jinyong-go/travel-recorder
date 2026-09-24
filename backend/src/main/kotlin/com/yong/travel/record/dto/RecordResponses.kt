@@ -2,12 +2,12 @@ package com.yong.travel.record.dto
 
 import com.yong.travel.auth.dto.UserResponse
 import com.yong.travel.auth.dto.toResponse
-import com.yong.travel.photo.domain.PhotoRef
+import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.dto.PhotoResponse
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.domain.RecordDetail
 import com.yong.travel.record.domain.RecordSummary
-import com.yong.travel.trip.domain.TripRef
+import com.yong.travel.trip.domain.Trip
 import com.yong.travel.trip.dto.TripRefResponse
 import java.time.Instant
 
@@ -59,9 +59,9 @@ data class TripRecordSummaryResponse(
     val createdAt: Instant,
 )
 
-private fun TripRef.toRefResponse() = TripRefResponse(id, name)
+private fun Trip.toRefResponse() = TripRefResponse(id, name)
 
-private fun PhotoRef.toPhotoResponse() = PhotoResponse(id, url)
+private fun Photo.toPhotoResponse() = PhotoResponse(id, url)
 
 /**
  * 기록 상세 → 응답.

@@ -1,6 +1,6 @@
 package com.yong.travel.group.domain
 
-import com.yong.travel.auth.domain.UserRef
+import com.yong.travel.auth.domain.User
 import java.time.Instant
 
 /**
@@ -9,8 +9,8 @@ import java.time.Instant
  * **JPA 엔티티가 아니다.** 영속성 컨텍스트에 붙어 있지 않고, 담긴 값은 조회 시점의 스냅샷이다.
  * 이 객체를 만든 뒤에는 추가 조회가 일어나지 않는다 — 필요한 것은 서비스가 미리 다 읽는다.
  *
- * [Member] 를 중첩해 둔 것은 엔티티 `GroupMember`(persistence) 와 단순 이름이 부딪히지 않게
- * 하기 위해서다. `GroupDetail.Member` 로 읽으면 어느 쪽인지도 분명해진다.
+ * [Member] 는 그룹 상세 안에서만 뜻이 있는 값이라 중첩해 둔다. `GroupDetail.Member` 로 읽으면
+ * 무엇의 멤버인지 분명해진다.
  */
 data class GroupDetail(
     val id: Long,
@@ -32,7 +32,7 @@ data class GroupDetail(
 
     /** 멤버 한 명 — 누구인지와 언제 들어왔는지. */
     data class Member(
-        val user: UserRef,
+        val user: User,
         val joinedAt: Instant,
     )
 }

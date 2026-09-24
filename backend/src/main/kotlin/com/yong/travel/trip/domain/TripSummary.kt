@@ -1,7 +1,7 @@
 package com.yong.travel.trip.domain
 
-import com.yong.travel.auth.domain.UserRef
-import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.auth.domain.User
+import com.yong.travel.group.domain.Group
 import java.time.Instant
 import java.time.LocalDate
 
@@ -15,11 +15,11 @@ data class TripSummary(
     val budget: Long?,
     val coverPhotoUrl: String?,
     val recordCount: Long,
-    val owner: UserRef,
+    val owner: User,
 
     /** 소유자 본인의 조회에서만 채운다. 이유는 [TripDetail.visibility] 와 같다. */
     val visibility: Visibility?,
-    val sharedGroups: List<GroupRef>?,
+    val sharedGroups: List<Group>?,
 
     val createdAt: Instant,
 ) {

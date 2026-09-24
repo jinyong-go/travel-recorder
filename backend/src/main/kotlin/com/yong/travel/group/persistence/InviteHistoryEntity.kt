@@ -1,6 +1,6 @@
 package com.yong.travel.group.persistence
 
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.group.domain.InviteOutcome
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -26,7 +26,7 @@ import java.time.Instant
  */
 @Entity
 @Table(name = "invite_history")
-class InviteHistory(
+class InviteHistoryEntity(
     /** 그룹이 지워져도 이력은 남아야 하므로 외래키를 걸지 않는다 (명세 §3.1). */
     @Column(nullable = false)
     val groupId: Long,
@@ -37,11 +37,11 @@ class InviteHistory(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invitee_id", nullable = false)
-    val invitee: User,
+    val invitee: UserEntity,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invited_by", nullable = false)
-    val invitedBy: User,
+    val invitedBy: UserEntity,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -66,7 +66,7 @@ class InviteHistory(
          * 기록 지점이 넷이라(수락·거절·취소·그룹 삭제, 명세 §3.1) 만드는 방법을 한 곳에 모은다.
          * 한 곳만 빠뜨려도 이력이 조용히 비고, 그런 누락은 조회 시점에 드러나지 않는다.
          */
-        fun from(invite: GroupInvite, outcome: InviteOutcome) = InviteHistory(
+        fun from(invite: GroupInviteEntity, outcome: InviteOutcome) = InviteHistoryEntity(
             groupId = requireNotNull(invite.group.id),
             groupName = invite.group.name,
             invitee = invite.invitee,

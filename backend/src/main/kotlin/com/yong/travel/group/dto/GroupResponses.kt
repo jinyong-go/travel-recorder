@@ -3,7 +3,7 @@ package com.yong.travel.group.dto
 import com.yong.travel.auth.dto.UserResponse
 import com.yong.travel.auth.dto.toResponse
 import com.yong.travel.group.domain.GroupDetail
-import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.group.domain.Group
 import com.yong.travel.group.domain.InviteHistoryEntry
 import com.yong.travel.group.domain.PendingInvite
 import com.yong.travel.group.domain.ReceivedInvite
@@ -136,7 +136,7 @@ fun GroupSummary.toSummaryResponse(requesterId: Long): GroupSummaryResponse =
         isOwner = isOwnedBy(requesterId),
     )
 
-fun GroupRef.toBriefResponse(): GroupBriefResponse = GroupBriefResponse(id, name)
+fun Group.toBriefResponse(): GroupBriefResponse = GroupBriefResponse(id, name)
 
 fun PendingInvite.toResponse(): PendingInviteResponse =
     PendingInviteResponse(id = id, invitee = invitee.toResponse(), createdAt = createdAt)

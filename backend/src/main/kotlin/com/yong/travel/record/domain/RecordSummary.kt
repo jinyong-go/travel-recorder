@@ -1,13 +1,13 @@
 package com.yong.travel.record.domain
 
-import com.yong.travel.auth.domain.UserRef
-import com.yong.travel.trip.domain.TripRef
+import com.yong.travel.auth.domain.User
+import com.yong.travel.trip.domain.Trip
 import java.time.Instant
 
 /** 기록 목록의 한 줄. 사진은 첫 장의 URL 과 개수까지만 든다. */
 data class RecordSummary(
     val id: Long,
-    val trip: TripRef,
+    val trip: Trip,
     val name: String,
     val category: Category,
     val tags: List<String>,
@@ -18,7 +18,7 @@ data class RecordSummary(
     val memo: String?,
     val thumbnailUrl: String?,
     val photoCount: Long,
-    val author: UserRef,
+    val author: User,
 
     /**
      * 요청자의 기준 좌표로부터의 거리(km). 좌표가 오지 않으면 null 이다.

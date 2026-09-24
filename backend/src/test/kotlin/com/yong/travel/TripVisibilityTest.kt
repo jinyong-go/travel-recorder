@@ -1,6 +1,6 @@
 package com.yong.travel
 
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
@@ -341,7 +341,7 @@ class TripVisibilityTest {
 
     private fun newUser(email: String = "tester-${System.nanoTime()}@example.com"): Long = requireNotNull(
         userRepository.save(
-            User(
+            UserEntity(
                 provider = "naver",
                 providerId = "provider-${System.nanoTime()}",
                 email = email,

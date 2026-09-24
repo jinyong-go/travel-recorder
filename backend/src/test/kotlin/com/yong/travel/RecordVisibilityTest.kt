@@ -1,6 +1,6 @@
 package com.yong.travel
 
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
@@ -17,8 +17,8 @@ import com.yong.travel.record.dto.RecordScope
 import com.yong.travel.record.dto.TripChangeRequest
 import com.yong.travel.record.dto.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
-import com.yong.travel.trip.persistence.Trip
-import com.yong.travel.trip.persistence.TripShare
+import com.yong.travel.trip.persistence.TripEntity
+import com.yong.travel.trip.persistence.TripShareEntity
 import com.yong.travel.trip.domain.Visibility
 import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.persistence.TripShareRepository
@@ -410,7 +410,7 @@ class RecordVisibilityTest {
     /** 이메일은 계정마다 고유해야 한다 (users.email 유니크). 초대 대상 조회에 쓰이는 값이라 필요하면 직접 지정한다. */
     private fun newUser(email: String = "tester-${System.nanoTime()}@example.com"): Long = requireNotNull(
         userRepository.save(
-            User(
+            UserEntity(
                 provider = "naver",
                 providerId = "provider-${System.nanoTime()}",
                 email = email,
@@ -441,7 +441,7 @@ class RecordVisibilityTest {
         groupIds: List<Long> = emptyList(),
     ): Long {
         val trip = tripRepository.save(
-            Trip(
+            TripEntity(
                 owner = userRepository.findById(ownerId).orElseThrow(),
                 name = "테스트 여행",
                 startDate = LocalDate.of(2026, 9, 5),
@@ -451,7 +451,7 @@ class RecordVisibilityTest {
             ),
         )
         groupIds.forEach { groupId ->
-            tripShareRepository.save(TripShare(trip = trip, group = groupRepository.findById(groupId).orElseThrow()))
+            tripShareRepository.save(TripShareEntity(trip = trip, group = groupRepository.findById(groupId).orElseThrow()))
         }
         return requireNotNull(trip.id)
     }

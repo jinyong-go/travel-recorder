@@ -1,6 +1,6 @@
 package com.yong.travel.record.persistence
 
-import com.yong.travel.record.persistence.TripRecord
+import com.yong.travel.record.persistence.TripRecordEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Modifying
@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.Instant
 
-interface TripRecordRepository : JpaRepository<TripRecord, Long>, JpaSpecificationExecutor<TripRecord> {
+interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpecificationExecutor<TripRecordEntity> {
 
     /**
      * 여행별 살아 있는 기록 수.
@@ -19,7 +19,7 @@ interface TripRecordRepository : JpaRepository<TripRecord, Long>, JpaSpecificati
     @Query(
         """
         select r.trip.id, count(r)
-        from TripRecord r
+        from TripRecordEntity r
         where r.trip.id in :tripIds and r.deletedAt is null
         group by r.trip.id
         """,
@@ -34,6 +34,6 @@ interface TripRecordRepository : JpaRepository<TripRecord, Long>, JpaSpecificati
      * 이미 지워진 기록의 삭제 시각을 덮어쓰지 않기 위해서다.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update TripRecord r set r.deletedAt = :now where r.trip.id = :tripId and r.deletedAt is null")
+    @Query("update TripRecordEntity r set r.deletedAt = :now where r.trip.id = :tripId and r.deletedAt is null")
     fun softDeleteByTripId(@Param("tripId") tripId: Long, @Param("now") now: Instant): Int
 }

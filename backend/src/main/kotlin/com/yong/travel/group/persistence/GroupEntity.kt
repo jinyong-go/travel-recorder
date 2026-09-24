@@ -1,6 +1,6 @@
 package com.yong.travel.group.persistence
 
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -22,10 +22,10 @@ import java.time.Instant
  */
 @Entity
 @Table(name = "share_group")
-class Group(
+class GroupEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
-    var owner: User,
+    var owner: UserEntity,
 
     @Column(nullable = false, length = 30)
     var name: String,

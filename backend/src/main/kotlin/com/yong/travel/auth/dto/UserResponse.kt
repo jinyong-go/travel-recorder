@@ -1,8 +1,8 @@
 package com.yong.travel.auth.dto
 
 import com.yong.travel.auth.domain.MyProfile
-import com.yong.travel.auth.domain.UserRef
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.domain.User
+import com.yong.travel.auth.persistence.UserEntity
 
 /**
  * 다른 사용자에게도 노출되는 최소 정보. 이메일은 담지 않는다 —
@@ -22,7 +22,7 @@ data class MeResponse(
     val profileImageUrl: String?,
 )
 
-fun User.toResponse(): UserResponse =
+fun UserEntity.toResponse(): UserResponse =
     UserResponse(
         id = requireNotNull(id),
         name = name,
@@ -31,5 +31,5 @@ fun User.toResponse(): UserResponse =
 
 fun MyProfile.toMeResponse(): MeResponse = MeResponse(id, name, email, profileImageUrl)
 
-/** 도메인 값 → 응답. 모양이 같아도 계층이 다르므로 변환을 거친다 ([UserRef] 주석 참고). */
-fun UserRef.toResponse(): UserResponse = UserResponse(id, name, profileImageUrl)
+/** 도메인 값 → 응답. 모양이 같아도 계층이 다르므로 변환을 거친다 ([User] 주석 참고). */
+fun User.toResponse(): UserResponse = UserResponse(id, name, profileImageUrl)

@@ -1,8 +1,8 @@
 package com.yong.travel.record.persistence
 
 import com.yong.travel.record.domain.Category
-import com.yong.travel.tag.persistence.Tag
-import com.yong.travel.trip.persistence.Trip
+import com.yong.travel.tag.persistence.TagEntity
+import com.yong.travel.trip.persistence.TripEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -36,7 +36,7 @@ import java.time.Instant
 @Entity
 @Table(name = "trip_records")
 @SQLRestriction("deleted_at is null")
-class TripRecord(
+class TripRecordEntity(
     /**
      * 소속 여행. 작성자와 공개 범위의 유일한 출처다.
      *
@@ -45,7 +45,7 @@ class TripRecord(
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_id", nullable = false)
-    var trip: Trip,
+    var trip: TripEntity,
 
     @Column(nullable = false)
     var name: String,
@@ -86,7 +86,7 @@ class TripRecord(
         joinColumns = [JoinColumn(name = "record_id")],
         inverseJoinColumns = [JoinColumn(name = "tag_id")],
     )
-    var tags: MutableSet<Tag> = mutableSetOf()
+    var tags: MutableSet<TagEntity> = mutableSetOf()
 
     @Column(nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()

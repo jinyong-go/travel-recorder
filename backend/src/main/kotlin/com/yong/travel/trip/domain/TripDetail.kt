@@ -1,7 +1,7 @@
 package com.yong.travel.trip.domain
 
-import com.yong.travel.auth.domain.UserRef
-import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.auth.domain.User
+import com.yong.travel.group.domain.Group
 import java.time.Instant
 import java.time.LocalDate
 
@@ -26,7 +26,7 @@ data class TripDetail(
     /** 삭제되지 않은 하위 기록 수 (명세 §3.1). */
     val recordCount: Long,
 
-    val owner: UserRef,
+    val owner: User,
 
     /**
      * 공개 범위. **소유자 본인의 조회에서만 채운다** (그 외에는 null).
@@ -37,7 +37,7 @@ data class TripDetail(
     val visibility: Visibility?,
 
     /** 공유 그룹. [visibility] 가 `GROUP` 인 소유자 조회에서만 채운다. 그 외에는 null. */
-    val sharedGroups: List<GroupRef>?,
+    val sharedGroups: List<Group>?,
 
     val createdAt: Instant,
     val updatedAt: Instant,

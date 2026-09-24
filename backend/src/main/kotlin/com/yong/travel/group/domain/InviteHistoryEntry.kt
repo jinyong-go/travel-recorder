@@ -1,6 +1,6 @@
 package com.yong.travel.group.domain
 
-import com.yong.travel.auth.domain.UserRef
+import com.yong.travel.auth.domain.User
 import java.time.Instant
 
 /**
@@ -11,11 +11,11 @@ import java.time.Instant
  */
 data class InviteHistoryEntry(
     val id: Long,
-    val group: GroupRef,
+    val group: Group,
     val groupDeleted: Boolean,
 
     /** 상대. 받은 이력이면 보냈던 사람, 보낸 이력이면 초대받았던 사람이다. */
-    val counterpart: UserRef,
+    val counterpart: User,
 
     val outcome: InviteOutcome,
     val invitedAt: Instant,

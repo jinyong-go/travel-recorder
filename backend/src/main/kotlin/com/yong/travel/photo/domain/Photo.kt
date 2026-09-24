@@ -6,7 +6,7 @@ package com.yong.travel.photo.domain
  * `storageKey` 를 담지 않는다. 저장소 내부 경로는 URL 을 만드는 데만 쓰이며
  * 밖으로 나갈 값이 아니다 (명세 §5).
  */
-data class PhotoRef(
+data class Photo(
     val id: Long,
     val url: String,
 )

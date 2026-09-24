@@ -13,7 +13,9 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
 [`frontend/SPECIFICATION.md`](../frontend/SPECIFICATION.md) 를 따른다.
 
 용어는 [공통 명세 §3](../SPECIFICATION.md) 을 그대로 쓴다. 본 문서에서만 이름이 다른 것은
-없으며, 엔티티 클래스명은 §3의 괄호 표기(`Trip`, `TripRecord`, `Group` …)와 일치시킨다.
+없다. 본문의 `Trip`·`TripRecord`·`Group` … 은 §3의 괄호 표기를 따른 개념 이름이며, JPA 엔티티
+클래스는 여기에 `Entity` 접미사를 붙인다 (`TripEntity`, `TripRecordEntity`, `GroupEntity` …).
+접미사 없는 이름은 서비스가 주고받는 도메인 객체의 몫이다.
 
 ### 1.2 실행 환경
 - Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client
@@ -278,7 +280,7 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 
 **그룹·공유**
 
-- `Group` 은 SQL 예약어라 테이블명을 `share_group` 으로 둔다 (엔티티 클래스명은 `Group`).
+- `Group` 은 SQL 예약어라 테이블명을 `share_group` 으로 둔다 (엔티티 클래스명은 `GroupEntity`).
 - `Group.memo` 는 선택이며 길이 상한은 공통 명세 §3.6이 정한다. 공백만 들어오면 `null` 로 저장해
   "메모 없음" 과 같은 값으로 만든다. **요청자에 따라 달라지지 않는다** —
   그룹을 조회할 수 있는 사람은 소유자와 멤버뿐이고(§4.7) 둘 다 메모를 볼 수 있으므로, DTO 에

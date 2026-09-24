@@ -1,6 +1,6 @@
 package com.yong.travel.auth.config
 
-import com.yong.travel.auth.persistence.User
+import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.auth.security.LoginUserDetails
 import org.springframework.boot.ApplicationRunner
@@ -64,7 +64,7 @@ class LocalLoginConfig {
                     email = account.email
                     name = account.name
                 }
-                ?: User(
+                ?: UserEntity(
                     provider = PROVIDER,
                     providerId = account.username,
                     email = account.email,

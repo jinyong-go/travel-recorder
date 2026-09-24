@@ -23,7 +23,7 @@ import java.time.Instant
         UniqueConstraint(columnNames = ["email"]),
     ],
 )
-class User(
+class UserEntity(
     @Column(nullable = false)
     var provider: String,
 
@@ -53,4 +53,4 @@ class User(
 }
 
 /** 엔티티 → 본인 정보 도메인 값. 이메일이 함께 담기는 유일한 변환이다 (공통 명세 §3.1). */
-fun User.toProfile(): MyProfile = MyProfile(requireNotNull(id), name, email, profileImageUrl)
+fun UserEntity.toProfile(): MyProfile = MyProfile(requireNotNull(id), name, email, profileImageUrl)

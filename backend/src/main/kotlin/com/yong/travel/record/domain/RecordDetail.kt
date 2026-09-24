@@ -1,8 +1,8 @@
 package com.yong.travel.record.domain
 
-import com.yong.travel.auth.domain.UserRef
-import com.yong.travel.photo.domain.PhotoRef
-import com.yong.travel.trip.domain.TripRef
+import com.yong.travel.auth.domain.User
+import com.yong.travel.photo.domain.Photo
+import com.yong.travel.trip.domain.Trip
 import java.time.Instant
 
 /**
@@ -13,7 +13,7 @@ import java.time.Instant
  */
 data class RecordDetail(
     val id: Long,
-    val trip: TripRef,
+    val trip: Trip,
     val name: String,
     val category: Category,
 
@@ -27,10 +27,10 @@ data class RecordDetail(
     val longitude: Double,
     val rating: Double,
     val memo: String?,
-    val photos: List<PhotoRef>,
+    val photos: List<Photo>,
 
     /** 소속 여행의 소유자. 기록은 작성자 컬럼을 갖지 않는다 (명세 §3.1). */
-    val author: UserRef,
+    val author: User,
 
     val createdAt: Instant,
     val updatedAt: Instant,
