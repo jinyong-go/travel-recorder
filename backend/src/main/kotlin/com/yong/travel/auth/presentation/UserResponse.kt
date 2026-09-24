@@ -21,6 +21,12 @@ data class MeResponse(
     val profileImageUrl: String?,
 )
 
+/** 클라이언트 부팅용 세션 상태. 사용자 정보는 담지 않는다 — 이메일은 [MeResponse] 에만 있다. */
+data class SessionResponse(
+    val authenticated: Boolean,
+    val csrfToken: String,
+)
+
 fun MyProfile.toMeResponse(): MeResponse = MeResponse(id, name, email, profileImageUrl)
 
 /** 도메인 값 → 응답. 모양이 같아도 계층이 다르므로 변환을 거친다 ([User] 주석 참고). */

@@ -13,13 +13,29 @@ export class ApiError extends Error {
   }
 }
 
-const readCookie = (name) =>
-  document.cookie
-    .split('; ')
-    .find((row) => row.startsWith(`${name}=`))
-    ?.slice(name.length + 1)
-
 const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
+
+// 토큰 쿠키가 HttpOnly 라 읽을 수 없으므로 세션 조회로 받아 둔다. 메모리에만 둔다 —
+// localStorage 에 두면 탭·재방문을 넘어 남는다 (명세 §2.1).
+let csrfToken = null
+
+/**
+ * 세션 상태를 조회해 로그인 여부를 돌려주고, CSRF 토큰은 이 모듈에 보관한다.
+ * 비로그인이어도 성공 응답이며, 실패하면 `ApiError` 를 던진다.
+ */
+export async function fetchSession() {
+  const session = await apiFetch('/api/auth/session')
+  csrfToken = session.csrfToken
+  return session.authenticated
+}
+
+/**
+ * 들고 있는 CSRF 토큰을 버린다. 로그인·로그아웃 뒤 서버가 토큰을 비우므로 부른다
+ * (공통 명세 §6.1). 다음 쓰기 요청 전에 세션 조회로 새 토큰을 받는다.
+ */
+export function clearCsrfToken() {
+  csrfToken = null
+}
 
 let unauthorizedHandler = null
 
@@ -34,7 +50,7 @@ export function setUnauthorizedHandler(handler) {
 /**
  * 백엔드 호출 공통 래퍼. 응답 본문이 있으면 JSON 으로 돌려주고, 실패하면 `ApiError` 를 던진다.
  *
- * 세션 쿠키 인증이라 자격 증명을 항상 포함하고, 쓰기 요청에는 서버가 내려준 XSRF 토큰을
+ * 세션 쿠키 인증이라 자격 증명을 항상 포함하고, 쓰기 요청에는 세션 조회로 받은 CSRF 토큰을
  * 헤더로 돌려보낸다. 헤더가 없으면 서버가 거부한다 (공통 명세 §6.1).
  *
  * `withStatus` 를 주면 `{ data, status }` 로 감싸 돌려준다. 성공 응답끼리 상태 코드가 갈리는
@@ -45,9 +61,11 @@ export async function apiFetch(path, { method = 'GET', body, withStatus = false 
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
+  // 토큰이 없는 것은 부팅 조회가 실패했거나 로그인·로그아웃 직후다. 여기서 받지 않으면
+  // 새로고침 전까지 모든 쓰기가 403 이 된다.
   if (WRITE_METHODS.includes(method)) {
-    const token = readCookie('XSRF-TOKEN')
-    if (token) headers['X-XSRF-TOKEN'] = decodeURIComponent(token)
+    if (!csrfToken) await fetchSession()
+    headers['X-XSRF-TOKEN'] = csrfToken
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {

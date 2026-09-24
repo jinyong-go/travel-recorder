@@ -6,7 +6,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
+import org.springframework.security.web.csrf.CsrfTokenRepository
 import org.springframework.security.web.SecurityFilterChain
 
 @Configuration
@@ -18,15 +18,12 @@ class SecurityConfig {
             sessionManagement {
                 sessionCreationPolicy = SessionCreationPolicy.IF_REQUIRED
             }
-            // 세션 쿠키 인증이므로 CSRF 보호는 유지하되, SPA 가 XSRF-TOKEN 쿠키를 읽어
-            // X-XSRF-TOKEN 헤더로 돌려보낼 수 있게 쿠키 저장소를 쓴다.
-            // csrfRequestAttributeName = null 은 지연 로딩을 끄는 설정으로, 이게 없으면
-            // 토큰을 실제로 읽는 요청이 없어 쿠키가 발급되지 않는다.
+            // 세션 쿠키 인증이므로 CSRF 보호는 유지한다. 토큰 쿠키는 HttpOnly 이고, SPA 는
+            // GET /api/auth/session 본문으로 받은 토큰을 X-XSRF-TOKEN 헤더로 돌려보낸다 (명세 §7).
+            // 요청 처리기는 기본값(XOR 마스킹)을 쓴다. 토큰이 응답 본문에 실리므로 응답마다
+            // 다른 값으로 가려 압축 기반 추측 공격(BREACH)의 단서를 없앤다.
             csrf {
-                csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse()
-                csrfTokenRequestHandler = CsrfTokenRequestAttributeHandler().apply {
-                    setCsrfRequestAttributeName(null)
-                }
+                csrfTokenRepository = csrfTokenRepository()
             }
             authorizeHttpRequests {
                 // TODO: 기능 개발 완료 후 authenticated 로 되돌리기
@@ -45,4 +42,11 @@ class SecurityConfig {
         }
         return http.build()
     }
+
+    /**
+     * CSRF 토큰 저장소. 로그인·로그아웃 컨트롤러가 토큰을 비울 때 같은 쿠키 설정을 써야 하므로
+     * 빈으로 꺼내 둔다 — 따로 만들면 쿠키 이름·경로가 어긋나 비우지 못할 수 있다.
+     */
+    @Bean
+    fun csrfTokenRepository(): CsrfTokenRepository = CookieCsrfTokenRepository()
 }

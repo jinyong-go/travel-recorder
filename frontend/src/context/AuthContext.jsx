@@ -1,15 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiError, apiFetch, setUnauthorizedHandler } from '../api/client.js'
+import {
+  ApiError,
+  apiFetch,
+  clearCsrfToken,
+  fetchSession,
+  setUnauthorizedHandler,
+} from '../api/client.js'
 
 const AuthContext = createContext(null)
 
 /**
  * 로그인 상태. 프론트엔드에서 실제 백엔드를 호출하는 유일한 영역이다 (명세 §10.2).
  *
- * 부팅 시 `GET /api/auth/me` 로 세션을 확인한다. 새로고침해도 로그인이 유지되는 것은
- * 이 조회 덕분이며(명세 §2.1), 이 요청이 XSRF 토큰 쿠키도 함께 받아 와 이후 쓰기 요청의
- * 전제를 만든다 (공통 명세 §6.1).
+ * 부팅 시 `GET /api/auth/session` 으로 로그인 여부와 CSRF 토큰을 받고, 로그인 상태면
+ * `GET /api/auth/me` 로 본인 정보를 받는다. 새로고침해도 로그인이 유지되는 것은 이 조회
+ * 덕분이다 (명세 §2.1).
  *
  * 로그인 상태에서 받은 `401` 은 세션 만료로 보고 로그인 화면으로 보낸다 (명세 §2.1).
  */
@@ -48,14 +54,16 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false
 
-    apiFetch('/api/auth/me')
+    // 비로그인 방문자가 매번 /me 의 401 을 받지 않게 순서대로 부른다 (명세 §2.1).
+    fetchSession()
+      .then((authenticated) => (authenticated ? apiFetch('/api/auth/me') : null))
       .then((me) => {
         if (cancelled) return
         setUser(me)
-        setStatus('authenticated')
+        setStatus(me ? 'authenticated' : 'anonymous')
       })
       .catch(() => {
-        // 401 도 서버가 죽은 것도 화면에서는 같다 — 로그인하지 않은 상태로 그린다.
+        // 서버 장애, 또는 두 조회 사이에 세션이 끝난 경우다. 화면은 비로그인으로 그린다.
         if (cancelled) return
         setUser(null)
         setStatus('anonymous')
@@ -73,6 +81,7 @@ export function AuthProvider({ children }) {
         method: 'POST',
         body: { username, password },
       })
+      clearCsrfToken()
       setUser(me)
       setStatus('authenticated')
       return me
@@ -88,6 +97,8 @@ export function AuthProvider({ children }) {
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' })
     } finally {
+      // 호출이 실패했어도 버린다. 토큰이 살아 있으면 다음 쓰기 요청에서 다시 받아 오면 그만이다.
+      clearCsrfToken()
       setUser(null)
       setStatus('anonymous')
     }

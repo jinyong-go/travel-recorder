@@ -392,6 +392,7 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 |---|---|---|:---:|
 | POST | `/api/auth/login` | **임시** 인메모리 로그인. `local`·`dev` 전용 (§2.1) | - |
 | GET | `/oauth2/authorization/naver` | 네이버 로그인 시작 (리다이렉트). **현재 비활성** (§2.1) | - |
+| GET | `/api/auth/session` | 클라이언트 부팅용 세션 상태 조회. `{ authenticated, csrfToken }` 을 반환하며 비로그인도 `200` (§7) | - |
 | GET | `/api/auth/me` | 현재 로그인 사용자 정보 조회. 비로그인 시 `401` | 선택 |
 | POST | `/api/auth/logout` | 로그아웃, 세션 무효화 | 필요 |
 
@@ -950,10 +951,17 @@ interface PhotoStorageService {
 **보안 구현**
 
 - 세션 쿠키는 `HttpOnly`, 운영 환경에서는 `Secure` 속성을 적용한다.
-- CSRF 토큰은 `XSRF-TOKEN` 쿠키(JS 접근 가능)로 내려주고 `X-XSRF-TOKEN` 헤더로 받는다.
-  헤더가 없으면 `403` 이다.
+- CSRF 토큰은 `XSRF-TOKEN` 쿠키(`HttpOnly`)에 두고, 클라이언트에는 `GET /api/auth/session`
+  응답 본문으로 준다. 클라이언트는 `X-XSRF-TOKEN` 헤더로 돌려보내며, 헤더가 없으면 `403` 이다.
+  본문의 토큰은 응답마다 다른 값으로 가린다(XOR 마스킹) — 압축된 응답 크기로 토큰을 추측하는
+  공격(BREACH)의 단서를 없앤다.
+- **로그인 시 세션 id 를 바꾸고, 로그인·로그아웃 시 CSRF 토큰 쿠키를 비운다** (공통 명세 §6.1).
+  새 토큰은 다음 `GET /api/auth/session` 에서 발급된다. 로그인을 컨트롤러가 직접 처리하므로
+  Spring Security 의 세션 고정 방지·토큰 교체가 자동으로 돌지 않는다.
 - CORS 허용 오리진은 프론트엔드 개발 서버(Vite, 기본 `http://localhost:5173`)이며 자격 증명
-  포함 요청을 허용한다.
+  포함 요청을 허용한다. **허용 오리진은 정확한 값의 목록으로만 준다.** 와일드카드 패턴이나
+  요청 `Origin` 을 되돌려 주는 설정을 쓰면, 아무 사이트나 `GET /api/auth/session` 응답을 읽어
+  CSRF 토큰을 가져갈 수 있다.
 - **초대에는 추측 가능한 진입점이 없어야 한다.** 초대 id 로 접근한 요청은 당사자인지 먼저
   판정하고, 아니면 `404` 다 (§4.8). 순번 id 를 쓰더라도 이 판정이 유일한 관문이 된다.
 - 파일 업로드 최대 요청 크기는 `spring.servlet.multipart.max-request-size` 로 제한한다.
