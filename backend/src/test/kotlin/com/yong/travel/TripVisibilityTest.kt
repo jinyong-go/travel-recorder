@@ -237,6 +237,26 @@ class TripVisibilityTest {
     }
 
     @Test
+    fun `목록 항목에도 여행 설명이 담긴다`() {
+        val owner = newUser()
+        val tripId = tripService.create(
+            owner,
+            TripCreateRequest(
+                name = "설명 있는 여행",
+                startDate = LocalDate.of(2026, 9, 5),
+                endDate = LocalDate.of(2026, 9, 8),
+                headcount = 1,
+                memo = "카드에 두 줄까지 보이는 설명",
+            ).toCommand(),
+        ).id
+        flush()
+
+        val item = tripService.list(TripListQuery(TripScope.MINE), owner, firstPage())
+            .content.single { it.id == tripId }
+        assertEquals("카드에 두 줄까지 보이는 설명", item.memo)
+    }
+
+    @Test
     fun `시작일순 정렬은 시작일 역순이고 기본은 생성 역순이다`() {
         val owner = newUser()
         val older = newTrip(owner, startDate = LocalDate.of(2026, 1, 1))

@@ -21,6 +21,8 @@ const EMPTY = {
  * 공개 범위는 만들기에서만 받는다(`showVisibility`). 수정에서는 여행 상세의 공개 범위 섹션이
  * 그 역할을 하므로, 같은 값을 두 곳에서 바꿀 수 있게 만들지 않는다.
  *
+ * `submitting` 동안은 제출 버튼을 막는다. 두 번 눌러 여행이 둘 생기는 것을 막기 위해서다.
+ *
  * `onSubmit` 에는 검증을 통과한 값만 넘어온다. 예산은 비어 있으면 `null` 이며 이는 "예산 정보
  * 없음"으로 `0` 과 구분된다 (공통 명세 §3.2).
  */
@@ -29,6 +31,7 @@ export default function TripForm({
   submitLabel,
   showVisibility = false,
   groups,
+  submitting = false,
   onSubmit,
   onCancel,
   onCreateGroupClick,
@@ -180,7 +183,7 @@ export default function TripForm({
         <button type="button" className="btn-secondary" onClick={onCancel}>
           취소
         </button>
-        <button type="submit" className="btn-primary">
+        <button type="submit" className="btn-primary" disabled={submitting}>
           {submitLabel}
         </button>
       </div>

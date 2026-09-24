@@ -62,7 +62,7 @@ data class TripResponse(
     val updatedAt: Instant,
 )
 
-/** 여행 목록 항목. 상세에서 `memo` 와 `updatedAt` 만 빠진다. */
+/** 여행 목록 항목. 상세에서 `updatedAt` 만 빠진다. 카드가 설명을 두 줄까지 보여주므로 `memo` 를 담는다. */
 data class TripSummaryResponse(
     val id: Long,
     val name: String,
@@ -70,6 +70,7 @@ data class TripSummaryResponse(
     val endDate: LocalDate,
     val headcount: Int,
     val budget: Long?,
+    val memo: String?,
     val coverPhotoUrl: String?,
     val recordCount: Long,
     val owner: UserResponse,
@@ -115,6 +116,7 @@ fun TripSummary.toSummaryResponse(requesterId: Long?): TripSummaryResponse =
         endDate = endDate,
         headcount = headcount,
         budget = budget,
+        memo = memo,
         coverPhotoUrl = coverPhotoUrl,
         recordCount = recordCount,
         owner = owner.toResponse(),

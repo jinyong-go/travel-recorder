@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CATEGORIES, categoryIcon } from '../data/records.js'
-import { useRecords } from '../context/RecordsContext.jsx'
+import { fetchTrips } from '../api/trips.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
@@ -33,10 +34,21 @@ const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 
 export default function LandingPage() {
   const { themeKey, changeTheme } = useTheme()
-  const { listTripsByScope } = useRecords()
   const { status } = useAuth()
-  // 랜딩은 비로그인도 보는 화면이므로 전체 공개 여행만 센다.
-  const publicTrips = listTripsByScope('public')
+  // 랜딩은 비로그인도 보는 화면이므로 전체 공개 여행만 센다. 건수만 필요해 첫 페이지의
+  // totalElements 를 쓴다. 받기 전이나 실패했을 때는 문장을 그리지 않는다 — 0건으로 보이면 거짓이다.
+  const [publicTripCount, setPublicTripCount] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    fetchTrips('public', 'recent', 0)
+      .then((result) => {
+        if (!cancelled) setPublicTripCount(result.totalElements)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <>
@@ -77,9 +89,11 @@ export default function LandingPage() {
             )}
           </div>
 
-          <p className="landing-stat">
-            지금까지 <strong>{publicTrips.length}</strong>건의 여행이 공개되어 있어요.
-          </p>
+          {publicTripCount != null && (
+            <p className="landing-stat">
+              지금까지 <strong>{publicTripCount}</strong>건의 여행이 공개되어 있어요.
+            </p>
+          )}
 
           <ul className="landing-category-chips">
             {SELECTABLE_CATEGORIES.map((c) => (

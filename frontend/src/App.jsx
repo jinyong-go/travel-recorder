@@ -20,7 +20,7 @@ import TripListPage from './pages/TripListPage.jsx'
 function App() {
   return (
     // 두 프로바이더 모두 로그인 사용자를 읽으므로 AuthProvider 가 바깥이다.
-    // GroupsProvider 는 서버 그룹·초대를, RecordsProvider 는 목업 여행·기록을 맡는다 (명세 §10.2).
+    // GroupsProvider 는 서버 그룹·초대를, RecordsProvider 는 목업 기록을 맡는다. 여행은 화면이 직접 읽는다 (명세 §10.2).
     <AuthProvider>
       <GroupsProvider>
         <RecordsProvider>

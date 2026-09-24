@@ -1,17 +1,29 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useRecords } from '../context/RecordsContext.jsx'
+import { ApiError } from '../api/client.js'
+import { createTrip } from '../api/trips.js'
+import { useGroups } from '../context/GroupsContext.jsx'
 import TripForm from '../components/TripForm.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
 import './RegisterRecordPage.css'
 
 export default function TripRegisterPage() {
   const navigate = useNavigate()
-  const { createTrip, myGroups } = useRecords()
+  const { groups } = useGroups()
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = (values) => {
-    // TODO(백엔드 연동): POST /api/trips 호출로 대체.
-    const trip = createTrip(values)
-    navigate(`/trips/${trip.id}`)
+  /** 만든 여행 상세로 보낸다 (명세 §5.1). 실패하면 입력값은 폼에 그대로 남는다. */
+  const handleSubmit = async (values) => {
+    setSubmitting(true)
+    setError('')
+    try {
+      const trip = await createTrip(values)
+      navigate(`/trips/${trip.id}`)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '여행을 만들지 못했습니다.')
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -28,11 +40,13 @@ export default function TripRegisterPage() {
           <TripForm
             submitLabel="여행 만들기"
             showVisibility
-            groups={myGroups}
+            groups={groups}
+            submitting={submitting}
             onSubmit={handleSubmit}
             onCancel={() => navigate('/trips')}
             onCreateGroupClick={() => navigate('/groups')}
           />
+          {error && <p className="field-error">{error}</p>}
         </div>
       </div>
     </div>

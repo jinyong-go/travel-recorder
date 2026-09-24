@@ -77,7 +77,7 @@ export default function VisibilitySelect({
                         onChange={() => toggleGroup(group.id)}
                       />
                       <span className="visibility-group-name">{group.name}</span>
-                      <span className="visibility-group-count">{group.members.length}명</span>
+                      <span className="visibility-group-count">{group.memberCount}명</span>
                     </label>
                   </li>
                 ))}

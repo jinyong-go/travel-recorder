@@ -5,7 +5,7 @@ import com.yong.travel.group.domain.Group
 import java.time.Instant
 import java.time.LocalDate
 
-/** 여행 목록의 한 줄. [TripDetail] 에서 `memo` 와 `updatedAt` 만 빠진다. */
+/** 여행 목록의 한 줄. [TripDetail] 에서 `updatedAt` 만 빠진다. */
 data class TripSummary(
     val id: Long,
     val name: String,
@@ -13,6 +13,7 @@ data class TripSummary(
     val endDate: LocalDate,
     val headcount: Int,
     val budget: Long?,
+    val memo: String?,
     val coverPhotoUrl: String?,
     val recordCount: Long,
     val owner: User,

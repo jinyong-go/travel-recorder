@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { CATEGORIES, categoryIcon } from '../data/records.js'
+import { fetchTrips } from '../api/trips.js'
 import { useRecords } from '../context/RecordsContext.jsx'
+import useTrip from '../hooks/useTrip.js'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import { haversineDistanceKm } from '../utils/geo.js'
 import {
@@ -27,13 +29,35 @@ const REFERENCE_LOCATION_LABEL = {
 export default function RegisterRecordPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { addRecord, myTrips } = useRecords()
+  const { addRecord } = useRecords()
   const { location: referenceLocation, source, status, setManualLocation } = useReferenceLocation()
 
   // 소속 여행을 먼저 정해야 기록을 만들 수 있다. 여행 없는 기록은 존재할 수 없다 (공통 명세 §3.3).
+  // ?tripId= 로 들어와도 본인 여행으로 확인된 뒤에만 정해진 것으로 본다 (명세 §5.3).
   const tripIdParam = searchParams.get('tripId')
-  const presetTrip = myTrips.find((t) => String(t.id) === String(tripIdParam)) ?? null
-  const [tripId, setTripId] = useState(presetTrip ? String(presetTrip.id) : '')
+  const { trip: paramTrip, status: paramTripStatus } = useTrip(tripIdParam)
+  const presetTrip = paramTrip?.isOwner ? paramTrip : null
+  const [pickedTripId, setPickedTripId] = useState('')
+  const tripId = presetTrip ? String(presetTrip.id) : pickedTripId
+
+  // 선택지는 최근 만든 내 여행 한 페이지다. 전부 받아 오지 않는다 (명세 §5.3).
+  // null 은 아직 받지 못한 상태, 'error' 는 실패다.
+  const [myTripsPage, setMyTripsPage] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    fetchTrips('mine', 'recent', 0)
+      .then((result) => {
+        if (!cancelled) setMyTripsPage(result)
+      })
+      .catch(() => {
+        if (!cancelled) setMyTripsPage('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  const myTrips = myTripsPage?.content ?? []
+  const hasMoreTrips = myTrips.length > 0 && myTripsPage.totalElements > myTrips.length
 
   const [category, setCategory] = useState('')
   const [selectedPlace, setSelectedPlace] = useState(null)
@@ -141,6 +165,10 @@ export default function RegisterRecordPage() {
             {presetTrip ? (
               // 여행 상세에서 들어온 경로다. 대상이 이미 정해져 있으므로 바꾸는 수단을 두지 않는다.
               <p className="preset-trip">{presetTrip.name} 여행에 추가합니다</p>
+            ) : paramTripStatus === 'loading' || myTripsPage === null ? (
+              <p className="field-hint">여행을 불러오는 중이에요…</p>
+            ) : myTripsPage === 'error' ? (
+              <p className="field-error">여행을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
             ) : myTrips.length === 0 ? (
               <p className="field-hint">
                 아직 여행이 없습니다. <Link to="/trips/new">여행을 먼저 만들어</Link> 주세요.
@@ -149,7 +177,7 @@ export default function RegisterRecordPage() {
               <select
                 id="trip-select"
                 value={tripId}
-                onChange={(e) => setTripId(e.target.value)}
+                onChange={(e) => setPickedTripId(e.target.value)}
               >
                 <option value="">여행을 선택해주세요</option>
                 {myTrips.map((trip) => (
@@ -158,6 +186,11 @@ export default function RegisterRecordPage() {
                   </option>
                 ))}
               </select>
+            )}
+            {!presetTrip && hasMoreTrips && (
+              <p className="field-hint">
+                찾는 여행이 없으면 그 여행 화면의 &lsquo;여행지 추가&rsquo;로 들어와 주세요.
+              </p>
             )}
             {errors.trip && <p className="field-error">{errors.trip}</p>}
             <p className="field-hint">이 기록의 공개 범위는 소속 여행을 따릅니다.</p>

@@ -436,6 +436,7 @@ GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0
       "endDate": "2026-09-08",
       "headcount": 4,
       "budget": 1250000,
+      "memo": "가족들과 다녀온 첫 제주",
       "coverPhotoUrl": "/api/files/photos/2026/09/14/abc123.jpg",
       "recordCount": 11,
       "owner": { "id": 7, "name": "홍길동", "profileImageUrl": "https://..." },
@@ -450,6 +451,8 @@ GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0
 ```
 
 - `recordCount` 는 삭제되지 않은 하위 기록 수다. 0 일 수 있다 (§3.1).
+- 목록 항목은 상세 응답에서 `updatedAt` 만 뺀 모양이다. `memo` 는 카드가 두 줄까지 보여주므로
+  함께 내려준다 (frontend §4.4).
 - `coverPhotoUrl` 은 커버가 지정되지 않았으면 `null` 이다. **서버는 대체 이미지를 고르지 않는다** —
   무엇을 대신 보여줄지는 화면의 판단이다.
 

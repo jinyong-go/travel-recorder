@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CATEGORIES, categoryIcon, categoryLabel } from '../data/records.js'
 import { useRecords } from '../context/RecordsContext.jsx'
+import useTrip from '../hooks/useTrip.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import {
   ALLOWED_PHOTO_ACCEPT,
@@ -40,7 +41,7 @@ const MEMO_MAX_LENGTH = 1000
 export default function RecordDetailPage() {
   const { recordId } = useParams()
   const navigate = useNavigate()
-  const { findRecord, tripOf, currentUser, myGroups, deleteRecord, updateRecord } = useRecords()
+  const { findRecord, currentUser, deleteRecord, updateRecord } = useRecords()
   const { themeKey, changeTheme } = useTheme()
   const { isEmbed } = useMapMode()
   const { location: referenceLocation } = useReferenceLocation()
@@ -63,7 +64,23 @@ export default function RecordDetailPage() {
   // 지울 사진의 위치. 0번도 지울 수 있으므로 없음은 null 로 구분한다.
   const [removingPhotoIndex, setRemovingPhotoIndex] = useState(null)
 
-  if (!record) {
+  // 공개 범위는 기록이 아니라 소속 여행이 갖는다 (공통 명세 §3.5). 기록은 아직 목업이라
+  // 판정 근거가 없으므로, 소속 여행을 서버에 물어 404 면 기록도 볼 수 없는 것으로 본다.
+  const { trip, status: tripStatus } = useTrip(record?.tripId)
+
+  if (record && (tripStatus === 'loading' || tripStatus === 'error')) {
+    const loading = tripStatus === 'loading'
+    return (
+      <main className="detail-page">
+        <div className="detail-missing">
+          <h1>{loading ? '기록을 불러오는 중이에요…' : '기록을 불러오지 못했습니다'}</h1>
+          {!loading && <p className="detail-missing-desc">잠시 후 다시 시도해주세요.</p>}
+        </div>
+      </main>
+    )
+  }
+
+  if (!record || tripStatus !== 'ready') {
     // 없는 기록과 볼 권한이 없는 기록을 구분해 보여주지 않는다.
     // 문구가 달라지는 순간 그 차이만으로 비공개 기록의 존재가 드러난다.
     return (
@@ -80,9 +97,8 @@ export default function RecordDetailPage() {
   }
 
   const photos = record.photos ?? []
-  // 공개 범위는 기록이 아니라 소속 여행이 갖는다 (공통 명세 §3.5).
-  const trip = tripOf(record)
-  const sharedGroups = myGroups.filter((g) => trip.sharedGroupIds.includes(g.id))
+  // 소유자에게만 채워지는 값이다. 열람자에게는 null 이다 (backend §4.3.1).
+  const sharedGroups = trip.sharedGroups ?? []
 
   const handleMapClick = () => {
     if (isEmbed) {

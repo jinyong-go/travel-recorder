@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { SCOPES, categoryIcon } from '../data/records.js'
 import { TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
-import { useRecords } from '../context/RecordsContext.jsx'
+import { fetchTrips } from '../api/trips.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import useTheme from '../hooks/useTheme.js'
 import useMapMode from '../hooks/useMapMode.js'
@@ -11,22 +12,8 @@ import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import { MapPinIcon, PlusIcon } from '../components/icons.jsx'
 
-const PAGE_SIZE = 10
-
-const sortTrips = (trips, sortKey) => {
-  const sorted = [...trips]
-  switch (sortKey) {
-    case 'startDate':
-      return sorted.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-    case 'recent':
-    default:
-      return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-  }
-}
-
 export default function TripListPage() {
-  const { listTripsByScope, recordsOfTrip, currentUser } = useRecords()
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, status: authStatus } = useAuth()
   const { themeKey, changeTheme } = useTheme()
   const { mapMode, changeMapMode } = useMapMode()
 
@@ -55,15 +42,39 @@ export default function TripListPage() {
     setSearchParams(params, { replace: true })
   }
 
-  // 메모이제이션은 React Compiler 에 맡긴다. (쿼리 파라미터 기반 값이라 수동 deps 가 유지되지 않음)
-  const sorted = sortTrips(listTripsByScope(scope), sortKey)
-  const totalCount = sorted.length
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages)
-  const pageItems = sorted.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    (currentPage - 1) * PAGE_SIZE + PAGE_SIZE,
-  )
+  // 'loading' | 'ready' | 'error'. 다시 시도 버튼이 같은 조건으로 한 번 더 읽도록 reloadKey 를 둔다.
+  const [result, setResult] = useState(null)
+  const [listStatus, setListStatus] = useState('loading')
+  const [reloadKey, setReloadKey] = useState(0)
+
+  useEffect(() => {
+    // 로그인 여부를 아직 모르면 기본 탭이 정해지지 않았다. 지금 읽으면 둘러보기를 한 번 읽은 뒤
+    // 내 여행으로 다시 읽게 된다.
+    if (authStatus === 'loading') return
+
+    // 탭·정렬·페이지를 빠르게 바꿀 때 늦게 도착한 이전 응답이 화면을 덮지 않게 한다.
+    let cancelled = false
+    setListStatus('loading')
+    // 화면의 페이지는 1부터, API 는 0부터 센다. 페이지 크기는 서버가 정한다 (backend §4.1).
+    fetchTrips(scope, sortKey, page - 1)
+      .then((next) => {
+        if (cancelled) return
+        setResult(next)
+        setListStatus('ready')
+      })
+      .catch(() => {
+        if (!cancelled) setListStatus('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [authStatus, scope, sortKey, page, reloadKey])
+
+  const pageItems = result?.content ?? []
+  const totalCount = result?.totalElements ?? 0
+  const totalPages = Math.max(1, result?.totalPages ?? 1)
+  const currentPage = page
 
   const emptyMessage = SCOPES.find((s) => s.key === scope)?.empty ?? '표시할 여행이 없습니다.'
 
@@ -118,24 +129,30 @@ export default function TripListPage() {
             </div>
           </div>
 
-          {pageItems.length === 0 ? (
+          {listStatus === 'loading' ? (
+            <div className="empty-state">여행을 불러오는 중이에요…</div>
+          ) : listStatus === 'error' ? (
+            <div className="empty-state">
+              여행을 불러오지 못했습니다.{' '}
+              <button type="button" className="link-button" onClick={() => setReloadKey((k) => k + 1)}>
+                다시 시도
+              </button>
+            </div>
+          ) : pageItems.length === 0 ? (
             <div className="empty-state">{emptyMessage}</div>
           ) : (
             <ul className="trip-grid">
               {pageItems.map((trip) => {
-                const isOwner = trip.ownerId === currentUser.id
-                const tripRecords = recordsOfTrip(trip.id)
+                const isOwner = trip.isOwner
                 return (
                   <li key={trip.id} className="trip-card">
                     <div className="trip-cover">
                       {trip.coverPhotoUrl ? (
                         <img src={trip.coverPhotoUrl} alt="" className="trip-cover-img" />
                       ) : (
-                        // 대표 사진이 없으면 첫 여행지의 카테고리 아이콘으로 대신한다.
-                        // 무엇을 보여줄지는 화면이 정한다 — 서버는 대체 이미지를 고르지 않는다.
-                        <span className="trip-cover-icon">
-                          {categoryIcon(tripRecords[0]?.category)}
-                        </span>
+                        // 대표 사진이 없으면 플레이스홀더를 둔다. 무엇을 보여줄지는 화면이
+                        // 정한다 — 서버는 대체 이미지를 고르지 않는다 (§4.4).
+                        <span className="trip-cover-icon">{categoryIcon()}</span>
                       )}
                     </div>
                     <div className="trip-body">
@@ -147,7 +164,7 @@ export default function TripListPage() {
                       </h3>
                       <p className="trip-period">
                         {tripPeriodLabel(trip)} ({tripDurationLabel(trip)}) · 인원{' '}
-                        {trip.headcount}명 · 여행지 {tripRecords.length}곳
+                        {trip.headcount}명 · 여행지 {trip.recordCount}곳
                       </p>
                       <div className="trip-meta">
                         <span className="trip-owner">by {isOwner ? '나' : trip.owner?.name}</span>

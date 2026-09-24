@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { categoryIcon, categoryLabel } from '../data/records.js'
 import { budgetLabel, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
+import { ApiError } from '../api/client.js'
+import * as tripApi from '../api/trips.js'
 import { useRecords } from '../context/RecordsContext.jsx'
+import { useGroups } from '../context/GroupsContext.jsx'
+import useTrip from '../hooks/useTrip.js'
 import useTheme from '../hooks/useTheme.js'
 import useMapMode from '../hooks/useMapMode.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
@@ -16,54 +20,72 @@ import { ArrowLeftIcon, MapPinIcon, MapViewIcon, PlusIcon } from '../components/
 // 상세 화면의 공통 레이아웃(.detail-page / .detail-inner / .detail-section)은 기록 상세와 같다.
 import './RecordDetailPage.css'
 
+/** 여행을 서버에서 읽고, 읽는 중·없음·실패를 처리한다. 화면은 여행이 도착한 뒤 TripDetailView 가 그린다. */
 export default function TripDetailPage() {
   const { tripId } = useParams()
+  const { trip, status, setTrip } = useTrip(tripId)
+
+  if (status === 'ready') {
+    // key 로 여행이 바뀌면 초안 상태를 새로 만든다. 초안의 초깃값이 여행 값이기 때문이다.
+    return <TripDetailView key={trip.id} trip={trip} onTripChange={setTrip} />
+  }
+
+  // 볼 수 없는 여행과 없는 여행을 구분해 표시하지 않는다. 구분하면 존재가 드러난다.
+  const message =
+    status === 'loading'
+      ? { title: '여행을 불러오는 중이에요…', desc: '' }
+      : status === 'error'
+        ? { title: '여행을 불러오지 못했습니다', desc: '잠시 후 다시 시도해주세요.' }
+        : { title: '여행을 찾을 수 없습니다', desc: '존재하지 않거나 볼 수 없는 여행입니다.' }
+  return (
+    <main className="detail-page">
+      <div className="detail-missing">
+        <h1>{message.title}</h1>
+        {message.desc && <p className="detail-missing-desc">{message.desc}</p>}
+        <Link to="/trips" className="detail-missing-link">
+          <ArrowLeftIcon /> 여행 목록으로
+        </Link>
+      </div>
+    </main>
+  )
+}
+
+/** 공유 그룹 id 를 순서와 무관하게 비교할 수 있는 문자열로 만든다. */
+const groupKey = (ids) => [...ids].sort((a, b) => a - b).join(',')
+
+/**
+ * 불러온 여행을 그린다. 수정·공개 범위 변경은 서버 응답으로 `onTripChange` 를 불러 갈아 끼운다.
+ *
+ * 하위 기록은 아직 목업이라 `recordsOfTrip` 에서 온다 (명세 §10.2).
+ */
+function TripDetailView({ trip, onTripChange }) {
   const navigate = useNavigate()
-  const {
-    findTrip,
-    recordsOfTrip,
-    currentUser,
-    myGroups,
-    changeTripVisibility,
-    updateTrip,
-    deleteTrip,
-  } = useRecords()
+  const { recordsOfTrip, removeRecordsOfTrip } = useRecords()
+  const { groups } = useGroups()
   const { themeKey, changeTheme } = useTheme()
   const { isEmbed } = useMapMode()
 
-  const trip = findTrip(tripId)
+  const sharedGroups = trip.sharedGroups ?? []
   const [mapModalRecord, setMapModalRecord] = useState(null)
-  const [visibilityDraft, setVisibilityDraft] = useState(trip?.visibility ?? 'PRIVATE')
-  const [groupDraft, setGroupDraft] = useState(trip?.sharedGroupIds ?? [])
+  const [visibilityDraft, setVisibilityDraft] = useState(trip.visibility ?? 'PRIVATE')
+  const [groupDraft, setGroupDraft] = useState(sharedGroups.map((g) => g.id))
   const [savedMessage, setSavedMessage] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const [editedMessage, setEditedMessage] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   // 확인을 누르기 전까지 수정 값을 들고만 있는다. 반영은 confirmEdit 이 한다.
   const [pendingEdit, setPendingEdit] = useState(null)
+  // 요청이 나가 있는 동안 같은 버튼을 다시 누르지 못하게 한다.
+  const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState('')
 
-  if (!trip) {
-    // 볼 수 없는 여행과 없는 여행을 구분해 표시하지 않는다. 구분하면 존재가 드러난다.
-    return (
-      <main className="detail-page">
-        <div className="detail-missing">
-          <h1>여행을 찾을 수 없습니다</h1>
-          <p className="detail-missing-desc">존재하지 않거나 볼 수 없는 여행입니다.</p>
-          <Link to="/trips" className="detail-missing-link">
-            <ArrowLeftIcon /> 여행 목록으로
-          </Link>
-        </div>
-      </main>
-    )
-  }
-
-  const isOwner = trip.ownerId === currentUser.id
+  const isOwner = trip.isOwner
   const tripRecords = recordsOfTrip(trip.id)
-  const sharedGroups = myGroups.filter((g) => trip.sharedGroupIds.includes(g.id))
   const visibilityChanged =
     visibilityDraft !== trip.visibility ||
-    (visibilityDraft === 'GROUP' &&
-      groupDraft.join(',') !== [...trip.sharedGroupIds].sort().join(','))
+    (visibilityDraft === 'GROUP' && groupKey(groupDraft) !== groupKey(sharedGroups.map((g) => g.id)))
+
+  const errorText = (err, fallback) => (err instanceof ApiError ? err.message : fallback)
 
   const handleMapButtonClick = (record) => {
     if (isEmbed) {
@@ -76,28 +98,57 @@ export default function TripDetailPage() {
   /** 폼 제출은 확인 모달을 여는 데서 끝난다. 실제 반영은 확인을 눌러야 일어난다. */
   const handleEditSubmit = (values) => setPendingEdit(values)
 
-  const confirmEdit = () => {
-    updateTrip(trip.id, pendingEdit)
-    setPendingEdit(null)
-    setEditOpen(false)
-    setEditedMessage('여행 정보를 수정했습니다.')
+  const confirmEdit = async () => {
+    setBusy(true)
+    try {
+      onTripChange(await tripApi.updateTrip(trip.id, pendingEdit))
+      setPendingEdit(null)
+      setEditOpen(false)
+      setEditedMessage('여행 정보를 수정했습니다.')
+    } catch (err) {
+      // 모달을 닫지 않는다. 입력값이 pendingEdit 에 남아 있어 그대로 다시 시도할 수 있다.
+      setActionError(errorText(err, '여행 정보를 수정하지 못했습니다.'))
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const handleDelete = () => {
-    deleteTrip(trip.id)
-    navigate('/trips')
+  /** 서버에서 지운 뒤에만 목업 하위 기록을 걷어낸다. 실패했는데 기록만 사라지면 안 된다. */
+  const handleDelete = async () => {
+    setBusy(true)
+    try {
+      await tripApi.deleteTrip(trip.id)
+      removeRecordsOfTrip(trip.id)
+      navigate('/trips')
+    } catch (err) {
+      setActionError(errorText(err, '여행을 삭제하지 못했습니다.'))
+      setBusy(false)
+    }
   }
 
   /** 범위를 바꾸면 하위 기록이 전부 함께 영향을 받으므로 몇 곳이 영향받는지 함께 알린다. */
-  const handleVisibilitySave = () => {
-    changeTripVisibility(trip.id, visibilityDraft, groupDraft)
-    const where =
-      visibilityDraft === 'PUBLIC'
-        ? '전체 공개됩니다'
-        : visibilityDraft === 'GROUP' && groupDraft.length > 0
-          ? '선택한 그룹에만 보입니다'
-          : '이제 나만 볼 수 있습니다'
-    setSavedMessage(`여행지 ${tripRecords.length}곳이 ${where}.`)
+  const handleVisibilitySave = async () => {
+    setBusy(true)
+    try {
+      const updated = await tripApi.changeTripVisibility(trip.id, visibilityDraft, groupDraft)
+      onTripChange(updated)
+      const where =
+        updated.visibility === 'PUBLIC'
+          ? '전체 공개됩니다'
+          : updated.visibility === 'GROUP' && updated.sharedGroups.length > 0
+            ? '선택한 그룹에만 보입니다'
+            : '이제 나만 볼 수 있습니다'
+      setSavedMessage(`여행지 ${tripRecords.length}곳이 ${where}.`)
+    } catch (err) {
+      setSavedMessage(errorText(err, '공개 범위를 바꾸지 못했습니다.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const closeModal = (close) => () => {
+    close()
+    setActionError('')
   }
 
   return (
@@ -158,7 +209,7 @@ export default function TripDetailPage() {
                   <VisibilitySelect
                     value={visibilityDraft}
                     onChange={setVisibilityDraft}
-                    groups={myGroups}
+                    groups={groups}
                     selectedGroupIds={groupDraft}
                     onChangeGroups={setGroupDraft}
                     onCreateGroupClick={() => navigate('/groups')}
@@ -167,7 +218,7 @@ export default function TripDetailPage() {
                     <button
                       type="button"
                       className="btn-primary"
-                      disabled={!visibilityChanged}
+                      disabled={!visibilityChanged || busy}
                       onClick={handleVisibilitySave}
                     >
                       저장
@@ -265,7 +316,7 @@ export default function TripDetailPage() {
       </main>
 
       {confirmingDelete && (
-        <div className="modal-overlay" onClick={() => setConfirmingDelete(false)}>
+        <div className="modal-overlay" onClick={closeModal(() => setConfirmingDelete(false))}>
           <div
             className="modal-panel confirm-panel"
             role="dialog"
@@ -278,15 +329,16 @@ export default function TripDetailPage() {
             <p className="confirm-desc">
               이 여행과 여행지 {tripRecords.length}곳의 기록이 함께 삭제됩니다. 되돌릴 수 없어요.
             </p>
+            {actionError && <p className="field-error">{actionError}</p>}
             <div className="confirm-actions">
               <button
                 type="button"
                 className="confirm-cancel"
-                onClick={() => setConfirmingDelete(false)}
+                onClick={closeModal(() => setConfirmingDelete(false))}
               >
                 취소
               </button>
-              <button type="button" className="confirm-ok" onClick={handleDelete}>
+              <button type="button" className="confirm-ok" disabled={busy} onClick={handleDelete}>
                 삭제
               </button>
             </div>
@@ -295,7 +347,7 @@ export default function TripDetailPage() {
       )}
 
       {pendingEdit && (
-        <div className="modal-overlay" onClick={() => setPendingEdit(null)}>
+        <div className="modal-overlay" onClick={closeModal(() => setPendingEdit(null))}>
           <div
             className="modal-panel confirm-panel"
             role="dialog"
@@ -308,15 +360,21 @@ export default function TripDetailPage() {
             <p className="confirm-desc">
               입력한 내용으로 여행 정보가 바뀝니다. 공개 범위는 그대로입니다.
             </p>
+            {actionError && <p className="field-error">{actionError}</p>}
             <div className="confirm-actions">
               <button
                 type="button"
                 className="confirm-cancel"
-                onClick={() => setPendingEdit(null)}
+                onClick={closeModal(() => setPendingEdit(null))}
               >
                 취소
               </button>
-              <button type="button" className="confirm-ok confirm-ok-safe" onClick={confirmEdit}>
+              <button
+                type="button"
+                className="confirm-ok confirm-ok-safe"
+                disabled={busy}
+                onClick={confirmEdit}
+              >
                 수정
               </button>
             </div>

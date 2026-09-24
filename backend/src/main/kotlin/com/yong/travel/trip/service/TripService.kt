@@ -308,6 +308,7 @@ class TripService(
             endDate = endDate,
             headcount = headcount,
             budget = budget,
+            memo = memo,
             coverPhotoUrl = coverUrl(),
             recordCount = counts[tripId] ?: 0L,
             owner = toOwner(),
