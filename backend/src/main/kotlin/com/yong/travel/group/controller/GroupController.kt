@@ -49,7 +49,7 @@ class GroupController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse {
         val userId = requireLogin(principal)
-        return groupService.create(userId, request).toResponse(userId)
+        return groupService.create(userId, request.name, request.memo).toResponse(userId)
     }
 
     /** 그룹 상세 (멤버 목록 포함). 멤버가 아니면 403, 없는 그룹이면 404 다 (명세 §2.2.2). */
@@ -70,7 +70,7 @@ class GroupController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse {
         val userId = requireLogin(principal)
-        return groupService.rename(groupId, userId, request).toResponse(userId)
+        return groupService.rename(groupId, userId, request.name, request.memo).toResponse(userId)
     }
 
     /** 그룹 삭제. 멤버·대기 초대·공유 관계가 함께 사라진다. */
@@ -115,7 +115,7 @@ class GroupController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<PendingInviteResponse> =
-        inviteService.listPending(groupId, requireLogin(principal), listPageRequest(page))
+        PageResponse.of(inviteService.listPending(groupId, requireLogin(principal), listPageRequest(page)))
             .map { it.toResponse() }
 
     /**
@@ -129,7 +129,7 @@ class GroupController(
         @RequestBody @Valid request: InviteRequest,
         @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<PendingInviteResponse> {
-        val result = inviteService.invite(groupId, requireLogin(principal), request)
+        val result = inviteService.invite(groupId, requireLogin(principal), request.email)
         val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
         return ResponseEntity.status(status).body(result.invite.toResponse())
     }

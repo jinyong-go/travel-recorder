@@ -10,8 +10,6 @@ import com.yong.travel.group.persistence.InviteHistoryEntity
 import com.yong.travel.group.domain.GroupDetail
 import com.yong.travel.group.domain.GroupSummary
 import com.yong.travel.group.domain.InviteOutcome
-import com.yong.travel.group.dto.GroupCreateRequest
-import com.yong.travel.group.dto.GroupUpdateRequest
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.persistence.InviteHistoryRepository
 import com.yong.travel.group.persistence.GroupMemberRepository
@@ -65,17 +63,18 @@ class GroupService(
      * 그룹을 만들고 소유자를 첫 멤버로 함께 넣는다.
      *
      * @param userId 그룹을 만드는 사용자 id. 그대로 소유자가 된다
-     * @param request 이름과 메모. 메모는 공백만 있으면 `null` 로 저장된다
+     * @param name 그룹 이름. 앞뒤 공백을 지워 저장한다
+     * @param memo 메모. 공백만 있으면 `null` 로 저장된다
      * @return 소유자 한 명이 멤버로 들어간 그룹 상세
      * @throws ApiException `UNAUTHENTICATED` — 세션은 살아 있는데 사용자 행이 없을 때.
      *         계정이 지워진 뒤의 요청이라 다시 로그인하는 것 말고 할 수 있는 일이 없다
      */
     @Transactional
-    fun create(userId: Long, request: GroupCreateRequest): GroupDetail {
+    fun create(userId: Long, name: String, memo: String?): GroupDetail {
         val owner = userRepository.findById(userId)
             .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
         val group = groupRepository.save(
-            GroupEntity(owner = owner, name = request.name.trim(), memo = request.memo.blankToNull()),
+            GroupEntity(owner = owner, name = name.trim(), memo = memo.blankToNull()),
         )
         // 소유자도 멤버 행을 가진다. 인원 계산과 조회 권한 판정을 한 경로로 모으기 위해서다.
         val ownerMember = groupMemberRepository.save(GroupMemberEntity(group = group, user = owner))
@@ -98,17 +97,18 @@ class GroupService(
      *
      * @param groupId 수정할 그룹 id
      * @param userId 수정을 요청한 사용자 id
-     * @param request 이름과 메모. **둘을 함께 덮어쓰므로 메모를 빼고 보내면 기존 메모가 지워진다** (명세 §4.7)
+     * @param name 새 이름
+     * @param memo 새 메모. **이름과 함께 덮어쓰므로 `null` 이면 기존 메모가 지워진다** (명세 §4.7)
      * @return 수정된 그룹 상세
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
      */
     @Transactional
-    fun rename(groupId: Long, userId: Long, request: GroupUpdateRequest): GroupDetail {
+    fun rename(groupId: Long, userId: Long, name: String, memo: String?): GroupDetail {
         val group = findGroup(groupId)
         requireOwner(group, userId)
-        group.name = request.name.trim()
-        group.memo = request.memo.blankToNull()
+        group.name = name.trim()
+        group.memo = memo.blankToNull()
         log.debug("그룹 수정 groupId={} ownerId={}", groupId, userId)
         return detailOf(groupRepository.save(group))
     }

@@ -1,7 +1,6 @@
 package com.yong.travel.record.service
 
 import com.yong.travel.auth.domain.User
-import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.util.haversineKm
@@ -13,11 +12,10 @@ import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoStorageService
 import com.yong.travel.record.domain.RecordDetail
 import com.yong.travel.record.domain.RecordSummary
-import com.yong.travel.record.dto.RecordListQuery
-import com.yong.travel.record.dto.RecordSort
-import com.yong.travel.record.dto.TripChangeRequest
-import com.yong.travel.record.dto.TripRecordCreateRequest
-import com.yong.travel.record.dto.TripRecordUpdateRequest
+import com.yong.travel.record.domain.RecordListQuery
+import com.yong.travel.record.domain.RecordSort
+import com.yong.travel.record.domain.TripRecordCreateCommand
+import com.yong.travel.record.domain.TripRecordUpdateCommand
 import com.yong.travel.record.persistence.TripRecordEntity
 import com.yong.travel.record.persistence.TripRecordRepository
 import com.yong.travel.record.persistence.TripRecordSpecifications
@@ -28,6 +26,8 @@ import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.persistence.TripShareRepository
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
@@ -52,7 +52,7 @@ class TripRecordService(
         query: RecordListQuery,
         userId: Long?,
         pageable: Pageable,
-    ): PageResponse<RecordSummary> {
+    ): Page<RecordSummary> {
         val groupIds = groupService.groupIdsOf(userId)
         val spec = TripRecordSpecifications.withScope(query.scope, userId, groupIds)
             .and(
@@ -86,7 +86,7 @@ class TripRecordService(
             "기록 목록 scope={} tripId={} userId={} 건수={}",
             query.scope, query.tripId, userId, page.totalElements,
         )
-        return PageResponse(sorted, page.number, page.size, page.totalElements, page.totalPages)
+        return PageImpl(sorted, page.pageable, page.totalElements)
     }
 
     /** 볼 권한이 없으면 없는 기록과 똑같이 RECORD_NOT_FOUND 로 응답한다 (존재 은닉). */
@@ -98,21 +98,21 @@ class TripRecordService(
 
     /** 소속 여행은 요청자가 소유한 것이어야 한다. 아니면 TRIP_NOT_FOUND 다. */
     @Transactional
-    fun create(authorId: Long, request: TripRecordCreateRequest): RecordDetail {
-        val trip = requireOwnedTrip(request.tripId, authorId)
+    fun create(authorId: Long, command: TripRecordCreateCommand): RecordDetail {
+        val trip = requireOwnedTrip(command.tripId, authorId)
         val record = TripRecordEntity(
             trip = trip,
-            name = request.name,
-            category = request.category,
-            address = request.address,
-            roadAddress = request.roadAddress,
-            externalLink = request.externalLink,
-            latitude = request.latitude,
-            longitude = request.longitude,
-            rating = request.rating,
-            memo = request.memo,
+            name = command.name,
+            category = command.category,
+            address = command.address,
+            roadAddress = command.roadAddress,
+            externalLink = command.externalLink,
+            latitude = command.latitude,
+            longitude = command.longitude,
+            rating = command.rating,
+            memo = command.memo,
         )
-        record.tags = tagService.findOrCreateAll(request.tags).toMutableSet()
+        record.tags = tagService.findOrCreateAll(command.tags).toMutableSet()
         val saved = recordRepository.save(record)
         log.debug(
             "기록 생성 recordId={} tripId={} authorId={} category={}",
@@ -125,21 +125,21 @@ class TripRecordService(
     fun update(
         recordId: Long,
         authorId: Long,
-        request: TripRecordUpdateRequest,
+        command: TripRecordUpdateCommand,
     ): RecordDetail {
         val record = findRecord(recordId)
         requireAuthor(record, authorId)
 
-        record.name = request.name
-        record.category = request.category
-        record.address = request.address
-        record.roadAddress = request.roadAddress
-        record.externalLink = request.externalLink
-        record.latitude = request.latitude
-        record.longitude = request.longitude
-        record.rating = request.rating
-        record.memo = request.memo
-        record.tags = tagService.findOrCreateAll(request.tags).toMutableSet()
+        record.name = command.name
+        record.category = command.category
+        record.address = command.address
+        record.roadAddress = command.roadAddress
+        record.externalLink = command.externalLink
+        record.latitude = command.latitude
+        record.longitude = command.longitude
+        record.rating = command.rating
+        record.memo = command.memo
+        record.tags = tagService.findOrCreateAll(command.tags).toMutableSet()
 
         log.debug("기록 수정 recordId={} authorId={}", recordId, authorId)
         // updatedAt 을 채우는 @PreUpdate 는 flush 시점에 돈다.
@@ -156,12 +156,12 @@ class TripRecordService(
     fun changeTrip(
         recordId: Long,
         authorId: Long,
-        request: TripChangeRequest,
+        tripId: Long,
     ): RecordDetail {
         val record = findRecord(recordId)
         requireAuthor(record, authorId)
 
-        val newTrip = requireOwnedTrip(request.tripId, authorId)
+        val newTrip = requireOwnedTrip(tripId, authorId)
         if (newTrip.id != record.trip.id) {
             log.debug(
                 "기록 여행 이동 recordId={} authorId={} {} -> {} (공개 범위가 새 여행의 것이 된다)",

@@ -36,9 +36,15 @@ com.yong.travel
 ```
 
 - **도메인으로 먼저 나누고, 그 안에서 계층으로 나눈다.** 계층을 최상위에 두지 않는다.
-- **JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 둔다.** `domain` 은 저장 수단을
-  모르는 도메인 개념의 자리다 — `Visibility`·`Category`·`InviteOutcome` 이 여기 있다.
-  의존 방향은 `persistence → domain` 한쪽이다.
+- **JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 둔다.** 엔티티 클래스는 `*Entity`
+  로 끝난다 (`TripEntity`). `domain` 은 저장 수단을 모르는 도메인 개념의 자리다 — `Visibility`·
+  `Category`·`InviteOutcome`, 서비스가 주고받는 도메인 객체(`Trip`·`TripDetail`), 입력(`TripCreateCommand`),
+  조회 조건(`TripListQuery`) 이 여기 있다.
+- **의존 방향은 `controller·dto → service → persistence → domain` 이다.** 모든 계층이 `domain` 을
+  알고, `domain` 은 아무것도 모른다.
+  - 컨트롤러·dto 는 `persistence` 를 모른다. 엔티티를 받거나 돌려주는 변환 함수를 dto 에 두지 않는다.
+  - 서비스·persistence 는 `dto` 를 모른다. 요청 DTO·`PageResponse` 를 서비스 시그니처에 쓰지 않는다.
+  - 외부 API 응답 모델은 그 API 를 부르는 `client` 에 둔다 (`NaverLocalSearchItem`).
 - 두 도메인이 함께 쓰는 것만 `common` 으로 올린다. 한 곳에서만 쓰면 그 도메인에 둔다.
 - import 는 **명시적으로 쓴다.** 와일드카드(`import ...*`)를 쓰지 않는다.
 
@@ -46,7 +52,7 @@ com.yong.travel
 
 | 계층 | 하는 일 | 하지 않는 일 |
 |---|---|---|
-| Controller | 요청 바인딩·검증(`@Valid`), 인증 principal 해석, **도메인 객체 → DTO 변환** | 비즈니스 로직, 조회 |
+| Controller | 요청 바인딩·검증(`@Valid`), 인증 principal 해석, **요청 DTO → 도메인 입력, 도메인 객체 → 응답 DTO 변환** | 비즈니스 로직, 조회 |
 | Service | 비즈니스 로직, 트랜잭션 경계, 권한 판정, **필요한 조회를 모두 끝내고 도메인 객체로 묶어 반환** | HTTP 관심사(상태 코드·헤더), 응답 모양 |
 | Persistence | 데이터 접근. 엔티티·리포지토리·`Specifications` | 로직 분기 |
 
@@ -61,7 +67,10 @@ com.yong.travel
   ```
 
 - **엔티티를 요청·응답에 직접 쓰지 않는다.** DTO로 주고받는다. DTO는 도메인별 `dto` 패키지에
-  용도별 파일로 모은다 (`RecordRequests.kt`, `RecordResponses.kt`, `RecordListQuery.kt`).
+  용도별 파일로 모은다 (`RecordRequests.kt`, `RecordResponses.kt`).
+- **서비스는 요청 DTO 를 받지 않는다.** 필드가 많은 생성·수정은 `domain` 의 `*Command`
+  (`TripCreateCommand`) 로, 한두 개짜리 입력은 파라미터로 받는다 (`changeCover(tripId, ownerId, photoId)`).
+  요청 DTO 의 `toCommand()` 가 옮겨 담는다. Bean Validation 은 요청 DTO 에만 건다.
 - **서비스는 DTO 가 아니라 도메인 객체를 반환한다** (`TripDetail`, `GroupSummary`, `User` …).
   변환 함수는 `dto` 패키지에 확장 함수로 두고 컨트롤러가 부른다. 서비스가 응답 모양을 알면
   화면이 바뀔 때마다 서비스가 끌려 들어온다.
@@ -76,7 +85,9 @@ com.yong.travel
 - 서비스끼리 주고받는 값은 예외다. `GroupService.requireAccessibleGroups` 와
   `TagService.findOrCreateAll` 은 엔티티를 반환한다 — 컨트롤러로 나가는 경계가 아니라
   다른 서비스가 연관을 걸 때 쓰기 때문이다.
-- 목록 응답은 공통 `PageResponse` 를 쓴다. 도메인 객체 페이지는 `PageResponse.map` 으로 옮긴다.
+- 서비스는 목록을 Spring Data `Page<도메인 객체>` 로 돌려준다. 페이지 안에서 재정렬하거나 직접
+  자른 목록은 `PageImpl` 로 감싼다. 응답은 컨트롤러가 `PageResponse.of(page).map { it.toXxxResponse() }`
+  로 만든다.
 
 ## 인가 — 가장 조심할 자리
 

@@ -1,6 +1,6 @@
 -- travel-recorder 스키마 (PostgreSQL)
 --
--- 엔티티(com.yong.travel.*.domain)로부터 Hibernate 가 생성하는 DDL 을 기준으로 작성했다.
+-- 엔티티(com.yong.travel.*.persistence)로부터 Hibernate 가 생성하는 DDL 을 기준으로 작성했다.
 -- 컬럼 타입/이름을 바꾸면 `ddl-auto: validate` 가 실패하므로 엔티티와 함께 수정해야 한다.
 --
 -- - 재실행해도 안전하도록 모든 DDL 은 IF NOT EXISTS 를 사용하고,

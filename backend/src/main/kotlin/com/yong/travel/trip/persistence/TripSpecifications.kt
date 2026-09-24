@@ -5,7 +5,7 @@ import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
 import com.yong.travel.trip.domain.Visibility
-import com.yong.travel.trip.dto.TripScope
+import com.yong.travel.trip.domain.TripScope
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root

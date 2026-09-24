@@ -6,11 +6,9 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.photo.service.PhotoService
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.dto.TripChangeRequest
 import com.yong.travel.record.dto.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
 import com.yong.travel.trip.domain.Visibility
-import com.yong.travel.trip.dto.TripCoverUpdateRequest
 import com.yong.travel.trip.dto.TripCreateRequest
 import com.yong.travel.trip.service.TripService
 import jakarta.persistence.EntityManager
@@ -50,20 +48,20 @@ class TripCoverTest {
         val photoId = newPhoto(newRecord(tripId, owner), owner)
         flush()
 
-        assertNotNull(tripService.changeCover(tripId, owner, TripCoverUpdateRequest(photoId)).coverPhotoUrl)
+        assertNotNull(tripService.changeCover(tripId, owner, photoId).coverPhotoUrl)
 
         // 다른 여행의 사진은 404 다. 아예 없는 사진과 구분되지 않아야 한다 (명세 §4.3.2).
         val otherTripId = newTrip(owner)
         assertEquals(
             ErrorCode.PHOTO_NOT_FOUND,
             assertThrows<ApiException> {
-                tripService.changeCover(otherTripId, owner, TripCoverUpdateRequest(photoId))
+                tripService.changeCover(otherTripId, owner, photoId)
             }.errorCode,
         )
         assertEquals(
             ErrorCode.PHOTO_NOT_FOUND,
             assertThrows<ApiException> {
-                tripService.changeCover(tripId, owner, TripCoverUpdateRequest(999_999L))
+                tripService.changeCover(tripId, owner, 999_999L)
             }.errorCode,
         )
     }
@@ -73,11 +71,11 @@ class TripCoverTest {
         val owner = newUser()
         val tripId = newTrip(owner)
         val photoId = newPhoto(newRecord(tripId, owner), owner)
-        tripService.changeCover(tripId, owner, TripCoverUpdateRequest(photoId))
+        tripService.changeCover(tripId, owner, photoId)
         flush()
         assertNotNull(tripService.get(tripId, owner).coverPhotoUrl)
 
-        tripService.changeCover(tripId, owner, TripCoverUpdateRequest(null))
+        tripService.changeCover(tripId, owner, null)
         flush()
 
         // 커버가 없으면 null 이다. 서버는 대체 이미지를 고르지 않는다 (명세 §4.3.1).
@@ -90,7 +88,7 @@ class TripCoverTest {
         val tripId = newTrip(owner)
         val recordId = newRecord(tripId, owner)
         val photoId = newPhoto(recordId, owner)
-        tripService.changeCover(tripId, owner, TripCoverUpdateRequest(photoId))
+        tripService.changeCover(tripId, owner, photoId)
         flush()
 
         photoService.delete(recordId, photoId, owner)
@@ -106,7 +104,7 @@ class TripCoverTest {
         val tripId = newTrip(owner)
         val recordId = newRecord(tripId, owner)
         val photoId = newPhoto(recordId, owner)
-        tripService.changeCover(tripId, owner, TripCoverUpdateRequest(photoId))
+        tripService.changeCover(tripId, owner, photoId)
         flush()
 
         recordService.delete(recordId, owner)
@@ -122,7 +120,7 @@ class TripCoverTest {
         val coverRecordId = newRecord(tripId, owner)
         val otherRecordId = newRecord(tripId, owner)
         newPhoto(otherRecordId, owner)
-        tripService.changeCover(tripId, owner, TripCoverUpdateRequest(newPhoto(coverRecordId, owner)))
+        tripService.changeCover(tripId, owner, newPhoto(coverRecordId, owner))
         flush()
 
         recordService.delete(otherRecordId, owner)
@@ -138,10 +136,10 @@ class TripCoverTest {
         val toTripId = newTrip(owner)
         val recordId = newRecord(fromTripId, owner)
         val photoId = newPhoto(recordId, owner)
-        tripService.changeCover(fromTripId, owner, TripCoverUpdateRequest(photoId))
+        tripService.changeCover(fromTripId, owner, photoId)
         flush()
 
-        recordService.changeTrip(recordId, owner, TripChangeRequest(toTripId))
+        recordService.changeTrip(recordId, owner, toTripId)
         flush()
 
         // 커버는 자기 여행의 사진만 가리킬 수 있다 (명세 §4.4).
@@ -165,7 +163,7 @@ class TripCoverTest {
         assertEquals(
             ErrorCode.PHOTO_NOT_FOUND,
             assertThrows<ApiException> {
-                tripService.changeCover(tripId, owner, TripCoverUpdateRequest(photoId))
+                tripService.changeCover(tripId, owner, photoId)
             }.errorCode,
         )
     }
@@ -182,7 +180,7 @@ class TripCoverTest {
         assertEquals(
             ErrorCode.FORBIDDEN,
             assertThrows<ApiException> {
-                tripService.changeCover(tripId, stranger, TripCoverUpdateRequest(photoId))
+                tripService.changeCover(tripId, stranger, photoId)
             }.errorCode,
         )
     }
@@ -192,11 +190,11 @@ class TripCoverTest {
         val owner = newUser()
         val tripId = newTrip(owner, Visibility.PUBLIC)
         val photoId = newPhoto(newRecord(tripId, owner), owner)
-        val url = tripService.changeCover(tripId, owner, TripCoverUpdateRequest(photoId)).coverPhotoUrl
+        val url = tripService.changeCover(tripId, owner, photoId).coverPhotoUrl
         flush()
 
         val fromList = tripService.list(
-            com.yong.travel.trip.dto.TripListQuery(com.yong.travel.trip.dto.TripScope.PUBLIC),
+            com.yong.travel.trip.domain.TripListQuery(com.yong.travel.trip.domain.TripScope.PUBLIC),
             null,
             org.springframework.data.domain.PageRequest.of(0, 10),
         ).content.single { it.id == tripId }
@@ -224,7 +222,7 @@ class TripCoverTest {
                 endDate = LocalDate.of(2026, 9, 8),
                 headcount = 2,
                 visibility = visibility,
-            ),
+            ).toCommand(),
         ).id
 
     private fun newRecord(tripId: Long, ownerId: Long): Long = recordService.create(
@@ -237,7 +235,7 @@ class TripCoverTest {
             latitude = 37.5,
             longitude = 127.0,
             rating = 4.5,
-        ),
+        ).toCommand(),
     ).id
 
     private fun newPhoto(recordId: Long, ownerId: Long): Long = photoService.upload(

@@ -1,6 +1,8 @@
 package com.yong.travel.record.dto
 
 import com.yong.travel.record.domain.Category
+import com.yong.travel.record.domain.TripRecordCreateCommand
+import com.yong.travel.record.domain.TripRecordUpdateCommand
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.DecimalMin
@@ -48,6 +50,10 @@ data class TripRecordCreateRequest(
     @get:AssertTrue(message = "평점은 0.5점 단위로만 입력할 수 있습니다.")
     val isHalfPointStep: Boolean
         get() = isHalfPoint(rating)
+
+    fun toCommand() = TripRecordCreateCommand(
+        tripId, name, category, tags, address, roadAddress, externalLink, latitude, longitude, rating, memo,
+    )
 }
 
 data class TripRecordUpdateRequest(
@@ -82,6 +88,10 @@ data class TripRecordUpdateRequest(
     @get:AssertTrue(message = "평점은 0.5점 단위로만 입력할 수 있습니다.")
     val isHalfPointStep: Boolean
         get() = isHalfPoint(rating)
+
+    fun toCommand() = TripRecordUpdateCommand(
+        name, category, tags, address, roadAddress, externalLink, latitude, longitude, rating, memo,
+    )
 }
 
 /**

@@ -1,4 +1,4 @@
-package com.yong.travel.search.dto
+package com.yong.travel.search.client
 
 /**
  * 네이버 지역 검색 오픈API 원본 응답.

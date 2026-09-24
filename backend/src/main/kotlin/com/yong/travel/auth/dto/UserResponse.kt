@@ -2,7 +2,6 @@ package com.yong.travel.auth.dto
 
 import com.yong.travel.auth.domain.MyProfile
 import com.yong.travel.auth.domain.User
-import com.yong.travel.auth.persistence.UserEntity
 
 /**
  * 다른 사용자에게도 노출되는 최소 정보. 이메일은 담지 않는다 —
@@ -21,13 +20,6 @@ data class MeResponse(
     val email: String?,
     val profileImageUrl: String?,
 )
-
-fun UserEntity.toResponse(): UserResponse =
-    UserResponse(
-        id = requireNotNull(id),
-        name = name,
-        profileImageUrl = profileImageUrl,
-    )
 
 fun MyProfile.toMeResponse(): MeResponse = MeResponse(id, name, email, profileImageUrl)
 

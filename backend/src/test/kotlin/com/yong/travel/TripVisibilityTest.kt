@@ -5,8 +5,6 @@ import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
-import com.yong.travel.group.dto.GroupCreateRequest
-import com.yong.travel.group.dto.InviteRequest
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.InviteService
 import com.yong.travel.record.domain.Category
@@ -14,11 +12,10 @@ import com.yong.travel.record.dto.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
 import com.yong.travel.trip.domain.Visibility
 import com.yong.travel.trip.dto.TripCreateRequest
-import com.yong.travel.trip.dto.TripListQuery
-import com.yong.travel.trip.dto.TripScope
-import com.yong.travel.trip.dto.TripSort
+import com.yong.travel.trip.domain.TripListQuery
+import com.yong.travel.trip.domain.TripScope
+import com.yong.travel.trip.domain.TripSort
 import com.yong.travel.trip.dto.TripUpdateRequest
-import com.yong.travel.trip.dto.TripVisibilityUpdateRequest
 import com.yong.travel.trip.service.TripService
 import jakarta.persistence.EntityManager
 import jakarta.validation.Validator
@@ -92,7 +89,7 @@ class TripVisibilityTest {
     fun `속하지 않은 그룹에는 공유할 수 없다`() {
         val owner = newUser()
         val stranger = newUser()
-        val foreignGroupId = requireNotNull(groupService.create(stranger, GroupCreateRequest("남의 그룹")).id)
+        val foreignGroupId = requireNotNull(groupService.create(stranger, "남의 그룹", null).id)
         flush()
 
         // 403 이면 "그런 그룹이 있다" 는 뜻이 되므로 여기서도 404 다.
@@ -106,7 +103,8 @@ class TripVisibilityTest {
             tripService.changeVisibility(
                 tripId,
                 owner,
-                TripVisibilityUpdateRequest(Visibility.GROUP, listOf(foreignGroupId)),
+                Visibility.GROUP,
+                listOf(foreignGroupId),
             )
         }
         assertEquals(ErrorCode.GROUP_NOT_FOUND, onChange.errorCode)
@@ -121,7 +119,7 @@ class TripVisibilityTest {
         flush()
         assertEquals(1L, count("select count(*) from trip_shares where trip_id = $tripId"))
 
-        tripService.changeVisibility(tripId, owner, TripVisibilityUpdateRequest(Visibility.PRIVATE))
+        tripService.changeVisibility(tripId, owner, Visibility.PRIVATE, emptyList())
         flush()
 
         // 남겨 두면 나중에 다시 GROUP 으로 되돌렸을 때 예전 공유가 의도치 않게 되살아난다.
@@ -143,7 +141,8 @@ class TripVisibilityTest {
         tripService.changeVisibility(
             tripId,
             owner,
-            TripVisibilityUpdateRequest(Visibility.GROUP, listOf(keepGroupId)),
+            Visibility.GROUP,
+            listOf(keepGroupId),
         )
         flush()
 
@@ -183,7 +182,7 @@ class TripVisibilityTest {
         assertEquals(
             ErrorCode.FORBIDDEN,
             assertThrows<ApiException> {
-                tripService.changeVisibility(tripId, guest, TripVisibilityUpdateRequest(Visibility.PUBLIC))
+                tripService.changeVisibility(tripId, guest, Visibility.PUBLIC, emptyList())
             }.errorCode,
         )
         // 볼 수도 없는 사람에게는 존재부터 숨긴다.
@@ -318,7 +317,7 @@ class TripVisibilityTest {
                 startDate = LocalDate.of(2026, 9, 5),
                 endDate = LocalDate.of(2026, 9, 8),
                 headcount = 4,
-            ),
+            ).toCommand(),
         )
         flush()
 
@@ -352,9 +351,9 @@ class TripVisibilityTest {
 
     /** 소유자 + 멤버 1명짜리 그룹을 만들고 그룹 id 를 돌려준다. */
     private fun newGroupWith(ownerId: Long, memberId: Long): Long {
-        val groupId = requireNotNull(groupService.create(ownerId, GroupCreateRequest("가족")).id)
+        val groupId = requireNotNull(groupService.create(ownerId, "가족", null).id)
         val memberEmail = requireNotNull(userRepository.findById(memberId).orElseThrow().email)
-        val invite = inviteService.invite(groupId, ownerId, InviteRequest(memberEmail))
+        val invite = inviteService.invite(groupId, ownerId, memberEmail)
         inviteService.accept(invite.invite.id, memberId)
         flush()
         return groupId
@@ -377,7 +376,7 @@ class TripVisibilityTest {
             budget = budget,
             visibility = visibility,
             groupIds = groupIds,
-        ),
+        ).toCommand(),
     ).id
 
     private fun newRecord(tripId: Long, ownerId: Long): Long = recordService.create(
@@ -390,7 +389,7 @@ class TripVisibilityTest {
             latitude = 37.5,
             longitude = 127.0,
             rating = 4.5,
-        ),
+        ).toCommand(),
     ).id
 
     private fun flush() {

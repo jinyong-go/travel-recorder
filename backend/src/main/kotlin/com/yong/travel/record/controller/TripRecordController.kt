@@ -5,9 +5,9 @@ import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.dto.RecordListQuery
-import com.yong.travel.record.dto.RecordScope
-import com.yong.travel.record.dto.RecordSort
+import com.yong.travel.record.domain.RecordListQuery
+import com.yong.travel.record.domain.RecordScope
+import com.yong.travel.record.domain.RecordSort
 import com.yong.travel.record.dto.TripChangeRequest
 import com.yong.travel.record.dto.TripRecordCreateRequest
 import com.yong.travel.record.dto.TripRecordResponse
@@ -60,11 +60,12 @@ class TripRecordController(
             RecordScope.MINE, RecordScope.SHARED -> requireLogin(principal)
             RecordScope.PUBLIC -> principal?.userId
         }
-        return recordService.list(
+        val records = recordService.list(
             RecordListQuery(scope, tripId, category, tag, keyword, sort, lat, lng),
             userId,
             listPageRequest(page),
-        ).map { it.toSummaryResponse(userId) }
+        )
+        return PageResponse.of(records).map { it.toSummaryResponse(userId) }
     }
 
     /** 기록 상세 조회. 볼 수 없는 기록은 존재하지 않는 것과 같은 404 다. */
@@ -84,7 +85,7 @@ class TripRecordController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse {
         val userId = requireLogin(principal)
-        return recordService.create(userId, request).toResponse(userId)
+        return recordService.create(userId, request.toCommand()).toResponse(userId)
     }
 
     /** 기록 수정. 작성자만 할 수 있다. */
@@ -95,7 +96,7 @@ class TripRecordController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse {
         val userId = requireLogin(principal)
-        return recordService.update(recordId, userId, request).toResponse(userId)
+        return recordService.update(recordId, userId, request.toCommand()).toResponse(userId)
     }
 
     /**
@@ -109,7 +110,7 @@ class TripRecordController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse {
         val userId = requireLogin(principal)
-        return recordService.changeTrip(recordId, userId, request).toResponse(userId)
+        return recordService.changeTrip(recordId, userId, request.tripId).toResponse(userId)
     }
 
     /** 기록 삭제. soft delete 라 행은 남고 조회에서만 사라진다. */

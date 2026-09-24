@@ -1,12 +1,14 @@
 package com.yong.travel.search.service
 
-import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.util.haversineKm
 import com.yong.travel.common.util.roundTo2Decimals
 import com.yong.travel.search.client.NaverLocalSearchClient
+import com.yong.travel.search.client.NaverLocalSearchItem
 import com.yong.travel.search.domain.PlaceCandidate
-import com.yong.travel.search.dto.NaverLocalSearchItem
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 
 @Service
@@ -21,7 +23,7 @@ class PlaceSearchService(
         lat: Double?,
         lng: Double?,
         page: Int,
-    ): PageResponse<PlaceCandidate> {
+    ): Page<PlaceCandidate> {
         // 원본 API 는 검색어당 최대 5건만 반환한다. 후보 풀을 늘리려면 여기서 검색어 변형
         // (지역명 결합 등)으로 추가 호출한 뒤 아래 중복 제거에 함께 태운다.
         val candidates = naverLocalSearchClient.search(keyword)
@@ -37,16 +39,11 @@ class PlaceSearchService(
         // 기준 좌표(lat,lng)는 남기지 않는다. 계산에만 쓰고 사용자와 묶지 않기로 한 값이다 (명세 §7).
         log.debug("장소 검색 page={} 거리정렬={} 후보={}건", page, lat != null && lng != null, sorted.size)
 
-        val fromIndex = (page.coerceAtLeast(0) * PAGE_SIZE).coerceAtMost(sorted.size)
+        // 원본 API 가 페이지를 모르므로 모아 온 후보를 여기서 자른다.
+        val pageable = PageRequest.of(page.coerceAtLeast(0), PAGE_SIZE)
+        val fromIndex = pageable.offset.toInt().coerceAtMost(sorted.size)
         val toIndex = (fromIndex + PAGE_SIZE).coerceAtMost(sorted.size)
-
-        return PageResponse(
-            content = sorted.subList(fromIndex, toIndex),
-            page = page,
-            size = PAGE_SIZE,
-            totalElements = sorted.size.toLong(),
-            totalPages = if (sorted.isEmpty()) 0 else (sorted.size + PAGE_SIZE - 1) / PAGE_SIZE,
-        )
+        return PageImpl(sorted.subList(fromIndex, toIndex), pageable, sorted.size.toLong())
     }
 
     /** 원본 응답 → 후보. 좌표 환산과 HTML 태그 제거가 여기서 끝난다 (명세 §1.3). */

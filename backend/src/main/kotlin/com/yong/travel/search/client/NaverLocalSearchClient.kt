@@ -2,8 +2,6 @@ package com.yong.travel.search.client
 
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.search.dto.NaverLocalSearchItem
-import com.yong.travel.search.dto.NaverLocalSearchResponse
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException

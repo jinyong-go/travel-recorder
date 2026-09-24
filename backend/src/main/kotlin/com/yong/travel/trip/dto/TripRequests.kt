@@ -1,5 +1,7 @@
 package com.yong.travel.trip.dto
 
+import com.yong.travel.trip.domain.TripCreateCommand
+import com.yong.travel.trip.domain.TripUpdateCommand
 import com.yong.travel.trip.domain.Visibility
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.Min
@@ -45,6 +47,8 @@ data class TripCreateRequest(
     @get:AssertTrue(message = "종료일은 시작일과 같거나 그보다 뒤여야 합니다.")
     val isValidPeriod: Boolean
         get() = !endDate.isBefore(startDate)
+
+    fun toCommand() = TripCreateCommand(name, startDate, endDate, headcount, budget, memo, visibility, groupIds)
 }
 
 /**
@@ -75,6 +79,8 @@ data class TripUpdateRequest(
     @get:AssertTrue(message = "종료일은 시작일과 같거나 그보다 뒤여야 합니다.")
     val isValidPeriod: Boolean
         get() = !endDate.isBefore(startDate)
+
+    fun toCommand() = TripUpdateCommand(name, startDate, endDate, headcount, budget, memo)
 }
 
 /** 공개 범위만 바꾼다. 공유 그룹 목록은 전체 교체이며, 빠진 그룹의 공유는 해제된다 (명세 §4.3.1). */

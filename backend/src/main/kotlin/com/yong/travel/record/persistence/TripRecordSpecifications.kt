@@ -4,7 +4,7 @@ import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.persistence.TripRecordEntity
-import com.yong.travel.record.dto.RecordScope
+import com.yong.travel.record.domain.RecordScope
 import com.yong.travel.tag.persistence.TagEntity
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity

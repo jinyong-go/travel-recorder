@@ -1,4 +1,4 @@
-package com.yong.travel.trip.dto
+package com.yong.travel.trip.domain
 
 /**
  * 여행 목록 조회 범위 (명세 §4.1).

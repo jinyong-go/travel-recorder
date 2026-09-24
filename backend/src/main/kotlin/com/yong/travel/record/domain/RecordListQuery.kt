@@ -1,6 +1,4 @@
-package com.yong.travel.record.dto
-
-import com.yong.travel.record.domain.Category
+package com.yong.travel.record.domain
 
 /**
  * 목록 조회 범위. 세 범위는 성격이 달라 한 목록에 섞지 않는다.

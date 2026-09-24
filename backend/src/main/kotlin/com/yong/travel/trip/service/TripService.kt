@@ -2,7 +2,6 @@ package com.yong.travel.trip.service
 
 import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.persistence.UserRepository
-import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.group.domain.Group
@@ -15,16 +14,15 @@ import com.yong.travel.trip.persistence.TripShareEntity
 import com.yong.travel.trip.domain.TripDetail
 import com.yong.travel.trip.domain.TripSummary
 import com.yong.travel.trip.domain.Visibility
-import com.yong.travel.trip.dto.TripCoverUpdateRequest
-import com.yong.travel.trip.dto.TripCreateRequest
-import com.yong.travel.trip.dto.TripListQuery
-import com.yong.travel.trip.dto.TripSort
-import com.yong.travel.trip.dto.TripUpdateRequest
-import com.yong.travel.trip.dto.TripVisibilityUpdateRequest
+import com.yong.travel.trip.domain.TripCreateCommand
+import com.yong.travel.trip.domain.TripListQuery
+import com.yong.travel.trip.domain.TripSort
+import com.yong.travel.trip.domain.TripUpdateCommand
 import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.persistence.TripShareRepository
 import com.yong.travel.trip.persistence.TripSpecifications
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
@@ -50,7 +48,7 @@ class TripService(
         query: TripListQuery,
         userId: Long?,
         pageable: Pageable,
-    ): PageResponse<TripSummary> {
+    ): Page<TripSummary> {
         val groupIds = groupService.groupIdsOf(userId)
         val spec = TripSpecifications.withScope(query.scope, userId, groupIds)
             .and(TripSpecifications.withKeyword(query.keyword))
@@ -66,10 +64,9 @@ class TripService(
         val counts = recordCounts(*page.content.mapNotNull { it.id }.toLongArray())
         // 공유 그룹은 소유자 본인의 항목에만 필요하다. 그 여행들만 골라 한 번에 읽는다.
         val shares = sharesOf(page.content.filter { userId != null && it.owner.id == userId })
-        val summaries = page.content.map { it.toSummary(userId, counts, shares) }
         // 범위 판정이 쿼리 단계에 있어(명세 §7) 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
         log.debug("여행 목록 scope={} userId={} 건수={}", query.scope, userId, page.totalElements)
-        return PageResponse(summaries, page.number, page.size, page.totalElements, page.totalPages)
+        return page.map { it.toSummary(userId, counts, shares) }
     }
 
     /** 볼 권한이 없으면 없는 여행과 똑같이 TRIP_NOT_FOUND 로 응답한다 (존재 은닉). */
@@ -83,80 +80,82 @@ class TripService(
     private fun recordCountOf(tripId: Long): Long = recordCounts(tripId)[tripId] ?: 0L
 
     @Transactional
-    fun create(ownerId: Long, request: TripCreateRequest): TripDetail {
+    fun create(ownerId: Long, command: TripCreateCommand): TripDetail {
         val owner = userRepository.findById(ownerId)
             .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
         val trip = tripRepository.save(
             TripEntity(
                 owner = owner,
-                name = request.name.trim(),
-                startDate = request.startDate,
-                endDate = request.endDate,
-                headcount = request.headcount,
-                budget = request.budget,
-                memo = request.memo,
-                visibility = request.visibility,
+                name = command.name.trim(),
+                startDate = command.startDate,
+                endDate = command.endDate,
+                headcount = command.headcount,
+                budget = command.budget,
+                memo = command.memo,
+                visibility = command.visibility,
             ),
         )
-        applyShares(trip, request.visibility, request.groupIds, ownerId)
+        applyShares(trip, command.visibility, command.groupIds, ownerId)
         log.debug("여행 생성 tripId={} ownerId={} visibility={}", trip.id, ownerId, trip.visibility)
         return detailOf(trip, ownerId)
     }
 
     /** 기본 정보만 바꾼다. 공개 범위는 changeVisibility 의 몫이다. */
     @Transactional
-    fun update(tripId: Long, ownerId: Long, request: TripUpdateRequest): TripDetail {
+    fun update(tripId: Long, ownerId: Long, command: TripUpdateCommand): TripDetail {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
-        trip.name = request.name.trim()
-        trip.startDate = request.startDate
-        trip.endDate = request.endDate
-        trip.headcount = request.headcount
-        trip.budget = request.budget
-        trip.memo = request.memo
+        trip.name = command.name.trim()
+        trip.startDate = command.startDate
+        trip.endDate = command.endDate
+        trip.headcount = command.headcount
+        trip.budget = command.budget
+        trip.memo = command.memo
 
         log.debug("여행 수정 tripId={} ownerId={}", tripId, ownerId)
         // updatedAt 을 채우는 @PreUpdate 는 flush 시점에 돈다.
         return detailOf(tripRepository.saveAndFlush(trip), ownerId)
     }
 
+    /** 공개 범위 변경. `groupIds` 는 GROUP 일 때만 쓰이며 기존 공유 그룹을 통째로 대체한다. */
     @Transactional
     fun changeVisibility(
         tripId: Long,
         ownerId: Long,
-        request: TripVisibilityUpdateRequest,
+        visibility: Visibility,
+        groupIds: List<Long>,
     ): TripDetail {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
         log.debug(
             "여행 공개 범위 변경 tripId={} ownerId={} {} -> {}",
-            tripId, ownerId, trip.visibility, request.visibility,
+            tripId, ownerId, trip.visibility, visibility,
         )
-        trip.visibility = request.visibility
-        applyShares(trip, request.visibility, request.groupIds, ownerId)
+        trip.visibility = visibility
+        applyShares(trip, visibility, groupIds, ownerId)
         return detailOf(tripRepository.saveAndFlush(trip), ownerId)
     }
 
     /**
-     * 커버 사진 지정·해제. 그 여행의 하위 기록에 속한 사진만 지정할 수 있으며,
-     * 아니면 PHOTO_NOT_FOUND 다 (존재 은닉, 명세 §4.3.2).
+     * 커버 사진 지정·해제. `photoId` 가 null 이면 해제한다.
+     * 그 여행의 하위 기록에 속한 사진만 지정할 수 있으며, 아니면 PHOTO_NOT_FOUND 다 (존재 은닉, 명세 §4.3.2).
      */
     @Transactional
     fun changeCover(
         tripId: Long,
         ownerId: Long,
-        request: TripCoverUpdateRequest,
+        photoId: Long?,
     ): TripDetail {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
-        trip.coverPhoto = request.photoId?.let {
+        trip.coverPhoto = photoId?.let {
             // 다른 여행의 사진인지 아예 없는 사진인지 구분되지 않아야 한다 (명세 §4.3.2).
             photoRepository.findByIdAndTripId(it, tripId) ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
         }
-        log.debug("여행 커버 변경 tripId={} ownerId={} photoId={}", tripId, ownerId, request.photoId)
+        log.debug("여행 커버 변경 tripId={} ownerId={} photoId={}", tripId, ownerId, photoId)
         return detailOf(tripRepository.saveAndFlush(trip), ownerId)
     }
 

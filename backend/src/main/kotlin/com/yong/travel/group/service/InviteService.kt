@@ -3,7 +3,6 @@ package com.yong.travel.group.service
 import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
-import com.yong.travel.common.dto.PageResponse
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.group.persistence.GroupEntity
@@ -16,13 +15,13 @@ import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.domain.PendingInvite
 import com.yong.travel.group.domain.ReceivedInvite
 import com.yong.travel.group.domain.SentInvite
-import com.yong.travel.group.dto.InviteHistoryRole
-import com.yong.travel.group.dto.InviteRequest
+import com.yong.travel.group.domain.InviteHistoryRole
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.persistence.GroupMemberRepository
 import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.group.persistence.InviteHistoryRepository
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -46,11 +45,9 @@ class InviteService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /** 그 그룹의 대기 중인 초대 목록. 소유자만 볼 수 있다. */
-    fun listPending(groupId: Long, ownerId: Long, pageable: Pageable): PageResponse<PendingInvite> {
+    fun listPending(groupId: Long, ownerId: Long, pageable: Pageable): Page<PendingInvite> {
         requireOwner(findGroup(groupId), ownerId)
-        return PageResponse.of(
-            inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, pageable).map { it.toPending() },
-        )
+        return inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, pageable).map { it.toPending() }
     }
 
     /**
@@ -60,12 +57,12 @@ class InviteService(
      * 판정은 수락 시점에만 한다 (공통 명세 §3.7).
      */
     @Transactional
-    fun invite(groupId: Long, ownerId: Long, request: InviteRequest): InviteResult {
+    fun invite(groupId: Long, ownerId: Long, email: String): InviteResult {
         val group = findGroup(groupId)
         requireOwner(group, ownerId)
 
         // 가입 여부를 숨기지 않는다. 소유자가 오타를 알아차릴 유일한 수단이며, 그 대가는 공통 명세 §7.2에 한계로 적혀 있다.
-        val invitee = userRepository.findByEmailIgnoreCase(request.email.trim())
+        val invitee = userRepository.findByEmailIgnoreCase(email.trim())
             ?: run {
                 // 이메일 자체는 남기지 않는다. 응답에서 가리는 값을 로그가 대신 보관하지 않는다 (공통 명세 §3.1).
                 log.debug("초대 실패 groupId={} ownerId={} 사유=가입되지_않은_이메일", groupId, ownerId)
@@ -103,16 +100,12 @@ class InviteService(
     }
 
     /** 내 앞으로 온 대기 초대. */
-    fun listReceived(userId: Long, pageable: Pageable): PageResponse<ReceivedInvite> =
-        PageResponse.of(
-            inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, pageable).map { it.toReceived() },
-        )
+    fun listReceived(userId: Long, pageable: Pageable): Page<ReceivedInvite> =
+        inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, pageable).map { it.toReceived() }
 
     /** 내가 보낸 대기 초대. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다 (명세 §4.8). */
-    fun listSent(userId: Long, pageable: Pageable): PageResponse<SentInvite> =
-        PageResponse.of(
-            inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, pageable).map { it.toSent() },
-        )
+    fun listSent(userId: Long, pageable: Pageable): Page<SentInvite> =
+        inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, pageable).map { it.toSent() }
 
     /**
      * 끝난 초대 이력. `role` 이 관점을 고르며, 어느 쪽이든 본인이 당사자인 것만 조회된다.
@@ -124,7 +117,7 @@ class InviteService(
         userId: Long,
         role: InviteHistoryRole,
         pageable: Pageable,
-    ): PageResponse<InviteHistoryEntry> {
+    ): Page<InviteHistoryEntry> {
         val page = when (role) {
             InviteHistoryRole.RECEIVED -> historyRepository.findByInviteeIdOrderByResolvedAtDesc(userId, pageable)
             InviteHistoryRole.SENT -> historyRepository.findByInvitedByIdOrderByResolvedAtDesc(userId, pageable)
@@ -133,7 +126,7 @@ class InviteService(
             .mapNotNull { it.id }
             .toSet()
         log.debug("초대 이력 role={} userId={} 건수={}", role, userId, page.totalElements)
-        return PageResponse.of(page.map { it.toDomain(role, it.groupId in aliveGroupIds) })
+        return page.map { it.toDomain(role, it.groupId in aliveGroupIds) }
     }
 
     /**

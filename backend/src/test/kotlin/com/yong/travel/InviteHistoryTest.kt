@@ -6,9 +6,7 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.group.domain.InviteOutcome
-import com.yong.travel.group.dto.GroupCreateRequest
-import com.yong.travel.group.dto.InviteHistoryRole
-import com.yong.travel.group.dto.InviteRequest
+import com.yong.travel.group.domain.InviteHistoryRole
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.InviteService
 import jakarta.persistence.EntityManager
@@ -187,10 +185,10 @@ class InviteHistoryTest {
         inviteService.listHistory(userId, role, page()).content
 
     private fun invite(groupId: Long, ownerId: Long, email: String): Long =
-        inviteService.invite(groupId, ownerId, InviteRequest(email)).invite.id
+        inviteService.invite(groupId, ownerId, email).invite.id
 
     private fun newGroup(ownerId: Long): Long =
-        requireNotNull(groupService.create(ownerId, GroupCreateRequest("가족")).id)
+        requireNotNull(groupService.create(ownerId, "가족", null).id)
 
     private fun newUser(email: String = "tester-${System.nanoTime()}@example.com"): Long = requireNotNull(
         userRepository.save(
