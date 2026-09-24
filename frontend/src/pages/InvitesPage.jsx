@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useRecords } from '../context/RecordsContext.jsx'
+import { ApiError } from '../api/client.js'
+import * as api from '../api/groups.js'
+import { useGroups } from '../context/GroupsContext.jsx'
+import usePagedList from '../hooks/usePagedList.js'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
@@ -29,33 +32,81 @@ const OUTCOME_LABEL = {
 }
 
 export default function InvitesPage({ tab }) {
-  const { receivedInvites, sentInvites, inviteHistoryFor, acceptInvite, rejectInvite, revokeInvite } =
-    useRecords()
   const navigate = useNavigate()
   const { themeKey, changeTheme } = useTheme()
+  const { reloadGroups } = useGroups()
   const [inviteError, setInviteError] = useState('')
   const [rejecting, setRejecting] = useState(null)
+  const [busy, setBusy] = useState(false)
 
-  const history = inviteHistoryFor(tab)
-  const pending = tab === 'received' ? receivedInvites : sentInvites
+  // 탭마다 담기는 항목과 동작이 달라 목록을 따로 부른다 (명세 §5.8.4).
+  const loadPending = useCallback(
+    (page) => (tab === 'received' ? api.fetchReceivedInvites(page) : api.fetchSentInvites(page)),
+    [tab],
+  )
+  const loadHistory = useCallback(
+    (page) => api.fetchInviteHistory(tab === 'received' ? 'RECEIVED' : 'SENT', page),
+    [tab],
+  )
+  const pending = usePagedList(loadPending)
+  const history = usePagedList(loadHistory)
 
   const changeTab = (next) => {
     navigate(`/invites/${next}`)
     setInviteError('')
   }
 
-  const handleAccept = (inviteId) => {
-    const result = acceptInvite(inviteId)
-    if (result.error === 'LIMIT') {
-      // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다 (§3.7).
-      setInviteError('그룹 정원(5명)이 가득 찼습니다. 자리가 나면 다시 수락할 수 있습니다.')
+  /** 대기·이력·그룹 목록이 함께 바뀐다. 초대 하나가 끝나면 세 곳을 모두 다시 읽는다. */
+  const refreshAll = async () => {
+    pending.reload()
+    history.reload()
+    await reloadGroups()
+  }
+
+  const handleAccept = async (invite) => {
+    setBusy(true)
+    setInviteError('')
+    try {
+      await api.acceptInvite(invite.id)
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : null
+      if (code === 'GROUP_MEMBER_LIMIT_EXCEEDED') {
+        // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다 (§3.7).
+        setInviteError('그룹 정원(5명)이 가득 찼습니다. 자리가 나면 다시 수락할 수 있습니다.')
+      } else {
+        setInviteError('이미 처리되었거나 취소된 초대입니다.')
+        pending.reload()
+      }
+      setBusy(false)
       return
     }
-    if (result.error) {
+    await refreshAll()
+    setBusy(false)
+    navigate(`/groups/${invite.group.id}`)
+  }
+
+  const handleReject = async (invite) => {
+    setBusy(true)
+    try {
+      await api.rejectInvite(invite.id)
+    } catch {
       setInviteError('이미 처리되었거나 취소된 초대입니다.')
-      return
+    } finally {
+      await refreshAll()
+      setBusy(false)
     }
-    navigate(`/groups/${result.groupId}`)
+  }
+
+  const handleRevoke = async (invite) => {
+    setBusy(true)
+    try {
+      await api.revokeInvite(invite.group.id, invite.id)
+    } catch {
+      setInviteError('이미 처리되었거나 취소된 초대입니다.')
+    } finally {
+      await refreshAll()
+      setBusy(false)
+    }
   }
 
   return (
@@ -99,13 +150,24 @@ export default function InvitesPage({ tab }) {
           <section className="group-section">
             <h2 className="group-section-title">대기 중</h2>
             {inviteError && <p className="invite-error">{inviteError}</p>}
-            {pending.length === 0 ? (
+            {pending.status === 'loading' && pending.items.length === 0 && (
+              <p className="invite-note">불러오는 중이에요…</p>
+            )}
+            {pending.status === 'error' && (
+              <p className="invite-error">
+                초대를 불러오지 못했습니다.{' '}
+                <button type="button" className="link-button" onClick={pending.reload}>
+                  다시 시도
+                </button>
+              </p>
+            )}
+            {pending.status === 'ready' && pending.items.length === 0 ? (
               <p className="invite-note">
                 {tab === 'received' ? '받은 초대가 없어요.' : '보낸 초대가 없어요.'}
               </p>
             ) : (
               <ul className="invite-list">
-                {pending.map((invite) => (
+                {pending.items.map((invite) => (
                   <li key={invite.id} className="invite-item">
                     <Link to={`/groups/${invite.group.id}`} className="invite-group-name">
                       {invite.group.name}
@@ -121,13 +183,15 @@ export default function InvitesPage({ tab }) {
                         <button
                           type="button"
                           className="btn-primary"
-                          onClick={() => handleAccept(invite.id)}
+                          disabled={busy}
+                          onClick={() => handleAccept(invite)}
                         >
                           수락
                         </button>
                         <button
                           type="button"
                           className="invite-reject"
+                          disabled={busy}
                           onClick={() => setRejecting(invite)}
                         >
                           거절
@@ -137,7 +201,8 @@ export default function InvitesPage({ tab }) {
                       <button
                         type="button"
                         className="member-remove"
-                        onClick={() => revokeInvite(invite.id)}
+                        disabled={busy}
+                        onClick={() => handleRevoke(invite)}
                       >
                         초대 취소
                       </button>
@@ -146,15 +211,29 @@ export default function InvitesPage({ tab }) {
                 ))}
               </ul>
             )}
+            {/* 이력은 지워지지 않아 계정이 오래될수록 길어진다 (명세 §5.8.4). */}
+            {pending.hasNext && (
+              <button type="button" className="link-button" onClick={pending.loadMore}>
+                더 보기
+              </button>
+            )}
           </section>
 
           <section className="group-section">
             <h2 className="group-section-title">지난 초대</h2>
-            {history.length === 0 ? (
+            {history.status === 'error' && (
+              <p className="invite-error">
+                지난 초대를 불러오지 못했습니다.{' '}
+                <button type="button" className="link-button" onClick={history.reload}>
+                  다시 시도
+                </button>
+              </p>
+            )}
+            {history.status === 'ready' && history.items.length === 0 ? (
               <p className="invite-note">아직 끝난 초대가 없어요.</p>
             ) : (
               <ul className="invite-list">
-                {history.map((item) => (
+                {history.items.map((item) => (
                   <li key={item.id} className="invite-item">
                     {/* 삭제된 그룹도 표시는 다른 항목과 같고, 갈 곳이 없으므로 링크만 걸지
                         않는다. 삭제 사실은 결과 배지가 말한다 (공통 명세 §3.7). */}
@@ -182,6 +261,11 @@ export default function InvitesPage({ tab }) {
                 ))}
               </ul>
             )}
+            {history.hasNext && (
+              <button type="button" className="link-button" onClick={history.loadMore}>
+                더 보기
+              </button>
+            )}
           </section>
         </div>
       </main>
@@ -208,10 +292,12 @@ export default function InvitesPage({ tab }) {
               <button
                 type="button"
                 className="confirm-ok"
+                disabled={busy}
                 onClick={() => {
-                  rejectInvite(rejecting.id)
+                  const invite = rejecting
                   setRejecting(null)
                   setInviteError('')
+                  handleReject(invite)
                 }}
               >
                 거절

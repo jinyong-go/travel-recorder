@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { GROUP_MEMBER_LIMIT } from '../data/groups.js'
-import { useRecords } from '../context/RecordsContext.jsx'
+import { ApiError } from '../api/client.js'
+import { createGroup as createGroupApi } from '../api/groups.js'
+import { useGroups } from '../context/GroupsContext.jsx'
 import useTheme from '../hooks/useTheme.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import { ArrowLeftIcon, MapPinIcon, PlusIcon } from '../components/icons.jsx'
 import './GroupsPage.css'
 
 export default function GroupsPage() {
-  const { myGroups, currentUser, createGroup, receivedInvites } = useRecords()
+  const { groups, status, receivedCount, reloadGroups } = useGroups()
   const { themeKey, changeTheme } = useTheme()
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [memo, setMemo] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const closeCreate = () => {
     setCreating(false)
@@ -22,7 +24,8 @@ export default function GroupsPage() {
     setError('')
   }
 
-  const handleCreate = (e) => {
+  // 클라이언트 검증은 서버 검증을 대신하지 않는다. 같은 규칙을 먼저 걸러 왕복을 줄일 뿐이다.
+  const handleCreate = async (e) => {
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) {
@@ -33,8 +36,19 @@ export default function GroupsPage() {
       setError('그룹 이름은 30자 이하로 입력해주세요.')
       return
     }
-    createGroup(trimmed, memo)
-    closeCreate()
+
+    setSubmitting(true)
+    setError('')
+    try {
+      // 공백만 남은 메모는 "메모 없음" 과 같다. 서버도 같은 규칙이다 (backend §4.7).
+      await createGroupApi(trimmed, memo.trim() || null)
+      await reloadGroups()
+      closeCreate()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '그룹을 만들지 못했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -56,9 +70,9 @@ export default function GroupsPage() {
           </Link>
 
           {/* 같은 목록을 두 화면이 각자 그리지 않도록 여기서는 건수만 알린다 (명세 §5.8.4). */}
-          {receivedInvites.length > 0 && (
+          {receivedCount > 0 && (
             <Link to="/invites/received" className="invite-notice">
-              받은 초대 {receivedInvites.length}건 <span aria-hidden="true">→</span>
+              받은 초대 {receivedCount}건 <span aria-hidden="true">→</span>
             </Link>
           )}
 
@@ -75,31 +89,40 @@ export default function GroupsPage() {
             </button>
           </div>
 
-          {myGroups.length === 0 ? (
+          {status === 'loading' && <div className="empty-state">그룹을 불러오는 중이에요…</div>}
+
+          {status === 'error' && (
             <div className="empty-state">
-              공유 그룹을 만들면 특정 기록을 원하는 사람에게만 보여줄 수 있습니다.
+              그룹을 불러오지 못했습니다.{' '}
+              <button type="button" className="link-button" onClick={reloadGroups}>
+                다시 시도
+              </button>
             </div>
-          ) : (
-            <ul className="group-list">
-              {myGroups.map((group) => {
-                const isOwner = group.ownerId === currentUser.id
-                return (
+          )}
+
+          {status === 'ready' &&
+            (groups.length === 0 ? (
+              <div className="empty-state">
+                공유 그룹을 만들면 특정 기록을 원하는 사람에게만 보여줄 수 있습니다.
+              </div>
+            ) : (
+              <ul className="group-list">
+                {groups.map((group) => (
                   <li key={group.id} className="group-card">
                     <Link to={`/groups/${group.id}`} className="group-card-link">
                       <span className="group-card-name">{group.name}</span>
-                      <span className={`group-role-badge${isOwner ? ' owner' : ''}`}>
-                        {isOwner ? '소유자' : '멤버'}
+                      <span className={`group-role-badge${group.isOwner ? ' owner' : ''}`}>
+                        {group.isOwner ? '소유자' : '멤버'}
                       </span>
                       <span className="group-card-count">
-                        {group.members.length}/{GROUP_MEMBER_LIMIT}명
+                        {group.memberCount}/{group.memberLimit}명
                       </span>
                       {group.memo && <span className="group-card-memo">{group.memo}</span>}
                     </Link>
                   </li>
-                )
-              })}
-            </ul>
-          )}
+                ))}
+              </ul>
+            ))}
         </div>
       </main>
 
@@ -144,8 +167,8 @@ export default function GroupsPage() {
                 <button type="button" className="confirm-cancel" onClick={closeCreate}>
                   취소
                 </button>
-                <button type="submit" className="confirm-ok confirm-ok-safe">
-                  만들기
+                <button type="submit" className="confirm-ok confirm-ok-safe" disabled={submitting}>
+                  {submitting ? '만드는 중…' : '만들기'}
                 </button>
               </div>
             </form>

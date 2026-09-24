@@ -46,7 +46,15 @@ src/
   export default function VisibilityBadge({ visibility, size = 'md' }) { ... }
   ```
 
-- **훅·유틸·설정은 named export**다 (`export const`, `export function`).
+- **훅은 default export**다. 파일 하나에 훅 하나이며 파일명이 곧 훅 이름이다.
+
+  ```js
+  export default function usePagedList(load, enabled = true) { ... }
+  ```
+
+- **유틸·설정·컨텍스트·API 모듈은 named export**다 (`export const`, `export function`).
+  한 파일이 값을 여럿 내보내므로 default 를 쓸 자리가 없다 — `config/uploadLimits.js` 는 8개,
+  `context/GroupsContext.jsx` 는 프로바이더와 훅 둘, `api/groups.js` 는 엔드포인트마다 하나다.
 - props 는 시그니처에서 구조 분해하고 기본값을 그 자리에 둔다.
 - 조건부 렌더링이 3단 이상 중첩되면 이른 반환으로 펼친다.
 
@@ -60,7 +68,11 @@ src/
 
 ## 상태
 
-- 서버에서 온 데이터는 `RecordsContext` 가 들고 있다. 화면 전용 상태만 `useState` 로 둔다.
+- **서버 상태는 `GroupsContext`**(그룹·초대)가, **목업 상태는 `RecordsContext`**(여행·기록)가
+  들고 있다. 화면 전용 상태만 `useState` 로 둔다.
+- **서버 상태에 낙관적 갱신을 하지 않는다.** 정원 판정처럼 서버만 아는 규칙이 있어(공통 명세 §3.7)
+  먼저 그려 두었다가 되돌리면 그 사이 화면이 거짓말을 한다. 쓰기가 성공하면 다시 읽는다.
+- 페이지 단위 목록은 `usePagedList` 를 쓴다. "더 보기"가 필요한 다섯 목록이 같은 모양이다.
 - **전역 상태 라이브러리를 새로 넣지 않는다.** Context로 부족해지면 먼저 논의한다.
 - 사용자 선택(테마, 기준 위치, 지도 표시 방식)은 로컬 저장소에 보관하고 전용 훅으로 감싼다
   (`useTheme`, `useReferenceLocation`, `useMapMode`).
@@ -99,6 +111,10 @@ src/
 
 ## 현재 상태
 
-**화면은 아직 백엔드를 호출하지 않는다.** `src/data/` 의 목업과 `RecordsContext` 로 동작하며,
-공개 범위 판정도 컨텍스트에서 서버와 같은 규칙으로 계산한다. **판정 규칙을 고칠 때는 서버와
-어긋나지 않는지 확인한다** — 다만 실제 차단 책임은 서버에 있다.
+**인증과 그룹·초대는 백엔드를 호출하고, 여행·기록·사진·태그는 아직 목업이다.** 목업 쪽은
+`src/data/` 와 `RecordsContext` 로 동작하며 공개 범위 판정도 컨텍스트에서 서버와 같은 규칙으로
+계산한다. **판정 규칙을 고칠 때는 서버와 어긋나지 않는지 확인한다** — 다만 실제 차단 책임은
+서버에 있다.
+
+**목업 여행의 `sharedGroupIds` 는 `MOCK_GROUPS` 의 id 를 가리킨다.** 그룹 화면이 쓰는 서버 id 와
+다른 체계이므로, 여행 화면의 `myGroups` 만 목업을 본다 (명세 §10.2). 섞지 않는다.

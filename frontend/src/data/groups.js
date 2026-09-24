@@ -1,8 +1,10 @@
-// 공유 그룹 목업. 백엔드 연동 시 /api/groups 응답으로 대체된다.
+// 공유 그룹 목업.
 //
-// 그룹은 조회 전용 대상 목록이며 편집 권한과 무관하다.
-// 소유자도 멤버에 포함되므로 memberCount 는 소유자를 센 값이다.
-export const GROUP_MEMBER_LIMIT = 5
+// **그룹 화면은 이미 서버를 쓴다** (`api/groups.js`, `GroupsContext`). 여기 남은 것은 목업
+// 여행의 `sharedGroupIds` 가 가리키는 대상뿐이며, 여행을 연동할 때 이 파일을 통째로 지운다
+// (명세 §10.2). 초대 목업은 연동과 함께 이미 걷어냈다.
+//
+// 소유자도 멤버에 포함되므로 members 는 소유자를 포함한 목록이다.
 
 export const MOCK_GROUPS = [
   {
@@ -37,57 +39,5 @@ export const MOCK_GROUPS = [
       { id: 2, name: '김여행', profileImageUrl: null, joinedAt: '2026-09-01' },
       { id: 4, name: '이산책', profileImageUrl: null, joinedAt: '2026-09-02' },
     ],
-  },
-]
-
-/**
- * 초대 목업. 백엔드 연동 시 /api/groups/{id}/invites · /api/invites 응답으로 대체된다.
- *
- * 초대는 토큰도 만료도 갖지 않는다 — 서비스 밖으로 나가지 않으므로 수명을 둘 이유가 없고,
- * 수락·거절·철회 셋 중 하나로 끝나면서 행이 사라진다 (공통 명세 §3.7).
- */
-export const MOCK_INVITES = [
-  { id: 101, groupId: 1, inviteeId: 4, invitedById: 1, createdAt: '2026-09-18' },
-  { id: 102, groupId: 3, inviteeId: 1, invitedById: 2, createdAt: '2026-09-19' },
-]
-
-/**
- * 끝난 초대 목업. 백엔드 연동 시 /api/invites/history 응답으로 대체된다.
- *
- * 초대는 수락·거절·취소·그룹 삭제 넷 중 하나로 끝나고, 끝났다는 사실만 여기 남는다.
- * 거절도 보낸 사람에게 그대로 보인다 (공통 명세 §3.7).
- *
- * groupId 99 는 이미 삭제된 그룹이다 — 이름 스냅샷만 남아 링크를 걸 수 없는 경우를 화면에서 확인한다.
- */
-export const MOCK_INVITE_HISTORY = [
-  {
-    id: 201,
-    groupId: 1,
-    groupName: '가족',
-    inviteeId: 3,
-    invitedById: 1,
-    outcome: 'REJECTED',
-    invitedAt: '2026-09-10',
-    resolvedAt: '2026-09-11',
-  },
-  {
-    id: 202,
-    groupId: 2,
-    groupName: '제주 동행',
-    inviteeId: 1,
-    invitedById: 2,
-    outcome: 'ACCEPTED',
-    invitedAt: '2026-08-11',
-    resolvedAt: '2026-08-12',
-  },
-  {
-    id: 203,
-    groupId: 99,
-    groupName: '동아리',
-    inviteeId: 1,
-    invitedById: 2,
-    outcome: 'GROUP_DELETED',
-    invitedAt: '2026-07-02',
-    resolvedAt: '2026-07-20',
   },
 ]

@@ -1,12 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import { MOCK_RECORDS, findUserByEmail, findUserById } from '../data/records.js'
+import { MOCK_RECORDS } from '../data/records.js'
 import { useAuth } from './AuthContext.jsx'
-import {
-  GROUP_MEMBER_LIMIT,
-  MOCK_GROUPS,
-  MOCK_INVITE_HISTORY,
-  MOCK_INVITES,
-} from '../data/groups.js'
+import { MOCK_GROUPS } from '../data/groups.js'
 import { MOCK_TRIPS } from '../data/trips.js'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -20,29 +15,34 @@ const ANONYMOUS_USER = { id: null, name: '', email: null, profileImageUrl: null 
 const RecordsContext = createContext(null)
 
 /**
- * 여행·기록과 공유 그룹의 클라이언트 상태.
+ * 여행·기록의 클라이언트 상태.
  *
  * 백엔드 연동 전까지 목업 데이터로 동작하지만, 공개 범위 판정만큼은 서버와 같은 규칙으로 계산한다.
  * 화면에서 "보이면 안 되는 것" 이 보이는 상태로 만들어 두면 연동 시점에 그대로 남기 쉽다.
  * 물론 실제 차단 책임은 서버에 있다.
+ *
+ * **그룹과 초대는 여기 없다.** 그쪽은 서버를 쓰므로 `GroupsContext` 가 맡는다 (명세 §10.2).
  */
 export function RecordsProvider({ children }) {
   const [trips, setTrips] = useState(MOCK_TRIPS)
   const [records, setRecords] = useState(MOCK_RECORDS)
-  const [groups, setGroups] = useState(MOCK_GROUPS)
-  // 초대는 소유자가 특정 사용자 앞으로 보내는 행이다. 토큰도 만료도 없다 (공통 명세 §3.7).
-  const [invites, setInvites] = useState(MOCK_INVITES)
-  // 끝난 초대는 대기 목록에서 사라지고 여기 쌓인다. 지우지 않는다 (공통 명세 §3.7).
-  const [inviteHistory, setInviteHistory] = useState(MOCK_INVITE_HISTORY)
-
-  // 여행·기록·그룹은 아직 목업이지만 로그인 사용자만은 실제 세션에서 온다 (명세 §10.2).
+  // 여행·기록은 아직 목업이지만 로그인 사용자만은 실제 세션에서 온다 (명세 §10.2).
   const { user } = useAuth()
   const currentUser = user ?? ANONYMOUS_USER
 
-  const myGroupIds = useMemo(
-    () => groups.filter((g) => g.members.some((m) => m.id === currentUser.id)).map((g) => g.id),
-    [groups, currentUser.id],
+  /**
+   * 목업 여행이 공유 대상으로 가리키는 그룹 (`MOCK_TRIPS.sharedGroupIds`).
+   *
+   * **서버 그룹이 아니다.** 그룹 화면은 `GroupsContext` 로 실제 API 를 쓰지만, 목업 여행의
+   * `sharedGroupIds` 는 `MOCK_GROUPS` 의 id 를 가리키고 있어 두 id 체계가 섞이면 GROUP 여행이
+   * 통째로 사라진다. 여행을 연동할 때 이 값과 `MOCK_GROUPS` 를 함께 걷어낸다 (명세 §10.2).
+   */
+  const myGroups = useMemo(
+    () => MOCK_GROUPS.filter((g) => g.members.some((m) => m.id === currentUser.id)),
+    [currentUser.id],
   )
+
+  const myGroupIds = useMemo(() => myGroups.map((g) => g.id), [myGroups])
 
   /**
    * 여행을 볼 수 있는 조건은 셋 중 하나 — 내 여행이거나, 전체 공개이거나,
@@ -201,279 +201,6 @@ export function RecordsProvider({ children }) {
     )
   }, [])
 
-  const myGroups = useMemo(
-    () => groups.filter((g) => g.members.some((m) => m.id === currentUser.id)),
-    [groups, currentUser.id],
-  )
-
-  const findGroup = useCallback(
-    (groupId) => {
-      const group = groups.find((g) => String(g.id) === String(groupId))
-      // 멤버가 아니면 그룹의 존재도 알리지 않는다.
-      if (!group || !group.members.some((m) => m.id === currentUser.id)) return null
-      return group
-    },
-    [groups, currentUser.id],
-  )
-
-  const createGroup = useCallback(
-    (name, memo) => {
-      const group = {
-        id: Date.now(),
-        name: name.trim(),
-        // 공백만 남은 메모는 "메모 없음" 과 같다 (backend §3.1 과 같은 규칙).
-        memo: memo?.trim() || null,
-        ownerId: currentUser.id,
-        // 소유자도 멤버 행을 가진다. 인원 계산과 권한 판정을 한 경로로 모으기 위해서다.
-        members: [{ ...currentUser, joinedAt: new Date().toISOString().slice(0, 10) }],
-      }
-      setGroups((prev) => [...prev, group])
-      return group
-    },
-    [currentUser],
-  )
-
-  const renameGroup = useCallback((groupId, name) => {
-    setGroups((prev) =>
-      prev.map((g) => (String(g.id) === String(groupId) ? { ...g, name: name.trim() } : g)),
-    )
-  }, [])
-
-  /**
-   * 끝난 초대를 이력으로 옮긴다 — 대기 행을 지우고 같은 자리에서 이력을 남긴다.
-   *
-   * 초대를 지우는 경로를 이 함수 하나로 모은다. 지우기만 하고 이력을 빠뜨린 경로가 생기면
-   * 이력이 조용히 비고, 그 누락은 조회 시점에 드러나지 않는다 (백엔드 `InviteService.resolve`
-   * 와 같은 규칙이다). `groupName` 은 그룹이 지워져도 남아야 하므로 스냅샷으로 복사한다.
-   */
-  const resolveInvite = useCallback((invite, groupName, outcome) => {
-    setInviteHistory((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}-${invite.id}`,
-        groupId: invite.groupId,
-        groupName,
-        inviteeId: invite.inviteeId,
-        invitedById: invite.invitedById,
-        outcome,
-        invitedAt: invite.createdAt,
-        resolvedAt: today(),
-      },
-    ])
-    setInvites((prev) => prev.filter((i) => i.id !== invite.id))
-  }, [])
-
-  /** 그룹을 지우면 그 그룹으로만 공유되던 기록은 사실상 비공개가 된다. 기록 자체는 남는다. */
-  const deleteGroup = useCallback(
-    (groupId) => {
-      const group = groups.find((g) => String(g.id) === String(groupId))
-      setGroups((prev) => prev.filter((g) => String(g.id) !== String(groupId)))
-      // 대기 중이던 초대는 받는 쪽에서 보면 이유 없이 사라지는 일이라, 그 이유를 이력에 남긴다 (§3.7).
-      invites
-        .filter((i) => String(i.groupId) === String(groupId))
-        .forEach((i) => resolveInvite(i, group?.name ?? '', 'GROUP_DELETED'))
-      setRecords((prev) =>
-        prev.map((r) => ({
-          ...r,
-          sharedGroupIds: r.sharedGroupIds.filter((id) => String(id) !== String(groupId)),
-        })),
-      )
-    },
-    [groups, invites, resolveInvite],
-  )
-
-  const removeMember = useCallback((groupId, userId) => {
-    setGroups((prev) =>
-      prev.map((g) =>
-        String(g.id) === String(groupId)
-          ? { ...g, members: g.members.filter((m) => m.id !== userId) }
-          : g,
-      ),
-    )
-  }, [])
-
-  const leaveGroup = useCallback(
-    (groupId) => removeMember(groupId, currentUser.id),
-    [removeMember, currentUser.id],
-  )
-
-  /**
-   * 이메일로 초대를 보낸다. 성공하면 `{ invite, duplicated }`, 실패하면 `{ error }` 다.
-   *
-   * 가입자가 없으면 `USER_NOT_FOUND` 로 그 사실을 그대로 알린다 — 소유자가 오타를 알아차릴
-   * 유일한 수단이며, 이 응답이 이메일의 가입 여부를 드러내는 것은 감수한 비용이다
-   * (공통 명세 §7.2). 대기 중인 초대가 이미 있으면 새로 만들지 않고 그것을 돌려준다.
-   */
-  const sendInvite = useCallback(
-    (groupId, email) => {
-      const group = groups.find((g) => String(g.id) === String(groupId))
-      if (!group) return { error: 'NOT_FOUND' }
-
-      const invitee = findUserByEmail(email)
-      if (!invitee) return { error: 'USER_NOT_FOUND' }
-      if (group.members.some((m) => m.id === invitee.id)) return { error: 'ALREADY_MEMBER' }
-
-      const existing = invites.find(
-        (i) => i.groupId === group.id && i.inviteeId === invitee.id,
-      )
-      if (existing) return { invite: existing, duplicated: true }
-
-      const invite = {
-        id: Date.now(),
-        groupId: group.id,
-        inviteeId: invitee.id,
-        invitedById: currentUser.id,
-        createdAt: today(),
-      }
-      setInvites((prev) => [...prev, invite])
-      return { invite, duplicated: false }
-    },
-    [groups, invites, currentUser.id],
-  )
-
-  /**
-   * 소유자가 보는 대기 초대 목록.
-   *
-   * 상대 정보는 이름·프로필 사진까지만 담는다. 소유자가 직접 입력한 이메일이라도 화면으로
-   * 되돌려주지 않는다 (공통 명세 §3.7).
-   */
-  const pendingInvites = useCallback(
-    (groupId) =>
-      invites
-        .filter((i) => String(i.groupId) === String(groupId))
-        .map((i) => ({ id: i.id, invitee: findUserById(i.inviteeId), createdAt: i.createdAt })),
-    [invites],
-  )
-
-  /** 내가 받은 초대. 수락 전이므로 그룹명·초대자·보낸 시각까지만 담는다 (공통 명세 §3.7). */
-  const receivedInvites = useMemo(
-    () =>
-      invites
-        .filter((i) => i.inviteeId === currentUser.id)
-        .map((i) => {
-          const group = groups.find((g) => g.id === i.groupId)
-          if (!group) return null
-          return {
-            id: i.id,
-            group: { id: group.id, name: group.name },
-            invitedBy: findUserById(i.invitedById),
-            createdAt: i.createdAt,
-          }
-        })
-        .filter(Boolean),
-    [invites, groups, currentUser.id],
-  )
-
-  /** 내가 보낸 대기 초대. 그룹을 가로질러 모으므로 그룹명이 함께 필요하다 (백엔드 §4.8). */
-  const sentInvites = useMemo(
-    () =>
-      invites
-        .filter((i) => i.invitedById === currentUser.id)
-        .map((i) => {
-          const group = groups.find((g) => g.id === i.groupId)
-          if (!group) return null
-          return {
-            id: i.id,
-            group: { id: group.id, name: group.name },
-            invitee: findUserById(i.inviteeId),
-            createdAt: i.createdAt,
-          }
-        })
-        .filter(Boolean),
-    [invites, groups, currentUser.id],
-  )
-
-  /**
-   * 끝난 초대 이력. `role` 이 관점을 고르며 어느 쪽이든 본인이 당사자인 것만 나온다.
-   *
-   * 상대는 관점에 따라 갈린다 — 받은 이력이면 보냈던 사람, 보낸 이력이면 초대받았던 사람이다.
-   * 그룹명은 끝난 시점의 스냅샷이라 지금 이름이 바뀌었어도 따라 바뀌지 않는다 (공통 명세 §3.7).
-   */
-  const inviteHistoryFor = useCallback(
-    (role) =>
-      inviteHistory
-        .filter((h) => (role === 'sent' ? h.invitedById : h.inviteeId) === currentUser.id)
-        .map((h) => {
-          const counterpart = findUserById(role === 'sent' ? h.inviteeId : h.invitedById)
-          // 상대를 찾을 수 없는 행은 그리지 않는다. 대기 초대 목록도 같은 방식이다.
-          if (!counterpart) return null
-          return {
-            id: h.id,
-            group: {
-              id: h.groupId,
-              name: h.groupName,
-              deleted: !groups.some((g) => String(g.id) === String(h.groupId)),
-            },
-            counterpart,
-            outcome: h.outcome,
-            invitedAt: h.invitedAt,
-            resolvedAt: h.resolvedAt,
-          }
-        })
-        .filter(Boolean)
-        .sort((a, b) => b.resolvedAt.localeCompare(a.resolvedAt)),
-    [inviteHistory, groups, currentUser.id],
-  )
-
-  /**
-   * 초대를 수락해 멤버가 된다. 성공하면 `{ groupId }`, 실패하면 `{ error }` 다.
-   *
-   * 정원 판정은 이 시점에 한다 — 대기 중인 초대는 자리를 차지하지 않기 때문이다.
-   * 정원이 차서 거부되어도 **초대 행은 남긴다.** 자리가 나면 같은 초대로 다시 수락할 수
-   * 있어야 한다 (공통 명세 §3.7).
-   */
-  const acceptInvite = useCallback(
-    (inviteId) => {
-      const invite = invites.find((i) => String(i.id) === String(inviteId))
-      // 당사자가 아닌 초대는 존재하지 않는 것과 같게 다룬다 (공통 명세 §2.6).
-      if (!invite || invite.inviteeId !== currentUser.id) return { error: 'NOT_FOUND' }
-
-      const group = groups.find((g) => g.id === invite.groupId)
-      if (!group) return { error: 'NOT_FOUND' }
-      if (group.members.length >= GROUP_MEMBER_LIMIT) return { error: 'LIMIT' }
-
-      setGroups((prev) =>
-        prev.map((g) =>
-          g.id === group.id
-            ? { ...g, members: [...g.members, { ...currentUser, joinedAt: today() }] }
-            : g,
-        ),
-      )
-      resolveInvite(invite, group.name, 'ACCEPTED')
-      return { groupId: group.id }
-    },
-    [invites, groups, currentUser, resolveInvite],
-  )
-
-  /**
-   * 받은 사람이 거절한다.
-   *
-   * 거절은 이력에 남고 **보낸 사람도 본다** (공통 명세 §3.7). 거절한 상대를 다시 초대하는 것은
-   * 그대로 허용된다 — 대기 행이 사라져 "같은 상대에게 한 건" 규칙이 비기 때문이다.
-   */
-  const rejectInvite = useCallback(
-    (inviteId) => {
-      const invite = invites.find(
-        (i) => String(i.id) === String(inviteId) && i.inviteeId === currentUser.id,
-      )
-      if (!invite) return
-      const group = groups.find((g) => g.id === invite.groupId)
-      resolveInvite(invite, group?.name ?? '', 'REJECTED')
-    },
-    [invites, groups, currentUser.id, resolveInvite],
-  )
-
-  /** 보낸 소유자가 취소한다. 거절과 결과는 같고 누가 하느냐만 다르다. */
-  const revokeInvite = useCallback(
-    (inviteId) => {
-      const invite = invites.find((i) => String(i.id) === String(inviteId))
-      if (!invite) return
-      const group = groups.find((g) => g.id === invite.groupId)
-      resolveInvite(invite, group?.name ?? '', 'REVOKED')
-    },
-    [invites, groups, resolveInvite],
-  )
-
   const value = useMemo(
     () => ({
       currentUser,
@@ -492,22 +219,8 @@ export function RecordsProvider({ children }) {
       addRecord,
       updateRecord,
       deleteRecord,
-      groups,
+      // 여행 화면의 공유 그룹 선택·표시용. 목업 그룹이다 (위 myGroups 주석 참고).
       myGroups,
-      findGroup,
-      createGroup,
-      renameGroup,
-      deleteGroup,
-      removeMember,
-      leaveGroup,
-      sendInvite,
-      pendingInvites,
-      receivedInvites,
-      sentInvites,
-      inviteHistoryFor,
-      acceptInvite,
-      rejectInvite,
-      revokeInvite,
     }),
     [
       currentUser,
@@ -526,22 +239,7 @@ export function RecordsProvider({ children }) {
       addRecord,
       updateRecord,
       deleteRecord,
-      groups,
       myGroups,
-      findGroup,
-      createGroup,
-      renameGroup,
-      deleteGroup,
-      removeMember,
-      leaveGroup,
-      sendInvite,
-      pendingInvites,
-      receivedInvites,
-      sentInvites,
-      inviteHistoryFor,
-      acceptInvite,
-      rejectInvite,
-      revokeInvite,
     ],
   )
 

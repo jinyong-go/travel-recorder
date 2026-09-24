@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { SCOPES, categoryIcon } from '../data/records.js'
 import { TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
+import { useGroups } from '../context/GroupsContext.jsx'
 import { useRecords } from '../context/RecordsContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import useTheme from '../hooks/useTheme.js'
@@ -25,7 +26,9 @@ const sortTrips = (trips, sortKey) => {
 }
 
 export default function TripListPage() {
-  const { listTripsByScope, recordsOfTrip, currentUser, receivedInvites } = useRecords()
+  const { listTripsByScope, recordsOfTrip, currentUser } = useRecords()
+  // 초대 건수만 서버에서 온다. 여행·기록은 아직 목업이다 (명세 §10.2).
+  const { receivedCount } = useGroups()
   const { isLoggedIn } = useAuth()
   const { themeKey, changeTheme } = useTheme()
   const { mapMode, changeMapMode } = useMapMode()
@@ -80,16 +83,16 @@ export default function TripListPage() {
               to="/groups"
               className="header-groups-link"
               aria-label={
-                receivedInvites.length > 0
-                  ? `공유 그룹 관리 (받은 초대 ${receivedInvites.length}건)`
+                receivedCount > 0
+                  ? `공유 그룹 관리 (받은 초대 ${receivedCount}건)`
                   : '공유 그룹 관리'
               }
             >
               <UsersIcon />
               <span className="header-groups-label">그룹</span>
               {/* 초대함은 그룹 목록을 거쳐 들어간다. 배지로 먼저 알리지 않으면 눈에 띄지 않는다. */}
-              {receivedInvites.length > 0 && (
-                <span className="header-invite-badge">{receivedInvites.length}</span>
+              {receivedCount > 0 && (
+                <span className="header-invite-badge">{receivedCount}</span>
               )}
             </Link>
           )}
