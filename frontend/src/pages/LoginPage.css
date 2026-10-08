@@ -38,17 +38,13 @@
 
 .login-error {
   width: 100%;
-  border: 1px solid #e0685f;
+  border: 1px solid var(--error-border);
   border-radius: var(--radius-sm);
-  background: rgba(224, 104, 95, 0.1);
-  color: #c0453c;
+  background: var(--error-bg);
+  color: var(--error);
   font-size: 13.5px;
   line-height: 1.5;
   padding: 10px 12px;
-}
-
-[data-theme='dark'] .login-error {
-  color: #ff9a92;
 }
 
 /* 임시 아이디/비밀번호 로그인 폼 (명세 §2.1). 네이버 로그인 복구 시 함께 걷어낸다. */
