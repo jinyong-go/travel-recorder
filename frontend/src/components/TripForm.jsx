@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { DEFAULT_VISIBILITY } from '../data/records.js'
 import { tripDurationLabel } from '../data/trips.js'
 import VisibilitySelect from './VisibilitySelect.jsx'
+import '../styles/form.css'
 import './TripForm.css'
-
 const EMPTY = {
   name: '',
   startDate: '',

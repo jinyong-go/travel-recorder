@@ -84,6 +84,11 @@
   border-color: var(--danger-hover);
 }
 
+.received-invite-actions {
+  display: flex;
+  gap: 8px;
+}
+
 @media (max-width: 480px) {
   /* 360px 에서 한 줄에 네 값이 들어가지 않는다. 그룹명을 첫 줄에 두고 나머지를 접는다. */
   .invite-item {

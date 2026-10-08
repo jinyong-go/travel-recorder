@@ -31,6 +31,7 @@ src/
   context/     전역 상태 (XxxContext.jsx) — 지금은 AuthContext 하나
   config/      설정·환경변수 (camelCase.js)
   utils/       순수 함수 (camelCase.js)
+  styles/      두 화면 이상이 함께 쓰는 CSS (camelCase.css)
   data/        화면 표기용 값·함수와 남은 목업(장소 검색)
 ```
 
@@ -66,6 +67,10 @@ src/
 
 - **일반 CSS 파일**을 쓴다. CSS Modules·Tailwind·CSS-in-JS 를 도입하지 않는다.
 - 컴포넌트 `Foo.jsx` 의 스타일은 **같은 위치의 `Foo.css`** 에 두고 컴포넌트가 직접 import 한다.
+- **두 화면 이상이 함께 쓰는 스타일만 `src/styles/`** 에 둔다 (입력 폼·상세 화면 틀·확인 모달·그룹 화면 틀).
+  쓰는 쪽이 각자 import 하며, **공유 CSS 를 먼저, 자기 CSS 를 나중에** 불러온다 — 전용 규칙이 공유
+  규칙을 덮어야 하기 때문이다. 다른 화면의 CSS 파일을 가져다 쓰지 않는다 (예외: 별점 표시가 입력의
+  `StarRatingInput.css` 를 함께 쓴다 — 쓰는 곳이 둘뿐이라 공통화 기준에 못 미친다).
 - 클래스명은 kebab-case 이며 컴포넌트 이름을 접두사로 쓴다 (`visibility-badge-icon`).
 - **색상은 CSS 변수로만 쓴다.** 라이트/다크 두 모드가 같은 변수를 공유해야 하므로 값을
   하드코딩하지 않는다. 브랜드 색은 파스텔 연두다 (명세 §6).

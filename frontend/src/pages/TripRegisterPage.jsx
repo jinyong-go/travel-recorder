@@ -4,8 +4,7 @@ import { ApiError } from '../api/client.js'
 import { createTrip } from '../api/trips.js'
 import TripForm from '../components/TripForm.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
-import './RegisterRecordPage.css'
-
+import './TripRegisterPage.css'
 export default function TripRegisterPage() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)

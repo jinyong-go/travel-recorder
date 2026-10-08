@@ -11,8 +11,10 @@ import useLatestRequest from '../hooks/useLatestRequest.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import {ArrowLeftIcon, MapPinIcon, PlusIcon} from '../components/icons.jsx'
+import '../styles/form.css'
+import '../styles/confirmPanel.css'
+import '../styles/groupPages.css'
 import './GroupsPage.css'
-
 export default function GroupsPage() {
     const [groups, setGroups] = useState([])
     const [status, setStatus] = useState(REQUEST_STATUS.LOADING)

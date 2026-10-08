@@ -1,0 +1,52 @@
+/* 삭제 확인 모달 — 되돌릴 수 없는 동작이라 브라우저 confirm() 대신 직접 띄운다. */
+.confirm-panel {
+  max-width: 380px;
+  display: grid;
+  gap: 14px;
+}
+
+.confirm-panel h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.confirm-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm-cancel,
+.confirm-ok {
+  border-radius: var(--radius-pill);
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.confirm-cancel {
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.confirm-ok {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 되돌릴 수 있는 동작의 확인 버튼. 삭제의 붉은색을 쓰지 않는다. */
+.confirm-ok-safe {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}

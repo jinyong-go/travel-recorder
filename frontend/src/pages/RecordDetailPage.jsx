@@ -39,9 +39,10 @@ import {
   SearchIcon,
 } from '../components/icons.jsx'
 // 수정 폼의 입력 요소(장소 검색 줄·카테고리 칩·파일 선택)는 등록 폼과 같은 생김새를 쓴다.
-import './RegisterRecordPage.css'
+import '../styles/form.css'
+import '../styles/detailPage.css'
+import '../styles/confirmPanel.css'
 import './RecordDetailPage.css'
-
 const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 
 /** 수정 초안의 사진 하나를 그릴 주소. 이미 올라간 사진은 서버 URL, 새로 고른 파일은 미리보기다. */

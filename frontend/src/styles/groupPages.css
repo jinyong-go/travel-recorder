@@ -1,0 +1,105 @@
+/* 그룹 목록·그룹 상세·초대함 공통 틀과 목록 항목 */
+
+.groups-page {
+  padding: 24px 16px 60px;
+}
+
+.groups-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.groups-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.groups-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.group-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 16px 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.group-section-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.member-remove {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.member-remove:hover {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.invite-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 멤버 목록과 같은 줄 구성이되, 참여일 자리에 보낸 날짜가 온다. */
+.invite-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.invite-sent-at {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.invite-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.invite-error {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* 그룹 상세의 메모. 소유자와 멤버 모두에게 보인다 (공통 명세 §3.6). */
+.group-memo {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}

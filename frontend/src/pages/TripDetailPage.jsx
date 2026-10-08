@@ -20,8 +20,8 @@ import VisibilitySelect from '../components/VisibilitySelect.jsx'
 import TripForm from '../components/TripForm.jsx'
 import { ArrowLeftIcon, MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
 // 상세 화면의 공통 레이아웃(.detail-page / .detail-inner / .detail-section)은 기록 상세와 같다.
-import './RecordDetailPage.css'
-
+import '../styles/detailPage.css'
+import '../styles/confirmPanel.css'
 /** 여행을 서버에서 읽고, 읽는 중·없음·실패를 처리한다. 화면은 여행이 도착한 뒤 TripDetailView 가 그린다. */
 export default function TripDetailPage() {
   const { tripId } = useParams()

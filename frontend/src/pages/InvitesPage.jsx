@@ -7,9 +7,9 @@ import usePagedList from '../hooks/usePagedList.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
-import './GroupsPage.css'
+import '../styles/confirmPanel.css'
+import '../styles/groupPages.css'
 import './InvitesPage.css'
-
 const formatDate = (iso) => new Date(iso).toLocaleDateString('ko-KR')
 
 /**

@@ -11,9 +11,8 @@ import {
 import PlaceSearchModal from './PlaceSearchModal.jsx'
 import StarRatingInput from './StarRatingInput.jsx'
 import { CloseIcon, PhotoIcon, SearchIcon } from './icons.jsx'
-import '../pages/RegisterRecordPage.css'
+import '../styles/form.css'
 import './RecordRegisterModal.css'
-
 const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 
 
