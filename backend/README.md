@@ -19,7 +19,6 @@
 | 인증 | Spring Security OAuth2 Client (네이버 로그인) | Boot 관리 |
 | 직렬화 | Jackson (`jackson-module-kotlin`) | Boot 관리 |
 | 입력 검증 | Bean Validation | Boot 관리 |
-| 리액티브 | Project Reactor (`reactor-core`, Kotlin 확장) | 3.8.7 |
 | 빌드 도구 | Gradle (Kotlin DSL, Wrapper 포함) | 9.7.1 |
 | 테스트 | JUnit 5, `kotlin-test-junit5`, Spring Boot Test | — |
 
