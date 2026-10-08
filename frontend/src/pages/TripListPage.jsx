@@ -4,6 +4,7 @@ import { SCOPES, categoryIcon } from '../data/records.js'
 import { TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
 import { fileUrl } from '../api/client.js'
 import { fetchTrips } from '../api/trips.js'
+import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import useMapMode from '../hooks/useMapMode.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
@@ -41,9 +42,9 @@ export default function TripListPage() {
     setSearchParams(params, { replace: true })
   }
 
-  // 'loading' | 'ready' | 'error'. 다시 시도 버튼이 같은 조건으로 한 번 더 읽도록 reloadKey 를 둔다.
+  // 다시 시도 버튼이 같은 조건으로 한 번 더 읽도록 reloadKey 를 둔다.
   const [result, setResult] = useState(null)
-  const [listStatus, setListStatus] = useState('loading')
+  const [listStatus, setListStatus] = useState(REQUEST_STATUS.LOADING)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -53,16 +54,16 @@ export default function TripListPage() {
 
     // 탭·정렬·페이지를 빠르게 바꿀 때 늦게 도착한 이전 응답이 화면을 덮지 않게 한다.
     let cancelled = false
-    setListStatus('loading')
+    setListStatus(REQUEST_STATUS.LOADING)
     // 화면의 페이지는 1부터, API 는 0부터 센다. 페이지 크기는 서버가 정한다 (backend §4.1).
     fetchTrips(scope, sortKey, page - 1)
       .then((next) => {
         if (cancelled) return
         setResult(next)
-        setListStatus('ready')
+        setListStatus(REQUEST_STATUS.COMPLETE)
       })
       .catch(() => {
-        if (!cancelled) setListStatus('error')
+        if (!cancelled) setListStatus(REQUEST_STATUS.ERROR)
       })
 
     return () => {
@@ -128,9 +129,9 @@ export default function TripListPage() {
             </div>
           </div>
 
-          {listStatus === 'loading' ? (
+          {listStatus === REQUEST_STATUS.LOADING ? (
             <div className="empty-state">여행을 불러오는 중이에요…</div>
-          ) : listStatus === 'error' ? (
+          ) : listStatus === REQUEST_STATUS.ERROR ? (
             <div className="empty-state">
               여행을 불러오지 못했습니다.{' '}
               <button type="button" className="link-button" onClick={() => setReloadKey((k) => k + 1)}>

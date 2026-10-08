@@ -4,6 +4,7 @@ import { categoryIcon, categoryLabel, dateLabel, placeOf } from '../data/records
 import { budgetLabel, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
 import { ApiError, fileUrl } from '../api/client.js'
 import { fetchTripRecords } from '../api/records.js'
+import { REQUEST_STATUS } from '../api/requestStatus.js'
 import * as tripApi from '../api/trips.js'
 import usePagedList from '../hooks/usePagedList.js'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
@@ -26,16 +27,16 @@ export default function TripDetailPage() {
   const { tripId } = useParams()
   const { trip, status, setTrip } = useTrip(tripId)
 
-  if (status === 'ready') {
+  if (status === REQUEST_STATUS.COMPLETE) {
     // key 로 여행이 바뀌면 초안 상태를 새로 만든다. 초안의 초깃값이 여행 값이기 때문이다.
     return <TripDetailView key={trip.id} trip={trip} onTripChange={setTrip} />
   }
 
   // 볼 수 없는 여행과 없는 여행을 구분해 표시하지 않는다. 구분하면 존재가 드러난다.
   const message =
-    status === 'loading'
+    status === REQUEST_STATUS.LOADING
       ? { title: '여행을 불러오는 중이에요…', desc: '' }
-      : status === 'error'
+      : status === REQUEST_STATUS.ERROR
         ? { title: '여행을 불러오지 못했습니다', desc: '잠시 후 다시 시도해주세요.' }
         : { title: '여행을 찾을 수 없습니다', desc: '존재하지 않거나 볼 수 없는 여행입니다.' }
   return (
@@ -291,14 +292,14 @@ function TripDetailView({ trip, onTripChange }) {
               </p>
             )}
 
-            {records.status === 'error' ? (
+            {records.status === REQUEST_STATUS.ERROR ? (
               <div className="empty-state">
                 여행지를 불러오지 못했습니다.{' '}
                 <button type="button" className="link-button" onClick={records.reload}>
                   다시 시도
                 </button>
               </div>
-            ) : records.status === 'loading' && records.items.length === 0 ? (
+            ) : records.status === REQUEST_STATUS.LOADING && records.items.length === 0 ? (
               <div className="empty-state">여행지를 불러오는 중이에요…</div>
             ) : records.items.length === 0 ? (
               <div className="empty-state">

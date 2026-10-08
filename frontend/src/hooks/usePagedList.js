@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { REQUEST_STATUS } from '../api/requestStatus.js'
 import useLatestRequest from './useLatestRequest.js'
 /**
  * 페이지 단위 목록 하나를 다루는 훅 — 첫 페이지 조회, "더 보기", 다시 읽기.
@@ -14,14 +15,14 @@ export default function usePagedList(load, enabled = true) {
   const [items, setItems] = useState([])
   const [page, setPage] = useState(0)
   const [hasNext, setHasNext] = useState(false)
-  const [status, setStatus] = useState('loading')
+  const [status, setStatus] = useState(REQUEST_STATUS.LOADING)
   const [total, setTotal] = useState(undefined)
   const beginRequest = useLatestRequest()
 
   const read = useCallback(
     async (nextPage, append) => {
       const isLatest = beginRequest()
-      setStatus('loading')
+      setStatus(REQUEST_STATUS.LOADING)
       try {
         const result = await load(nextPage)
         // 탭을 바꾸거나 다시 읽기를 누른 뒤 도착한 이전 응답은 버린다.
@@ -31,9 +32,9 @@ export default function usePagedList(load, enabled = true) {
         setPage(result.page)
         // totalPages 는 0 일 수 있다(빈 목록). 그때는 다음 페이지가 없다.
         setHasNext(result.page + 1 < result.totalPages)
-        setStatus('ready')
+        setStatus(REQUEST_STATUS.COMPLETE)
       } catch {
-        if (isLatest()) setStatus('error')
+        if (isLatest()) setStatus(REQUEST_STATUS.ERROR)
       }
     },
     [load, beginRequest],
@@ -44,7 +45,7 @@ export default function usePagedList(load, enabled = true) {
     setTotal(undefined)
     if (!enabled) {
       setItems([])
-      setStatus('ready')
+      setStatus(REQUEST_STATUS.COMPLETE)
       return
     }
     read(0, false)

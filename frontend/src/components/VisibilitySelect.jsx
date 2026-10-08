@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchGroups } from '../api/groups.js'
+import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { VISIBILITIES } from '../data/records.js'
 import { GlobeIcon, LockIcon, UsersIcon } from './icons.jsx'
 import './VisibilitySelect.css'
@@ -25,8 +26,7 @@ export default function VisibilitySelect({
   onCreateGroupClick,
 }) {
   const [groups, setGroups] = useState([])
-  // 'idle' | 'loading' | 'ready' | 'error'
-  const [groupsStatus, setGroupsStatus] = useState('idle')
+  const [groupsStatus, setGroupsStatus] = useState(REQUEST_STATUS.IDLE)
   const [retryCount, setRetryCount] = useState(0)
   const wantsGroups = value === 'GROUP'
 
@@ -34,15 +34,15 @@ export default function VisibilitySelect({
   useEffect(() => {
     if (!wantsGroups) return undefined
     let cancelled = false
-    setGroupsStatus('loading')
+    setGroupsStatus(REQUEST_STATUS.LOADING)
     fetchGroups()
       .then((result) => {
         if (cancelled) return
         setGroups(result)
-        setGroupsStatus('ready')
+        setGroupsStatus(REQUEST_STATUS.COMPLETE)
       })
       .catch(() => {
-        if (!cancelled) setGroupsStatus('error')
+        if (!cancelled) setGroupsStatus(REQUEST_STATUS.ERROR)
       })
     return () => {
       cancelled = true
@@ -88,9 +88,9 @@ export default function VisibilitySelect({
 
       {wantsGroups && (
         <div className="visibility-groups">
-          {groupsStatus === 'loading' || groupsStatus === 'idle' ? (
+          {groupsStatus === REQUEST_STATUS.LOADING || groupsStatus === REQUEST_STATUS.IDLE ? (
             <p className="visibility-groups-empty">그룹을 불러오는 중이에요…</p>
-          ) : groupsStatus === 'error' ? (
+          ) : groupsStatus === REQUEST_STATUS.ERROR ? (
             <p className="visibility-groups-empty">
               그룹을 불러오지 못했습니다.{' '}
               <button type="button" className="link-btn" onClick={() => setRetryCount((n) => n + 1)}>

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client.js'
 import * as api from '../api/groups.js'
+import { REQUEST_STATUS } from '../api/requestStatus.js'
 import usePagedList from '../hooks/usePagedList.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
@@ -151,10 +152,10 @@ export default function InvitesPage({ tab }) {
           <section className="group-section">
             <h2 className="group-section-title">대기 중</h2>
             {inviteError && <p className="invite-error">{inviteError}</p>}
-            {pending.status === 'loading' && pending.items.length === 0 && (
+            {pending.status === REQUEST_STATUS.LOADING && pending.items.length === 0 && (
               <p className="invite-note">불러오는 중이에요…</p>
             )}
-            {pending.status === 'error' && (
+            {pending.status === REQUEST_STATUS.ERROR && (
               <p className="invite-error">
                 초대를 불러오지 못했습니다.{' '}
                 <button type="button" className="link-button" onClick={pending.reload}>
@@ -162,7 +163,7 @@ export default function InvitesPage({ tab }) {
                 </button>
               </p>
             )}
-            {pending.status === 'ready' && pending.items.length === 0 ? (
+            {pending.status === REQUEST_STATUS.COMPLETE && pending.items.length === 0 ? (
               <p className="invite-note">
                 {tab === 'received' ? '받은 초대가 없어요.' : '보낸 초대가 없어요.'}
               </p>
@@ -222,7 +223,7 @@ export default function InvitesPage({ tab }) {
 
           <section className="group-section">
             <h2 className="group-section-title">지난 초대</h2>
-            {history.status === 'error' && (
+            {history.status === REQUEST_STATUS.ERROR && (
               <p className="invite-error">
                 지난 초대를 불러오지 못했습니다.{' '}
                 <button type="button" className="link-button" onClick={history.reload}>
@@ -230,7 +231,7 @@ export default function InvitesPage({ tab }) {
                 </button>
               </p>
             )}
-            {history.status === 'ready' && history.items.length === 0 ? (
+            {history.status === REQUEST_STATUS.COMPLETE && history.items.length === 0 ? (
               <p className="invite-note">아직 끝난 초대가 없어요.</p>
             ) : (
               <ul className="invite-list">

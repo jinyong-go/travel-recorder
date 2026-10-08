@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, fileUrl } from '../api/client.js'
 import * as recordApi from '../api/records.js'
+import { REQUEST_STATUS } from '../api/requestStatus.js'
 import {
   CATEGORIES,
   MEMO_MAX_LENGTH,
@@ -52,9 +53,9 @@ export default function RecordDetailPage() {
   const { isEmbed } = useMapMode()
   const { location: referenceLocation } = useReferenceLocation()
 
-  // 'loading' | 'ready' | 'missing' | 'error'. 404 는 없는 기록과 볼 수 없는 기록을 구분하지 않는다.
+  // 404 는 없는 기록과 볼 수 없는 기록을 구분하지 않는다.
   const [record, setRecord] = useState(null)
-  const [recordStatus, setRecordStatus] = useState('loading')
+  const [recordStatus, setRecordStatus] = useState(REQUEST_STATUS.LOADING)
 
   const beginRequest = useLatestRequest()
 
@@ -65,15 +66,17 @@ export default function RecordDetailPage() {
       const result = await recordApi.fetchRecord(recordId)
       if (!isLatest()) return
       setRecord(result)
-      setRecordStatus('ready')
+      setRecordStatus(REQUEST_STATUS.COMPLETE)
     } catch (err) {
       if (!isLatest()) return
-      setRecordStatus(err instanceof ApiError && err.status === 404 ? 'missing' : 'error')
+      setRecordStatus(
+        err instanceof ApiError && err.status === 404 ? REQUEST_STATUS.MISSING : REQUEST_STATUS.ERROR,
+      )
     }
   }, [recordId, beginRequest])
 
   useEffect(() => {
-    setRecordStatus('loading')
+    setRecordStatus(REQUEST_STATUS.LOADING)
     loadRecord()
   }, [loadRecord])
 
@@ -103,8 +106,8 @@ export default function RecordDetailPage() {
   // 기록 응답에는 없으므로 작성자일 때만 여행을 읽는다. 열람자에게는 내려오지도 않는다.
   const { trip } = useTrip(isAuthor ? record.trip.id : null)
 
-  if (recordStatus === 'loading' || recordStatus === 'error') {
-    const loading = recordStatus === 'loading'
+  if (recordStatus === REQUEST_STATUS.LOADING || recordStatus === REQUEST_STATUS.ERROR) {
+    const loading = recordStatus === REQUEST_STATUS.LOADING
     return (
       <main className="detail-page">
         <div className="detail-missing">
@@ -115,7 +118,7 @@ export default function RecordDetailPage() {
     )
   }
 
-  if (recordStatus === 'missing') {
+  if (recordStatus === REQUEST_STATUS.MISSING) {
     // 없는 기록과 볼 권한이 없는 기록을 구분해 보여주지 않는다.
     // 문구가 달라지는 순간 그 차이만으로 비공개 기록의 존재가 드러난다.
     return (
