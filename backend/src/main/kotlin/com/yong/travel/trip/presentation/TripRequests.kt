@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import java.time.LocalDate
+import java.util.UUID
 
 /**
  * 여행 생성.
@@ -98,5 +99,5 @@ data class TripVisibilityUpdateRequest(
  * 명시적으로 비우는 것을 구분할 필요가 없다 (명세 §4.3.2).
  */
 data class TripCoverUpdateRequest(
-    val photoId: Long? = null,
+    val photoId: UUID? = null,
 )

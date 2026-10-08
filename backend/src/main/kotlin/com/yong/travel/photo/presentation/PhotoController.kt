@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/records/{recordId}/photos")
@@ -29,11 +30,11 @@ class PhotoController(
     ): List<PhotoResponse> =
         photoService.upload(recordId, requireLogin(principal), files).map { it.toResponse() }
 
-    /** 사진 삭제. 파일 본체까지 함께 지우는 물리 삭제다. */
+    /** 사진 삭제. 바이너리까지 함께 지우는 물리 삭제다. */
     @DeleteMapping("/{photoId}")
     fun delete(
         @PathVariable recordId: Long,
-        @PathVariable photoId: Long,
+        @PathVariable photoId: UUID,
         @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
         photoService.delete(recordId, photoId, requireLogin(principal))

@@ -6,13 +6,14 @@ import com.yong.travel.photo.config.PhotoUploadProperties
 import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
-import com.yong.travel.photo.storage.PhotoStorageService
+import com.yong.travel.photo.storage.PhotoDatabaseService
 import com.yong.travel.record.persistence.TripRecordEntity
 import com.yong.travel.record.persistence.TripRecordRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
+import java.util.UUID
 
 /**
  * 사진은 기록에 종속되며, 올리고 지울 수 있는 사람은 기록 작성자뿐이다.
@@ -23,7 +24,7 @@ import org.springframework.web.multipart.MultipartFile
 class PhotoService(
     private val recordRepository: TripRecordRepository,
     private val photoRepository: PhotoRepository,
-    private val photoStorageService: PhotoStorageService,
+    private val photoDatabaseService: PhotoDatabaseService,
     private val uploadProperties: PhotoUploadProperties,
 ) {
 
@@ -44,22 +45,22 @@ class PhotoService(
             ) {
                 throw ApiException(ErrorCode.INVALID_FILE)
             }
-            val stored = photoStorageService.store(file)
             val photo = photoRepository.save(
                 PhotoEntity(
                     record = record,
-                    storageKey = stored.storageKey,
-                    originalFileName = stored.originalFileName,
-                    contentType = stored.contentType,
-                    fileSizeBytes = stored.fileSizeBytes,
+                    originalFileName = file.originalFilename.orEmpty(),
+                    contentType = requireNotNull(file.contentType),
+                    fileSizeBytes = file.size,
                 ),
             )
-            Photo(requireNotNull(photo.id), photoStorageService.resolveUrl(photo.storageKey))
+            photoDatabaseService.store(photo, file)
+            val id = requireNotNull(photo.id)
+            Photo(id, photoDatabaseService.urlOf(id))
         }
     }
 
     @Transactional
-    fun delete(recordId: Long, photoId: Long, requesterId: Long) {
+    fun delete(recordId: Long, photoId: UUID, requesterId: Long) {
         val record = findOwnRecord(recordId, requesterId)
         val photo = photoRepository.findByIdAndRecordId(photoId, recordId)
             ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
@@ -68,7 +69,7 @@ class PhotoService(
         // 없는 사진을 가리키는 커버가 남아 여행 조회가 깨진다 (명세 §3, §4.6).
         record.trip.clearCoverIfAmong(listOf(photoId))
 
-        photoStorageService.delete(photo.storageKey)
+        // 바이너리(photo_data)는 ON DELETE CASCADE 로 함께 지워진다 (명세 §5.1).
         photoRepository.delete(photo)
         log.debug("사진 삭제 recordId={} photoId={} requesterId={}", recordId, photoId, requesterId)
     }

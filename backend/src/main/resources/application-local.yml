@@ -24,9 +24,6 @@ spring:
       enabled: true
 
 app:
-  storage:
-    local:
-      root-dir: ./uploads
   cors:
     allowed-origins: http://localhost:5173
 

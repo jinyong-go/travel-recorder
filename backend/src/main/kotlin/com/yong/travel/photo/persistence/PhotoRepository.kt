@@ -1,11 +1,11 @@
 package com.yong.travel.photo.persistence
 
-import com.yong.travel.photo.persistence.PhotoEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.util.UUID
 
-interface PhotoRepository : JpaRepository<PhotoEntity, Long> {
+interface PhotoRepository : JpaRepository<PhotoEntity, UUID> {
     fun findByRecordIdOrderByCreatedAtAsc(recordId: Long): List<PhotoEntity>
 
     /**
@@ -16,7 +16,7 @@ interface PhotoRepository : JpaRepository<PhotoEntity, Long> {
      */
     fun findByRecordIdInOrderByCreatedAtAsc(recordIds: Collection<Long>): List<PhotoEntity>
 
-    fun findByIdAndRecordId(id: Long, recordId: Long): PhotoEntity?
+    fun findByIdAndRecordId(id: UUID, recordId: Long): PhotoEntity?
 
     /**
      * 커버로 지정할 수 있는 사진인지 확인한다 — 그 여행의 하위 기록에 속한 사진만이다 (명세 §4.3.2).
@@ -32,9 +32,9 @@ interface PhotoRepository : JpaRepository<PhotoEntity, Long> {
           and p.record.deletedAt is null
         """,
     )
-    fun findByIdAndTripId(@Param("photoId") photoId: Long, @Param("tripId") tripId: Long): PhotoEntity?
+    fun findByIdAndTripId(@Param("photoId") photoId: UUID, @Param("tripId") tripId: Long): PhotoEntity?
 
     /** 한 기록에 달린 사진 id 전부. 커버 해제 판정에 쓴다. */
     @Query("select p.id from PhotoEntity p where p.record.id = :recordId")
-    fun findIdsByRecordId(@Param("recordId") recordId: Long): List<Long>
+    fun findIdsByRecordId(@Param("recordId") recordId: Long): List<UUID>
 }

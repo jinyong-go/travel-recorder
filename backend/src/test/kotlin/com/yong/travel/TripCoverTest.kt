@@ -20,6 +20,7 @@ import org.springframework.http.MediaType
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -61,7 +62,7 @@ class TripCoverTest {
         assertEquals(
             ErrorCode.PHOTO_NOT_FOUND,
             assertThrows<ApiException> {
-                tripService.changeCover(tripId, owner, 999_999L)
+                tripService.changeCover(tripId, owner, UUID.randomUUID())
             }.errorCode,
         )
     }
@@ -238,7 +239,7 @@ class TripCoverTest {
         ).toCommand(),
     ).id
 
-    private fun newPhoto(recordId: Long, ownerId: Long): Long = photoService.upload(
+    private fun newPhoto(recordId: Long, ownerId: Long): UUID = photoService.upload(
         recordId,
         ownerId,
         listOf(

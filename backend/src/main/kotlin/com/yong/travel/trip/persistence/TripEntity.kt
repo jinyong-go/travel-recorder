@@ -18,6 +18,7 @@ import jakarta.persistence.Table
 import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 
 /**
  * 여행 — 여행 기록의 상위 그룹이자 공유의 단위.
@@ -109,7 +110,7 @@ class TripEntity(
      * 빠뜨리면 없는 사진을 가리키는 커버가 남아 여행 조회가 깨진다. 그래서 경로마다 흩어 놓지
      * 않고 상태를 가진 이곳에 모아 둔다.
      */
-    fun clearCoverIfAmong(photoIds: Collection<Long>) {
+    fun clearCoverIfAmong(photoIds: Collection<UUID>) {
         val current = coverPhoto?.id ?: return
         if (current in photoIds) coverPhoto = null
     }

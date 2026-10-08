@@ -7,7 +7,7 @@ import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.group.domain.Group
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.photo.persistence.PhotoRepository
-import com.yong.travel.photo.storage.PhotoStorageService
+import com.yong.travel.photo.storage.PhotoDatabaseService
 import com.yong.travel.record.persistence.TripRecordRepository
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
@@ -29,6 +29,7 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -39,7 +40,7 @@ class TripService(
     private val userRepository: UserRepository,
     private val groupService: GroupService,
     private val photoRepository: PhotoRepository,
-    private val photoStorageService: PhotoStorageService,
+    private val photoDatabaseService: PhotoDatabaseService,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -146,7 +147,7 @@ class TripService(
     fun changeCover(
         tripId: Long,
         ownerId: Long,
-        photoId: Long?,
+        photoId: UUID?,
     ): TripDetail {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
@@ -273,7 +274,7 @@ class TripService(
             .groupBy({ requireNotNull(it.trip.id) }) { Group(requireNotNull(it.group.id), it.group.name) }
     }
 
-    private fun TripEntity.coverUrl(): String? = coverPhoto?.let { photoStorageService.resolveUrl(it.storageKey) }
+    private fun TripEntity.coverUrl(): String? = coverPhoto?.let { photoDatabaseService.urlOf(requireNotNull(it.id)) }
 
     private fun TripEntity.toOwner() = User(requireNotNull(owner.id), owner.name, owner.profileImageUrl)
 

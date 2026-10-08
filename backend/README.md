@@ -62,11 +62,12 @@ backend/
 │  │  ├─ service/PlaceSearchService.kt      # 중복 제거·거리순 정렬·페이징
 │  │  └─ presentation/PlaceSearchController.kt  # GET /api/places/search (저장 단위가 아니라 외부 조회)
 │  ├─ tag/                         # 태그 조회 (볼 수 있는 기록에 쓰인 태그로 제한)
-│  ├─ photo/                       # 사진 업로드·삭제
-│  │  ├─ config/                   # 업로드 제한·저장소 설정 (@ConfigurationProperties)
-│  │  └─ storage/                  # PhotoStorageService 추상화 + 파일시스템 구현체
+│  ├─ photo/                       # 사진 업로드·삭제·서빙
+│  │  ├─ config/                   # 업로드 제한 설정 (@ConfigurationProperties)
+│  │  ├─ persistence/              # photos(메타데이터) · photo_data(바이너리) 엔티티
+│  │  └─ storage/PhotoDatabaseService.kt  # 사진 바이너리 DB 저장·조회와 URL 생성
 │  └─ common/
-│     ├─ config/WebConfig.kt       # CORS, 사진 정적 리소스 핸들러, 쿼리 파라미터 enum 변환기
+│     ├─ config/WebConfig.kt       # CORS, 쿼리 파라미터 enum 변환기
 │     ├─ error/                    # ErrorCode, ApiException, GlobalExceptionHandler
 │     ├─ web/AuthSupport.kt        # 인증 주체 → User 변환 헬퍼 (컨트롤러가 아니라 web 유지)
 │     ├─ web/EnumParams.kt         # scope=mine 같은 소문자 enum 파라미터 변환
@@ -112,7 +113,6 @@ backend/
 | `DB_USERNAME` | ✅ | 데이터베이스 사용자 |
 | `DB_PASSWORD` | ✅ | 데이터베이스 비밀번호 |
 | `CORS_ALLOWED_ORIGINS` | ✅ | 허용할 프론트엔드 오리진 (쉼표로 여러 개) |
-| `PHOTO_STORAGE_DIR` | `prod` 필수 | 사진 저장 디렉터리. 재배포 시에도 유지되는 경로여야 합니다 |
 | `DB_POOL_SIZE` | 선택 | HikariCP 최대 커넥션 수 (`prod`, 기본 10) |
 
 ```bash
@@ -196,7 +196,7 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 - PostgreSQL은 외래키에 인덱스를 자동 생성하지 않으므로, 조회·삭제에 쓰이는 FK 컬럼에 인덱스를 명시해 두었습니다.
 - `trips`와 `trip_records`는 **soft delete**를 사용합니다. `deleted_at`이 `NULL`인 행만 살아 있는 행이며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동으로 제외합니다. 여행을 지우면 하위 기록도 같은 시각으로 함께 지웁니다. 그룹·멤버·초대·공유 관계는 반대로 물리 삭제합니다 — 탈퇴와 공유 해제는 즉시 조회 권한을 없애야 하기 때문입니다. 정책과 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2를 참고하세요.
 - **`trip_records`에는 `visibility`와 `author_id` 컬럼이 없습니다.** 둘 다 소속 여행에서 파생되며, 같은 사실을 두 곳에 적으면 어긋나는 순간 어느 쪽이 맞는지 알 수 없기 때문입니다. 그래서 기록 조회는 **항상 `trip_id`로 여행을 조인해** 공개 범위를 판정합니다.
-- `CREATE TABLE IF NOT EXISTS`는 **이미 존재하는 테이블에 컬럼을 추가하지 못합니다.** 여행 계층 전환은 `schema.sql`을 새로 써서 반영했으므로 **기존 개발·dev 데이터베이스는 재생성해야 합니다.** 실제 데이터가 쌓이기 시작하면 변경 이력을 남길 마이그레이션 도구가 필요합니다.
+- `CREATE TABLE IF NOT EXISTS`는 **이미 존재하는 테이블에 컬럼을 추가하지 못합니다.** 여행 계층 전환과 사진 DB 저장 전환(사진 id UUID화, `photo_data` 추가)은 `schema.sql`을 새로 써서 반영했으므로 **기존 개발·dev 데이터베이스는 재생성해야 합니다.** 실제 데이터가 쌓이기 시작하면 변경 이력을 남길 마이그레이션 도구가 필요합니다.
 
 ## 설정 값
 
@@ -204,8 +204,6 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 
 | 키 | 기본값 | 설명 |
 |---|---|---|
-| `app.storage.type` | `filesystem` | 사진 저장소 종류 (`s3`는 후속 과제) |
-| `app.storage.local.root-dir` | `./uploads` (local) | 사진 저장 디렉터리. `/api/files/photos/**` 경로로 정적 서빙됩니다 |
 | `app.cors.allowed-origins` | `http://localhost:5173` (local) | CORS 허용 오리진 (프론트엔드 dev 서버) |
 | `app.upload.max-photo-size` | `5MB` | 서비스 레벨 사진 크기 검증 값 |
 | `app.upload.allowed-content-types` | `image/jpeg,image/png,image/webp` | 업로드 허용 MIME 타입 |
@@ -250,6 +248,7 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 | `POST` | `/api/invites/{inviteId}/reject` | 초대 거절 |
 | `POST` | `/api/records/{recordId}/photos` | 사진 업로드 (`multipart/form-data`, 여행 소유자) |
 | `DELETE` | `/api/records/{recordId}/photos/{photoId}` | 사진 삭제 (여행 소유자) |
+| `GET` | `/api/files/photos/{photoId}` | 사진 바이너리 서빙 (인증 불필요, 공개 범위 미적용) |
 
 - `scope`와 `sort`는 **소문자로 보냅니다.** 대문자도 받습니다 (`common/web/EnumParams.kt`).
 - 목록의 **페이지 크기는 서버가 정합니다.** 요청에 `size`를 담아도 무시하며, 응답의 `size`가 적용된 값입니다.
@@ -279,11 +278,11 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 - 공개 범위 판정을 조회 쿼리에 싣습니다. 기록 목록·상세·태그 자동완성 모두 소속 여행을 조인해 판정합니다
 - 네이버 OAuth2 로그인 연동 및 사용자 Upsert
 - 네이버 지역 검색 오픈API 프록시 (중복 제거, 거리순 정렬, 페이징)
-- 파일시스템 사진 저장소 및 정적 서빙, 공통 예외 처리
+- 사진 DB 저장(`photo_data`, `BYTEA`) 및 `/api/files/photos/{photoId}` 서빙, 공통 예외 처리
 
 미구현 / 예정 (상세는 SPECIFICATION.md 8장)
 - **인가 정책 적용** — `SecurityConfig`가 개발 편의를 위해 `anyRequest().permitAll()`로 열려 있습니다. 인증은 컨트롤러가 `requireLogin`으로 직접 막고 있으며, SPECIFICATION.md 2.2의 정책대로 필터체인의 `authenticated()`로 되돌려야 합니다.
 - 스키마 마이그레이션 도구 도입 (Flyway/Liquibase) — 현재는 `schema.sql` 단일 파일이라 기존 테이블의 변경 이력을 관리할 수 없습니다. 도입하면 `trips.cover_photo_id`에 외래키를 되돌릴 수 있습니다.
-- 사진 저장소의 AWS S3 전환 (`app.storage.type: s3`)
-- 사진 서빙에 공개 범위가 적용되지 않습니다 — 경로를 아는 사람은 비공개 여행의 사진도 볼 수 있으며, 현재는 추측 불가능한 UUID 경로에만 의존합니다.
+- 사진 저장소의 AWS S3 전환 — 현재는 DB에 저장하며, 저장 추상화는 전환 시점에 도입합니다.
+- 사진 서빙에 공개 범위가 적용되지 않습니다 — URL을 아는 사람은 비공개 여행의 사진도 볼 수 있으며, 현재는 추측 불가능한 사진 id(UUID)에만 의존합니다.
 - 장소 검색 후보 풀 확대 — 원본 API가 검색어당 최대 5건만 반환하므로, 검색어 변형으로 추가 호출해 집계하는 로직이 필요합니다.

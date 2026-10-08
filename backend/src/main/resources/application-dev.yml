@@ -21,9 +21,6 @@ spring:
       enabled: false
 
 app:
-  storage:
-    local:
-      root-dir: ${PHOTO_STORAGE_DIR:./uploads}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
 

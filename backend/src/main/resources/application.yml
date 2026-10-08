@@ -48,5 +48,3 @@ app:
     # 서비스 레벨 검증 값. spring.servlet.multipart.max-file-size 와 같은 값을 유지한다.
     max-photo-size: ${MAX_PHOTO_SIZE:5MB}
     allowed-content-types: ${ALLOWED_PHOTO_CONTENT_TYPES:image/jpeg,image/png,image/webp}
-  storage:
-    type: filesystem

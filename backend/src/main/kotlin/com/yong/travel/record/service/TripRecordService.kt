@@ -9,7 +9,7 @@ import com.yong.travel.group.service.GroupService
 import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
-import com.yong.travel.photo.storage.PhotoStorageService
+import com.yong.travel.photo.storage.PhotoDatabaseService
 import com.yong.travel.record.domain.RecordDetail
 import com.yong.travel.record.domain.RecordSummary
 import com.yong.travel.record.domain.RecordListQuery
@@ -41,7 +41,7 @@ class TripRecordService(
     private val tripRepository: TripRepository,
     private val tagService: TagService,
     private val photoRepository: PhotoRepository,
-    private val photoStorageService: PhotoStorageService,
+    private val photoDatabaseService: PhotoDatabaseService,
     private val groupService: GroupService,
     private val tripService: TripService,
 ) {
@@ -254,7 +254,10 @@ class TripRecordService(
             .groupBy { requireNotNull(it.record.id) }
     }
 
-    private fun PhotoEntity.toDomain() = Photo(requireNotNull(id), photoStorageService.resolveUrl(storageKey))
+    private fun PhotoEntity.toDomain(): Photo {
+        val id = requireNotNull(id)
+        return Photo(id, photoDatabaseService.urlOf(id))
+    }
 
     private fun TripEntity.toDomain() = Trip(id = requireNotNull(id), name = name)
 
@@ -306,7 +309,7 @@ class TripRecordService(
             longitude = longitude,
             rating = rating,
             memo = memo,
-            thumbnailUrl = mine.firstOrNull()?.let { photoStorageService.resolveUrl(it.storageKey) },
+            thumbnailUrl = mine.firstOrNull()?.let { photoDatabaseService.urlOf(requireNotNull(it.id)) },
             photoCount = mine.size.toLong(),
             author = trip.toOwner(),
             distanceKm = if (lat != null && lng != null) {

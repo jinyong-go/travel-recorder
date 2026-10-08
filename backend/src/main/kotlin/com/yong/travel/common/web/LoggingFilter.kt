@@ -1,6 +1,6 @@
 package com.yong.travel.common.web
 
-import com.yong.travel.photo.storage.FileSystemPhotoStorageService
+import com.yong.travel.photo.storage.PhotoDatabaseService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -56,9 +56,9 @@ class LoggingFilter : OncePerRequestFilter() {
         }
     }
 
-    /** 정적 사진 서빙과 H2 콘솔은 건당 한 줄을 남길 값어치가 없다. */
+    /** 사진 서빙과 H2 콘솔은 건당 한 줄을 남길 값어치가 없다. */
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
-        request.requestURI.startsWith(FileSystemPhotoStorageService.PHOTO_URL_PREFIX) ||
+        request.requestURI.startsWith(PhotoDatabaseService.PHOTO_URL_PREFIX) ||
             request.requestURI.startsWith("/h2-console")
 
     /**

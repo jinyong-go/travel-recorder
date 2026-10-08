@@ -1,12 +1,13 @@
 package com.yong.travel.photo.domain
 
+import java.util.UUID
+
 /**
  * 응답에 실리는 사진 한 장 — 식별자와 이미 만들어진 접근 URL.
  *
- * `storageKey` 를 담지 않는다. 저장소 내부 경로는 URL 을 만드는 데만 쓰이며
- * 밖으로 나갈 값이 아니다 (명세 §5).
+ * `url` 은 서버가 만들어 준 값을 그대로 쓴다. 클라이언트가 id 로 URL 을 조립하지 않는다 (명세 §4.6).
  */
 data class Photo(
-    val id: Long,
+    val id: UUID,
     val url: String,
 )

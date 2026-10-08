@@ -17,10 +17,6 @@ spring:
       schema-locations: classpath:schema.sql
 
 app:
-  storage:
-    local:
-      # 테스트가 올린 파일이 로컬 개발용 ./uploads 에 섞이지 않게 빌드 디렉터리에 둔다.
-      root-dir: ./build/test-uploads
   cors:
     # WebConfig 가 필수로 읽는 값이라 비워 둘 수 없다.
     allowed-origins: http://localhost:5173

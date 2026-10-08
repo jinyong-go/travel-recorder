@@ -177,15 +177,18 @@ TripRecordTag                  // TripRecord - Tag 다대다 조인
   record: TripRecord (FK)
   tag: Tag (FK)
 
-Photo
-  id: Long (PK)
+Photo                           // 사진 메타데이터. 바이너리는 PhotoData 에 따로 둔다 (§5.1)
+  id: UUID (PK)                 // 애플리케이션이 생성하는 무작위 UUID(v4). 사진 URL 에 그대로 실린다 (§5.1)
   record: TripRecord (FK)
-  storageKey: String            // 저장소 내 식별 경로/키
   originalFileName: String
   contentType: String
   fileSizeBytes: Long
   createdAt: Instant
   // uploader 컬럼은 두지 않는다 — 사진을 올릴 수 있는 사람이 작성자뿐이라 record.trip.owner 와 항상 같다
+
+PhotoData                       // 사진 바이너리 (테이블명 photo_data)
+  photo: Photo (PK·FK)          // Photo 와 1:1. id 를 공유한다
+  data: ByteArray               // BYTEA
 
 Group                           // 조회 전용 공유 대상 목록 (테이블명 share_group, §3.1)
   id: Long (PK)
@@ -326,8 +329,8 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - 기록 하나만 삭제하는 것은 여행에 영향을 주지 않는다. 마지막 기록을 지워 기록이 0건이 되어도
   여행은 그대로 남는다. **다만 그 기록의 사진이 커버였다면 커버 지정은 해제된다** — 커버는
   "그 여행의 하위 기록에 속한 사진" 이어야 하고(§3.1), 지워진 기록의 사진이 여행을 계속
-  대표하게 두면 그 불변식이 깨진다. 사진 행과 파일 자체는 남는다.
-- `Photo` 는 파일 본체를 함께 지워야 하므로 soft delete 대상이 아니며 물리 삭제한다.
+  대표하게 두면 그 불변식이 깨진다. 사진 행과 바이너리는 남는다.
+- `Photo` 는 바이너리(`PhotoData`)를 함께 지워야 하므로 soft delete 대상이 아니며 물리 삭제한다.
   삭제된 사진을 커버로 쓰던 여행은 `cover_photo_id` 가 `NULL` 이 된다. DB 제약이 아니라
   애플리케이션이 지우는 시점에 해제한다 (§3).
 - **`Group`, `GroupMember`, `GroupInvite`, `TripShare` 는 물리 삭제한다.** 공유 해제와
@@ -437,7 +440,7 @@ GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0
       "headcount": 4,
       "budget": 1250000,
       "memo": "가족들과 다녀온 첫 제주",
-      "coverPhotoUrl": "/api/files/photos/2026/09/14/abc123.jpg",
+      "coverPhotoUrl": "/api/files/photos/3f2b8c1e-7a4d-4e0b-9c55-1d2e6f8a9b07",
       "recordCount": 11,
       "owner": { "id": 7, "name": "홍길동", "profileImageUrl": "https://..." },
       "isOwner": true,
@@ -487,7 +490,7 @@ GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0
   "headcount": 4,
   "budget": 1250000,
   "memo": "가족들과 다녀온 첫 제주",
-  "coverPhotoUrl": "/api/files/photos/2026/09/14/abc123.jpg",
+  "coverPhotoUrl": "/api/files/photos/3f2b8c1e-7a4d-4e0b-9c55-1d2e6f8a9b07",
   "recordCount": 11,
   "owner": { "id": 7, "name": "홍길동", "profileImageUrl": "https://..." },
   "isOwner": true,
@@ -520,7 +523,7 @@ GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0
 
 ```json
 PATCH /api/trips/{id}/cover
-{ "photoId": 11 }
+{ "photoId": "3f2b8c1e-7a4d-4e0b-9c55-1d2e6f8a9b07" }
 ```
 ```json
 { "photoId": null }
@@ -587,7 +590,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
       "longitude": 126.942520,
       "rating": 4.5,
       "memo": "일출 시간에 맞춰 올라갔는데 최고였습니다",
-      "thumbnailUrl": "/api/files/photos/2026/09/14/abc123.jpg",
+      "thumbnailUrl": "/api/files/photos/3f2b8c1e-7a4d-4e0b-9c55-1d2e6f8a9b07",
       "photoCount": 3,
       "trip": { "id": 12, "name": "제주 3박 4일" },
       "author": { "id": 7, "name": "홍길동", "profileImageUrl": "https://..." },
@@ -640,7 +643,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
   "rating": 4.5,
   "memo": "일출 시간에 맞춰 올라갔는데 최고였습니다",
   "photos": [
-    { "id": 11, "url": "/api/files/photos/2026/09/14/abc123.jpg" }
+    { "id": "3f2b8c1e-7a4d-4e0b-9c55-1d2e6f8a9b07", "url": "/api/files/photos/3f2b8c1e-7a4d-4e0b-9c55-1d2e6f8a9b07" }
   ],
   "author": { "id": 7, "name": "홍길동", "profileImageUrl": "https://..." },
   "isAuthor": true,
@@ -715,7 +718,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 |---|---|---|:---:|
 | POST | `/api/records/{id}/photos` | 사진 업로드 (multipart/form-data, 필드명 `files`, 다중 첨부 가능) | 소유자만 |
 | DELETE | `/api/records/{id}/photos/{photoId}` | 사진 삭제 | 소유자만 |
-| GET | `/api/files/photos/**` | 저장된 사진 파일 서빙(정적 리소스) | 선택 |
+| GET | `/api/files/photos/{photoId}` | 사진 바이너리 서빙 | 선택 |
 
 - 업로드 제약(크기·포맷)은 **공통 명세 §6.3이 유일한 출처**이며 양쪽 모듈이 같은 값을 쓴다.
   백엔드는 이를 설정값으로 외부화한다.
@@ -724,8 +727,12 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 - 삭제된 사진이 어느 여행의 커버였다면 그 여행의 `cover_photo_id` 는 `NULL` 이 된다. 외래키가 없어
   사진 삭제 처리가 직접 해제해야 한다 (§3).
   커버 지정 자체는 `PATCH /api/trips/{id}/cover` 로 한다 (§4.3.2).
-- ⚠️ `GET /api/files/photos/**` 는 **공개 범위를 적용하지 않는다.** 경로를 아는 사람은 비공개
-  여행의 사진도 볼 수 있으며, 현재는 추측 불가능한 UUID 경로에만 의존한다 (§8).
+- 사진 id 는 UUID 문자열이다. 응답의 `url` 이 곧 `/api/files/photos/{photoId}` 이며, 클라이언트는
+  URL 을 직접 조립하지 않고 응답 값을 그대로 쓴다.
+- 서빙 응답은 저장된 `contentType` 을 `Content-Type` 으로 내려준다. 사진은 한 번 올라가면 내용이
+  바뀌지 않으므로(수정 API 가 없다) 오래 캐시해도 된다. 없는 사진이면 `404 PHOTO_NOT_FOUND` 다.
+- ⚠️ `GET /api/files/photos/{photoId}` 는 **공개 범위를 적용하지 않는다.** URL 을 아는 사람은 비공개
+  여행의 사진도 볼 수 있으며, 현재는 추측 불가능한 UUID 식별자에만 의존한다 (§5.1, §8.2).
 
 ### 4.7 그룹
 
@@ -886,27 +893,26 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 ## 5. 사진 저장소 설계
 
-### 5.1 현재 단계 — 서버 파일시스템
-- 업로드된 파일은 설정된 루트 경로(예: `app.storage.local.root-dir`) 아래에
-  `yyyy/MM/dd/{UUID}.{ext}` 형태로 저장한다.
-- `Photo.storageKey` 에는 저장소 루트 기준 상대 경로를 저장한다 (예: `2026/09/14/abc123.jpg`).
-- 파일은 `GET /api/files/photos/**` 정적 리소스 핸들러를 통해 서빙한다.
+### 5.1 현재 단계 — 데이터베이스
+- 사진 바이너리는 **`photo_data` 테이블의 `BYTEA` 컬럼**에 저장한다. 메타데이터(`photos`)와
+  테이블을 나눈다.
+  - 기록 목록·여행 커버처럼 `Photo` 를 읽는 경로가 많은데, 바이너리가 같은 행에 있으면 그때마다
+    수 MB 가 함께 읽힌다. Hibernate 의 컬럼 단위 지연 로딩은 바이트코드 enhancement 없이는
+    동작하지 않으므로 테이블을 나누는 것으로 막는다.
+  - `@Lob` 을 쓰지 않는다. PostgreSQL 에서 `@Lob ByteArray` 는 `oid`(large object)로 매핑되어
+    행을 지워도 본체가 남고, H2 와도 동작이 달라진다.
+- **사진 id 는 무작위 UUID(v4)다.** 사진 URL 에 id 가 그대로 실리고 서빙에 공개 범위가 적용되지
+  않으므로(§4.6), 순번 id 면 차례로 넣어 보는 것만으로 모든 사진을 받아 갈 수 있다. 시각이 앞에
+  오는 v7 은 추측의 단서를 늘리므로 쓰지 않는다. 사진 외 엔티티의 id 는 그대로 `Long` 이다.
+- 저장·조회·삭제는 `PhotoDatabaseService` 가 맡는다. 구현이 하나뿐이므로 인터페이스를 두지 않는다.
+- 업로드 한 장이 통째로 메모리에 올라가고, DB 백업 크기가 사진 용량만큼 커진다. 파일당 상한
+  (공통 명세 §6.3) 안에서는 감당할 수 있는 비용으로 본다.
 
 ### 5.2 향후 전환 — 오브젝트 스토리지(AWS S3)
-- `PhotoStorageService` 인터페이스로 저장 로직을 추상화하여 구현체를
-  `FileSystemPhotoStorageService`(현재) / `S3PhotoStorageService`(향후) 로 교체 가능하게 한다.
-
-```kotlin
-interface PhotoStorageService {
-    fun store(file: MultipartFile, record: TripRecord): StoredPhoto
-    fun delete(storageKey: String)
-    fun resolveUrl(storageKey: String): String
-}
-```
-
-- `application.yml` 의 `app.storage.type=filesystem|s3` 설정값으로 구현체를 선택한다.
-- API 응답의 `photos[].url` 은 저장 방식과 무관하게 항상 접근 가능한 URL을 반환하므로,
-  프론트엔드는 저장소 전환과 무관하게 동작한다.
+- 현재는 S3 를 고려하지 않는다. 저장 추상화도 전환 시점에 도입한다 — 구현이 하나인 지금
+  인터페이스를 두면 위임만 하는 계층이 된다.
+- API 응답의 `photos[].url` 은 저장 방식과 무관하게 항상 접근 가능한 URL 이므로, 전환해도
+  프론트엔드는 바뀌지 않는다.
 - S3 전환 시 **서명 URL(pre-signed URL)** 을 도입하면 §4.6의 공개 범위 미적용 문제를 함께
   해결할 수 있다. 전환 시점에 함께 검토한다 (§8).
 
@@ -1035,7 +1041,7 @@ interface PhotoStorageService {
   태그 목록으로 들어온다 (frontend §10).
 
 ### 8.2 알려진 한계
-- **사진 서빙에 공개 범위가 적용되지 않는다** (§4.6). 추측 불가능한 UUID 경로에만 의존하는
+- **사진 서빙에 공개 범위가 적용되지 않는다** (§4.6). 추측 불가능한 UUID 식별자에만 의존하는
   상태이며, 서명 URL 또는 인가 기반 서빙으로의 전환이 후속 과제다 (§5.2).
 - **장소 검색 후보 풀이 부족할 수 있다** (§4.5). 원본 API의 검색어당 5건 상한 때문에 다중 호출
   집계로도 요청 건수를 못 채울 수 있다. 구현 착수 전 재검토하고, 필요 시 카카오 로컬 API 등
@@ -1046,4 +1052,4 @@ interface PhotoStorageService {
 ### 8.3 외부 확인이 필요한 것
 - 네이버 지역 검색 오픈API의 **정확한 `mapx`/`mapy` 좌표계**와 **일일 호출 한도**는 구현 착수
   시점에 developers.naver.com 공식 문서로 재검증해야 한다 (§1.3).
-- 오브젝트 스토리지 전환 일정과 기존 파일시스템 데이터 마이그레이션 절차는 후속 명세에서 다룬다 (§5.2).
+- 오브젝트 스토리지 전환 일정과 DB 에 저장된 사진의 이전 절차는 후속 명세에서 다룬다 (§5.2).
