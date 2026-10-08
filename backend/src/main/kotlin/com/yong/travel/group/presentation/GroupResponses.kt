@@ -1,14 +1,10 @@
 package com.yong.travel.group.presentation
 
 import com.yong.travel.auth.presentation.UserResponse
-import com.yong.travel.auth.presentation.toResponse
-import com.yong.travel.group.domain.GroupDetail
 import com.yong.travel.group.domain.Group
+import com.yong.travel.group.domain.GroupInvite
+import com.yong.travel.group.domain.GroupRef
 import com.yong.travel.group.domain.InviteHistoryEntry
-import com.yong.travel.group.domain.PendingInvite
-import com.yong.travel.group.domain.ReceivedInvite
-import com.yong.travel.group.domain.SentInvite
-import com.yong.travel.group.domain.GroupSummary
 import com.yong.travel.group.domain.InviteOutcome
 import java.time.Instant
 
@@ -20,14 +16,35 @@ data class GroupSummaryResponse(
     val memberCount: Long,
     val memberLimit: Int,
     val isOwner: Boolean,
-)
+) {
+    companion object {
+        /** 그룹 요약 → 응답. `isOwner` 를 여기서 정하는 이유는 [GroupResponse.from] 과 같다. */
+        fun from(group: Group, requesterId: Long) = GroupSummaryResponse(
+            id = group.id,
+            name = group.name,
+            memo = group.memo,
+            memberCount = group.memberCount.toLong(),
+            memberLimit = group.memberLimit,
+            isOwner = group.isOwnedBy(requesterId),
+        )
+    }
+}
 
 data class GroupMemberResponse(
     val id: Long,
     val name: String,
     val profileImageUrl: String?,
     val joinedAt: Instant,
-)
+) {
+    companion object {
+        fun from(member: Group.Member) = GroupMemberResponse(
+            id = member.user.id,
+            name = member.user.name,
+            profileImageUrl = member.user.profileImageUrl,
+            joinedAt = member.joinedAt,
+        )
+    }
+}
 
 data class GroupResponse(
     val id: Long,
@@ -38,13 +55,36 @@ data class GroupResponse(
     val memberCount: Long,
     val memberLimit: Int,
     val isOwner: Boolean,
-)
+) {
+    companion object {
+        /**
+         * 그룹 상세 → 응답.
+         *
+         * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 그래서 `requesterId`
+         * 를 받는다 — 서비스가 아니라 컨트롤러가 요청자를 알고 있는 계층이다.
+         */
+        fun from(group: Group, requesterId: Long) = GroupResponse(
+            id = group.id,
+            name = group.name,
+            memo = group.memo,
+            owner = UserResponse.from(group.owner.user),
+            members = group.members.map { GroupMemberResponse.from(it) },
+            memberCount = group.memberCount.toLong(),
+            memberLimit = group.memberLimit,
+            isOwner = group.isOwnedBy(requesterId),
+        )
+    }
+}
 
 /** 받은 초대에 담기는 그룹 정보. 수락 전에는 멤버 목록도 공유된 기록도 보이지 않는다 (공통 명세 §3.7). */
 data class GroupBriefResponse(
     val id: Long,
     val name: String,
-)
+) {
+    companion object {
+        fun from(group: GroupRef) = GroupBriefResponse(group.id, group.name)
+    }
+}
 
 /**
  * 소유자가 보는 대기 중인 초대.
@@ -56,7 +96,15 @@ data class PendingInviteResponse(
     val id: Long,
     val invitee: UserResponse,
     val createdAt: Instant,
-)
+) {
+    companion object {
+        fun from(invite: GroupInvite) = PendingInviteResponse(
+            id = invite.id,
+            invitee = UserResponse.from(invite.invitee),
+            createdAt = invite.createdAt,
+        )
+    }
+}
 
 /** 받은 초대. 그룹명·초대자·보낸 시각까지가 수락 전에 보여 줄 수 있는 전부다 (공통 명세 §3.7). */
 data class ReceivedInviteResponse(
@@ -64,7 +112,16 @@ data class ReceivedInviteResponse(
     val group: GroupBriefResponse,
     val invitedBy: UserResponse,
     val createdAt: Instant,
-)
+) {
+    companion object {
+        fun from(invite: GroupInvite) = ReceivedInviteResponse(
+            id = invite.id,
+            group = GroupBriefResponse.from(invite.group),
+            invitedBy = UserResponse.from(invite.invitedBy),
+            createdAt = invite.createdAt,
+        )
+    }
+}
 
 /**
  * 내가 보낸 대기 초대. 그룹을 가로지르는 목록이라 그룹명이 함께 필요하다.
@@ -77,7 +134,16 @@ data class SentInviteResponse(
     val group: GroupBriefResponse,
     val invitee: UserResponse,
     val createdAt: Instant,
-)
+) {
+    companion object {
+        fun from(invite: GroupInvite) = SentInviteResponse(
+            id = invite.id,
+            group = GroupBriefResponse.from(invite.group),
+            invitee = UserResponse.from(invite.invitee),
+            createdAt = invite.createdAt,
+        )
+    }
+}
 
 /** 끝난 시점의 그룹. 삭제되었으면 화면이 링크를 걸지 않도록 `deleted` 로 알린다 (공통 명세 §3.7). */
 data class HistoryGroupResponse(
@@ -98,71 +164,15 @@ data class InviteHistoryResponse(
     val outcome: InviteOutcome,
     val invitedAt: Instant,
     val resolvedAt: Instant,
-)
-
-/**
- * 그룹 상세 → 응답.
- *
- * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 그래서 `requesterId`
- * 를 받는다 — 서비스가 아니라 컨트롤러가 요청자를 알고 있는 계층이다.
- */
-fun GroupDetail.toResponse(requesterId: Long): GroupResponse =
-    GroupResponse(
-        id = id,
-        name = name,
-        memo = memo,
-        owner = owner.user.toResponse(),
-        members = members.map {
-            GroupMemberResponse(
-                id = it.user.id,
-                name = it.user.name,
-                profileImageUrl = it.user.profileImageUrl,
-                joinedAt = it.joinedAt,
-            )
-        },
-        memberCount = memberCount.toLong(),
-        memberLimit = memberLimit,
-        isOwner = isOwnedBy(requesterId),
-    )
-
-/** 그룹 요약 → 응답. `isOwner` 를 여기서 정하는 이유는 [toResponse] 와 같다. */
-fun GroupSummary.toSummaryResponse(requesterId: Long): GroupSummaryResponse =
-    GroupSummaryResponse(
-        id = id,
-        name = name,
-        memo = memo,
-        memberCount = memberCount,
-        memberLimit = memberLimit,
-        isOwner = isOwnedBy(requesterId),
-    )
-
-fun Group.toBriefResponse(): GroupBriefResponse = GroupBriefResponse(id, name)
-
-fun PendingInvite.toResponse(): PendingInviteResponse =
-    PendingInviteResponse(id = id, invitee = invitee.toResponse(), createdAt = createdAt)
-
-fun ReceivedInvite.toResponse(): ReceivedInviteResponse =
-    ReceivedInviteResponse(
-        id = id,
-        group = group.toBriefResponse(),
-        invitedBy = invitedBy.toResponse(),
-        createdAt = createdAt,
-    )
-
-fun SentInvite.toResponse(): SentInviteResponse =
-    SentInviteResponse(
-        id = id,
-        group = group.toBriefResponse(),
-        invitee = invitee.toResponse(),
-        createdAt = createdAt,
-    )
-
-fun InviteHistoryEntry.toResponse(): InviteHistoryResponse =
-    InviteHistoryResponse(
-        id = id,
-        group = HistoryGroupResponse(id = group.id, name = group.name, deleted = groupDeleted),
-        counterpart = counterpart.toResponse(),
-        outcome = outcome,
-        invitedAt = invitedAt,
-        resolvedAt = resolvedAt,
-    )
+) {
+    companion object {
+        fun from(entry: InviteHistoryEntry) = InviteHistoryResponse(
+            id = entry.id,
+            group = HistoryGroupResponse(id = entry.group.id, name = entry.group.name, deleted = entry.groupDeleted),
+            counterpart = UserResponse.from(entry.counterpart),
+            outcome = entry.outcome,
+            invitedAt = entry.invitedAt,
+            resolvedAt = entry.resolvedAt,
+        )
+    }
+}

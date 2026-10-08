@@ -4,15 +4,14 @@ import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.group.domain.Group
+import com.yong.travel.group.domain.GroupRef
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
 import com.yong.travel.record.persistence.TripRecordRepository
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
-import com.yong.travel.trip.domain.TripDetail
-import com.yong.travel.trip.domain.TripSummary
+import com.yong.travel.trip.domain.Trip
 import com.yong.travel.trip.domain.Visibility
 import com.yong.travel.trip.domain.TripCreateCommand
 import com.yong.travel.trip.domain.TripListQuery
@@ -49,7 +48,7 @@ class TripService(
         query: TripListQuery,
         userId: Long?,
         pageable: Pageable,
-    ): Page<TripSummary> {
+    ): Page<Trip> {
         val groupIds = groupService.groupIdsOf(userId)
         val spec = TripSpecifications.withScope(query.scope, userId, groupIds)
             .and(TripSpecifications.withKeyword(query.keyword))
@@ -67,11 +66,11 @@ class TripService(
         val shares = sharesOf(page.content.filter { userId != null && it.owner.id == userId })
         // 범위 판정이 쿼리 단계에 있어(명세 §7) 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
         log.debug("여행 목록 scope={} userId={} 건수={}", query.scope, userId, page.totalElements)
-        return page.map { it.toSummary(userId, counts, shares) }
+        return page.map { it.toDomain(userId, counts[requireNotNull(it.id)] ?: 0L, shares) }
     }
 
     /** 볼 권한이 없으면 없는 여행과 똑같이 TRIP_NOT_FOUND 로 응답한다 (존재 은닉). */
-    fun get(tripId: Long, userId: Long?): TripDetail {
+    fun get(tripId: Long, userId: Long?): Trip {
         val trip = findTrip(tripId)
         requireViewable(trip, userId)
         return detailOf(trip, userId)
@@ -81,7 +80,7 @@ class TripService(
     private fun recordCountOf(tripId: Long): Long = recordCounts(tripId)[tripId] ?: 0L
 
     @Transactional
-    fun create(ownerId: Long, command: TripCreateCommand): TripDetail {
+    fun create(ownerId: Long, command: TripCreateCommand): Trip {
         val owner = userRepository.findById(ownerId)
             .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
         val trip = tripRepository.save(
@@ -103,7 +102,7 @@ class TripService(
 
     /** 기본 정보만 바꾼다. 공개 범위는 changeVisibility 의 몫이다. */
     @Transactional
-    fun update(tripId: Long, ownerId: Long, command: TripUpdateCommand): TripDetail {
+    fun update(tripId: Long, ownerId: Long, command: TripUpdateCommand): Trip {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
@@ -126,7 +125,7 @@ class TripService(
         ownerId: Long,
         visibility: Visibility,
         groupIds: List<Long>,
-    ): TripDetail {
+    ): Trip {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
@@ -148,7 +147,7 @@ class TripService(
         tripId: Long,
         ownerId: Long,
         photoId: UUID?,
-    ): TripDetail {
+    ): Trip {
         val trip = findTrip(tripId)
         requireOwner(trip, ownerId)
 
@@ -196,10 +195,9 @@ class TripService(
         ownerId: Long,
     ) {
         val tripId = requireNotNull(trip.id)
+        // 벌크 삭제라 호출 즉시 DB 에 반영된다. 아래 INSERT 보다 늦게 나가 교체 후에도 남는 그룹에서
+        // unique(trip_id, group_id) 위반이 나는 일이 없다.
         tripShareRepository.deleteByTripId(tripId)
-        // 삭제를 먼저 DB 에 반영한다. 그러지 않으면 Hibernate 가 INSERT 를 DELETE 보다 먼저
-        // 내보내, 교체 후에도 남는 그룹에서 unique(trip_id, group_id) 위반이 난다.
-        tripShareRepository.flush()
         if (visibility != Visibility.GROUP) return
 
         // 속하지 않은 그룹에는 공유할 수 없다. 그런 그룹 id 는 404 로 막아 존재 여부도 알리지 않는다.
@@ -267,57 +265,39 @@ class TripService(
      * **소유자 본인의 여행만 넘겨야 한다.** 누구에게 공유했는지는 소유자만 아는 정보라
      * (공통 명세 §3.5), 응답에서 가리는 대신 애초에 읽지 않는다.
      */
-    private fun sharesOf(trips: List<TripEntity>): Map<Long, List<Group>> {
+    private fun sharesOf(trips: List<TripEntity>): Map<Long, List<GroupRef>> {
         val tripIds = trips.filter { it.visibility == Visibility.GROUP }.mapNotNull { it.id }
         if (tripIds.isEmpty()) return emptyMap()
         return tripShareRepository.findByTripIdIn(tripIds)
-            .groupBy({ requireNotNull(it.trip.id) }) { Group(requireNotNull(it.group.id), it.group.name) }
+            .groupBy({ requireNotNull(it.trip.id) }) { GroupRef(requireNotNull(it.group.id), it.group.name) }
     }
 
     private fun TripEntity.coverUrl(): String? = coverPhoto?.let { photoDatabaseService.urlOf(requireNotNull(it.id)) }
 
     private fun TripEntity.toOwner() = User(requireNotNull(owner.id), owner.name, owner.profileImageUrl)
 
-    /**
-     * 여행 엔티티에 기록 수·커버 URL·공유 그룹을 붙여 [TripDetail] 로 만든다.
-     *
-     * 조회가 여기서 끝난다 — 응답을 만들면서 리포지토리를 다시 부르지 않기 위해 도메인 객체를
-     * 두는 것이므로, 이 함수를 지나면 더 읽을 것이 없어야 한다.
-     */
-    private fun detailOf(trip: TripEntity, requesterId: Long?): TripDetail {
+    /** 단건 응답. 기록 수와 (소유자라면) 공유 그룹을 이 여행 하나에 대해 읽어 [toDomain] 에 넘긴다. */
+    private fun detailOf(trip: TripEntity, requesterId: Long?): Trip {
         val tripId = requireNotNull(trip.id)
-        val mine = requesterId != null && trip.owner.id == requesterId
-        return TripDetail(
-            id = tripId,
-            name = trip.name,
-            startDate = trip.startDate,
-            endDate = trip.endDate,
-            headcount = trip.headcount,
-            budget = trip.budget,
-            memo = trip.memo,
-            coverPhotoUrl = trip.coverUrl(),
-            recordCount = recordCountOf(tripId),
-            owner = trip.toOwner(),
-            visibility = if (mine) trip.visibility else null,
-            sharedGroups = if (mine && trip.visibility == Visibility.GROUP) {
-                sharesOf(listOf(trip))[tripId].orEmpty()
-            } else {
-                null
-            },
-            createdAt = trip.createdAt,
-            updatedAt = trip.updatedAt,
-        )
+        val shares = if (requesterId != null && trip.owner.id == requesterId) sharesOf(listOf(trip)) else emptyMap()
+        return trip.toDomain(requesterId, recordCountOf(tripId), shares)
     }
 
-    /** 목록 한 줄. 기록 수와 공유 그룹은 호출부가 한 번에 모아 온 것을 받는다. */
-    private fun TripEntity.toSummary(
+    /**
+     * 여행 엔티티에 기록 수·커버 URL·공유 그룹을 붙여 [Trip] 으로 만든다. 목록과 단건이 함께 쓴다.
+     *
+     * 기록 수와 공유 그룹은 호출부가 미리 모아 온다 — 목록에서 항목마다 조회하지 않기 위해서다.
+     * 조회가 여기서 끝난다. 응답을 만들면서 리포지토리를 다시 부르지 않기 위해 도메인 객체를
+     * 두는 것이므로, 이 함수를 지나면 더 읽을 것이 없어야 한다.
+     */
+    private fun TripEntity.toDomain(
         requesterId: Long?,
-        counts: Map<Long, Long>,
-        shares: Map<Long, List<Group>>,
-    ): TripSummary {
+        recordCount: Long,
+        shares: Map<Long, List<GroupRef>>,
+    ): Trip {
         val tripId = requireNotNull(id)
         val mine = requesterId != null && owner.id == requesterId
-        return TripSummary(
+        return Trip(
             id = tripId,
             name = name,
             startDate = startDate,
@@ -326,11 +306,12 @@ class TripService(
             budget = budget,
             memo = memo,
             coverPhotoUrl = coverUrl(),
-            recordCount = counts[tripId] ?: 0L,
+            recordCount = recordCount,
             owner = toOwner(),
             visibility = if (mine) visibility else null,
             sharedGroups = if (mine && visibility == Visibility.GROUP) shares[tripId].orEmpty() else null,
             createdAt = createdAt,
+            updatedAt = updatedAt,
         )
     }
 }

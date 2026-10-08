@@ -28,5 +28,5 @@ class PlaceSearchController(
         @RequestParam(required = false) lng: Double?,
         @RequestParam(defaultValue = "0") page: Int,
     ): PageResponse<PlaceSearchResultResponse> =
-        PageResponse.of(placeSearchService.search(keyword, lat, lng, page)).map { it.toResponse() }
+        PageResponse.of(placeSearchService.search(keyword, lat, lng, page)).map { PlaceSearchResultResponse.from(it) }
 }

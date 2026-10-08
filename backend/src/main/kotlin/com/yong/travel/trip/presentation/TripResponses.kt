@@ -1,10 +1,9 @@
 package com.yong.travel.trip.presentation
 
 import com.yong.travel.auth.presentation.UserResponse
-import com.yong.travel.auth.presentation.toResponse
-import com.yong.travel.group.domain.Group
-import com.yong.travel.trip.domain.TripDetail
-import com.yong.travel.trip.domain.TripSummary
+import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.trip.domain.Trip
+import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.domain.Visibility
 import java.time.Instant
 import java.time.LocalDate
@@ -18,7 +17,11 @@ import java.time.LocalDate
 data class TripRefResponse(
     val id: Long,
     val name: String,
-)
+) {
+    companion object {
+        fun from(trip: TripRef) = TripRefResponse(trip.id, trip.name)
+    }
+}
 
 /**
  * 여행 응답에 담기는 공유 그룹.
@@ -29,7 +32,11 @@ data class TripRefResponse(
 data class SharedGroupResponse(
     val id: Long,
     val name: String,
-)
+) {
+    companion object {
+        fun from(group: GroupRef) = SharedGroupResponse(group.id, group.name)
+    }
+}
 
 /**
  * 여행 상세.
@@ -60,7 +67,33 @@ data class TripResponse(
     val sharedGroups: List<SharedGroupResponse>?,
     val createdAt: Instant,
     val updatedAt: Instant,
-)
+) {
+    companion object {
+        /**
+         * 여행 → 응답.
+         *
+         * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. `visibility` 와
+         * `sharedGroups` 는 서비스가 소유자에게만 채워 주므로 그대로 옮긴다.
+         */
+        fun from(trip: Trip, requesterId: Long?) = TripResponse(
+            id = trip.id,
+            name = trip.name,
+            startDate = trip.startDate,
+            endDate = trip.endDate,
+            headcount = trip.headcount,
+            budget = trip.budget,
+            memo = trip.memo,
+            coverPhotoUrl = trip.coverPhotoUrl,
+            recordCount = trip.recordCount,
+            owner = UserResponse.from(trip.owner),
+            isOwner = trip.isOwnedBy(requesterId),
+            visibility = trip.visibility,
+            sharedGroups = trip.sharedGroups?.map { SharedGroupResponse.from(it) },
+            createdAt = trip.createdAt,
+            updatedAt = trip.updatedAt,
+        )
+    }
+}
 
 /** 여행 목록 항목. 상세에서 `updatedAt` 만 빠진다. 카드가 설명을 두 줄까지 보여주므로 `memo` 를 담는다. */
 data class TripSummaryResponse(
@@ -78,50 +111,24 @@ data class TripSummaryResponse(
     val visibility: Visibility?,
     val sharedGroups: List<SharedGroupResponse>?,
     val createdAt: Instant,
-)
-
-private fun Group.toSharedResponse() = SharedGroupResponse(id, name)
-
-/**
- * 여행 상세 → 응답.
- *
- * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. `visibility` 와
- * `sharedGroups` 는 서비스가 소유자에게만 채워 주므로 그대로 옮긴다.
- */
-fun TripDetail.toResponse(requesterId: Long?): TripResponse =
-    TripResponse(
-        id = id,
-        name = name,
-        startDate = startDate,
-        endDate = endDate,
-        headcount = headcount,
-        budget = budget,
-        memo = memo,
-        coverPhotoUrl = coverPhotoUrl,
-        recordCount = recordCount,
-        owner = owner.toResponse(),
-        isOwner = isOwnedBy(requesterId),
-        visibility = visibility,
-        sharedGroups = sharedGroups?.map { it.toSharedResponse() },
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-    )
-
-/** 여행 목록 항목 → 응답. `isOwner` 를 여기서 정하는 이유는 [toResponse] 와 같다. */
-fun TripSummary.toSummaryResponse(requesterId: Long?): TripSummaryResponse =
-    TripSummaryResponse(
-        id = id,
-        name = name,
-        startDate = startDate,
-        endDate = endDate,
-        headcount = headcount,
-        budget = budget,
-        memo = memo,
-        coverPhotoUrl = coverPhotoUrl,
-        recordCount = recordCount,
-        owner = owner.toResponse(),
-        isOwner = isOwnedBy(requesterId),
-        visibility = visibility,
-        sharedGroups = sharedGroups?.map { it.toSharedResponse() },
-        createdAt = createdAt,
-    )
+) {
+    companion object {
+        /** 여행 목록 항목 → 응답. `isOwner` 를 여기서 정하는 이유는 [TripResponse.from] 과 같다. */
+        fun from(trip: Trip, requesterId: Long?) = TripSummaryResponse(
+            id = trip.id,
+            name = trip.name,
+            startDate = trip.startDate,
+            endDate = trip.endDate,
+            headcount = trip.headcount,
+            budget = trip.budget,
+            memo = trip.memo,
+            coverPhotoUrl = trip.coverPhotoUrl,
+            recordCount = trip.recordCount,
+            owner = UserResponse.from(trip.owner),
+            isOwner = trip.isOwnedBy(requesterId),
+            visibility = trip.visibility,
+            sharedGroups = trip.sharedGroups?.map { SharedGroupResponse.from(it) },
+            createdAt = trip.createdAt,
+        )
+    }
+}

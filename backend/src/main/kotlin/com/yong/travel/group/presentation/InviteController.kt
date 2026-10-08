@@ -32,7 +32,7 @@ class InviteController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<ReceivedInviteResponse> =
         PageResponse.of(inviteService.listReceived(requireLogin(principal), listPageRequest(page)))
-            .map { it.toResponse() }
+            .map { ReceivedInviteResponse.from(it) }
 
     /** 내가 보낸 대기 초대 목록. 그룹을 가로질러 모은다 (명세 §4.8). */
     @GetMapping("/sent")
@@ -41,7 +41,7 @@ class InviteController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<SentInviteResponse> =
         PageResponse.of(inviteService.listSent(requireLogin(principal), listPageRequest(page)))
-            .map { it.toResponse() }
+            .map { SentInviteResponse.from(it) }
 
     /**
      * 끝난 초대 이력. `role` 로 받은 관점과 보낸 관점을 고르며 기본값은 받은 쪽이다.
@@ -55,7 +55,7 @@ class InviteController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<InviteHistoryResponse> =
         PageResponse.of(inviteService.listHistory(requireLogin(principal), role, listPageRequest(page)))
-            .map { it.toResponse() }
+            .map { InviteHistoryResponse.from(it) }
 
     /** 초대 수락 → 그룹 멤버가 된다. 정원이 차 있으면 409 이고 초대는 남는다. */
     @PostMapping("/{inviteId}/accept")

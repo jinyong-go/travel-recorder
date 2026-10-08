@@ -1,13 +1,9 @@
 package com.yong.travel.record.presentation
 
 import com.yong.travel.auth.presentation.UserResponse
-import com.yong.travel.auth.presentation.toResponse
-import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.presentation.PhotoResponse
 import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.RecordDetail
-import com.yong.travel.record.domain.RecordSummary
-import com.yong.travel.trip.domain.Trip
+import com.yong.travel.record.domain.TripRecord
 import com.yong.travel.trip.presentation.TripRefResponse
 import java.time.Instant
 
@@ -38,7 +34,35 @@ data class TripRecordResponse(
     val isAuthor: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
-)
+) {
+    companion object {
+        /**
+         * 기록 상세 → 응답.
+         *
+         * `isAuthor` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 필드 이름은 이전 판
+         * 그대로 유지한다 (명세 §4.4.1).
+         */
+        fun from(record: TripRecord, requesterId: Long?) = TripRecordResponse(
+            id = record.id,
+            trip = TripRefResponse.from(record.trip),
+            name = record.name,
+            category = record.category,
+            tags = record.tags,
+            address = record.address,
+            roadAddress = record.roadAddress,
+            externalLink = record.externalLink,
+            latitude = record.latitude,
+            longitude = record.longitude,
+            rating = record.rating,
+            memo = record.memo,
+            photos = record.photos.map { PhotoResponse.from(it) },
+            author = UserResponse.from(record.author),
+            isAuthor = record.isAuthoredBy(requesterId),
+            createdAt = record.createdAt,
+            updatedAt = record.updatedAt,
+        )
+    }
+}
 
 data class TripRecordSummaryResponse(
     val id: Long,
@@ -57,56 +81,26 @@ data class TripRecordSummaryResponse(
     val isAuthor: Boolean,
     val distanceKm: Double?,
     val createdAt: Instant,
-)
-
-private fun Trip.toRefResponse() = TripRefResponse(id, name)
-
-private fun Photo.toPhotoResponse() = PhotoResponse(id, url)
-
-/**
- * 기록 상세 → 응답.
- *
- * `isAuthor` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 필드 이름은 이전 판
- * 그대로 유지한다 (명세 §4.4.1).
- */
-fun RecordDetail.toResponse(requesterId: Long?): TripRecordResponse =
-    TripRecordResponse(
-        id = id,
-        trip = trip.toRefResponse(),
-        name = name,
-        category = category,
-        tags = tags,
-        address = address,
-        roadAddress = roadAddress,
-        externalLink = externalLink,
-        latitude = latitude,
-        longitude = longitude,
-        rating = rating,
-        memo = memo,
-        photos = photos.map { it.toPhotoResponse() },
-        author = author.toResponse(),
-        isAuthor = isAuthoredBy(requesterId),
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-    )
-
-/** 기록 목록 항목 → 응답. `isAuthor` 를 여기서 정하는 이유는 [toResponse] 와 같다. */
-fun RecordSummary.toSummaryResponse(requesterId: Long?): TripRecordSummaryResponse =
-    TripRecordSummaryResponse(
-        id = id,
-        trip = trip.toRefResponse(),
-        name = name,
-        category = category,
-        tags = tags,
-        address = address,
-        latitude = latitude,
-        longitude = longitude,
-        rating = rating,
-        memo = memo,
-        thumbnailUrl = thumbnailUrl,
-        photoCount = photoCount,
-        author = author.toResponse(),
-        isAuthor = isAuthoredBy(requesterId),
-        distanceKm = distanceKm,
-        createdAt = createdAt,
-    )
+) {
+    companion object {
+        /** 기록 목록 항목 → 응답. `isAuthor` 를 여기서 정하는 이유는 [TripRecordResponse.from] 과 같다. */
+        fun from(record: TripRecord, requesterId: Long?) = TripRecordSummaryResponse(
+            id = record.id,
+            trip = TripRefResponse.from(record.trip),
+            name = record.name,
+            category = record.category,
+            tags = record.tags,
+            address = record.address,
+            latitude = record.latitude,
+            longitude = record.longitude,
+            rating = record.rating,
+            memo = record.memo,
+            thumbnailUrl = record.photos.firstOrNull()?.url,
+            photoCount = record.photos.size.toLong(),
+            author = UserResponse.from(record.author),
+            isAuthor = record.isAuthoredBy(requesterId),
+            distanceKm = record.distanceKm,
+            createdAt = record.createdAt,
+        )
+    }
+}

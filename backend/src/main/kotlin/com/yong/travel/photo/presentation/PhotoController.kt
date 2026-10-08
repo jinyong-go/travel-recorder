@@ -28,7 +28,7 @@ class PhotoController(
         @RequestParam("files") files: List<MultipartFile>,
         @AuthenticationPrincipal principal: LoginUser?,
     ): List<PhotoResponse> =
-        photoService.upload(recordId, requireLogin(principal), files).map { it.toResponse() }
+        photoService.upload(recordId, requireLogin(principal), files).map { PhotoResponse.from(it) }
 
     /** 사진 삭제. 바이너리까지 함께 지우는 물리 삭제다. */
     @DeleteMapping("/{photoId}")

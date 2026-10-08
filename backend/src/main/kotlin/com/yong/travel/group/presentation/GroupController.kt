@@ -31,7 +31,7 @@ class GroupController(
     @GetMapping
     fun list(@AuthenticationPrincipal principal: LoginUser?): List<GroupSummaryResponse> {
         val userId = requireLogin(principal)
-        return groupService.list(userId).map { it.toSummaryResponse(userId) }
+        return groupService.list(userId).map { GroupSummaryResponse.from(it, userId) }
     }
 
     /** 그룹 생성. 만든 사람이 소유자이자 첫 멤버가 된다. */
@@ -41,7 +41,7 @@ class GroupController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse {
         val userId = requireLogin(principal)
-        return groupService.create(userId, request.name, request.memo).toResponse(userId)
+        return GroupResponse.from(groupService.create(userId, request.name, request.memo), userId)
     }
 
     /** 그룹 상세 (멤버 목록 포함). 멤버가 아니면 403, 없는 그룹이면 404 다 (명세 §2.2.2). */
@@ -51,7 +51,7 @@ class GroupController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse {
         val userId = requireLogin(principal)
-        return groupService.get(groupId, userId).toResponse(userId)
+        return GroupResponse.from(groupService.get(groupId, userId), userId)
     }
 
     /** 그룹 이름 변경. 소유자만 할 수 있다. */
@@ -62,7 +62,7 @@ class GroupController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse {
         val userId = requireLogin(principal)
-        return groupService.rename(groupId, userId, request.name, request.memo).toResponse(userId)
+        return GroupResponse.from(groupService.rename(groupId, userId, request.name, request.memo), userId)
     }
 
     /** 그룹 삭제. 멤버·대기 초대·공유 관계가 함께 사라진다. */
@@ -108,7 +108,7 @@ class GroupController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<PendingInviteResponse> =
         PageResponse.of(inviteService.listPending(groupId, requireLogin(principal), listPageRequest(page)))
-            .map { it.toResponse() }
+            .map { PendingInviteResponse.from(it) }
 
     /**
      * 이메일로 초대 보내기.
@@ -123,7 +123,7 @@ class GroupController(
     ): ResponseEntity<PendingInviteResponse> {
         val result = inviteService.invite(groupId, requireLogin(principal), request.email)
         val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
-        return ResponseEntity.status(status).body(result.invite.toResponse())
+        return ResponseEntity.status(status).body(PendingInviteResponse.from(result.invite))
     }
 
     /** 대기 중인 초대 철회. 초대 행을 지운다. */

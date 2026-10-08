@@ -1,6 +1,10 @@
 package com.yong.travel.record.persistence
 
 import com.yong.travel.record.persistence.TripRecordEntity
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.domain.Specification
+import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Modifying
@@ -9,6 +13,26 @@ import org.springframework.data.repository.query.Param
 import java.time.Instant
 
 interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpecificationExecutor<TripRecordEntity> {
+
+    /**
+     * 기록 목록. 응답에 소속 여행 이름과 작성자(여행 소유자)가 실리므로 둘을 함께 읽는다 — 빠뜨리면
+     * 처음 보는 여행·소유자마다 조회가 따로 나간다.
+     *
+     * 범위 판정이 Specification 에 있어 `@Query` fetch join 으로 옮길 수 없으므로 엔티티 그래프를 쓴다.
+     * 엔티티 그래프는 건수 쿼리에 적용되지 않는다. 태그는 컬렉션이라 여기 넣으면 페이징이 메모리에서
+     * 일어나므로 [findTagNamesByRecordIds] 로 따로 읽는다.
+     */
+    @EntityGraph(attributePaths = ["trip", "trip.owner"])
+    override fun findAll(spec: Specification<TripRecordEntity>, pageable: Pageable): Page<TripRecordEntity>
+
+    /**
+     * 여러 기록의 태그 이름을 한 번에 읽는다. 결과는 `[기록 id, 태그 이름]` 쌍이다.
+     *
+     * 기록 목록이 기록마다 태그 컬렉션을 따로 읽지 않도록 두었다. 태그가 없는 기록은 결과에
+     * 나오지 않으므로 호출부가 빈 목록으로 채운다.
+     */
+    @Query("select r.id, t.name from TripRecordEntity r join r.tags t where r.id in :recordIds")
+    fun findTagNamesByRecordIds(@Param("recordIds") recordIds: Collection<Long>): List<Array<Any>>
 
     /**
      * 여행별 살아 있는 기록 수.

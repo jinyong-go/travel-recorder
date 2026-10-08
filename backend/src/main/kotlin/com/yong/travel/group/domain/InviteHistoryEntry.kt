@@ -11,7 +11,7 @@ import java.time.Instant
  */
 data class InviteHistoryEntry(
     val id: Long,
-    val group: Group,
+    val group: GroupRef,
     val groupDeleted: Boolean,
 
     /** 상대. 받은 이력이면 보냈던 사람, 보낸 이력이면 초대받았던 사람이다. */

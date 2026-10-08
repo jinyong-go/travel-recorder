@@ -110,4 +110,16 @@ class TripRecordEntity(
     fun softDelete() {
         if (deletedAt == null) deletedAt = Instant.now()
     }
+
+    /**
+     * 태그를 주어진 집합으로 맞춘다.
+     *
+     * 컬렉션을 새 Set 으로 바꿔 끼우면 Hibernate 가 조인 테이블 행을 전부 지우고 다시 넣는다. 그래서
+     * 빠진 것만 지우고 새것만 더해, 바뀐 행만 DELETE·INSERT 되게 한다. [TagEntity] 는 equals 를
+     * 재정의하지 않으므로 같은 영속성 컨텍스트에서 읽은 태그 엔티티를 넘겨야 한다.
+     */
+    fun replaceTags(newTags: Set<TagEntity>) {
+        tags.retainAll(newTags)
+        tags.addAll(newTags)
+    }
 }

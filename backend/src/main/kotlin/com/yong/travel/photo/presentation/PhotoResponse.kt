@@ -6,6 +6,8 @@ import java.util.UUID
 data class PhotoResponse(
     val id: UUID,
     val url: String,
-)
-
-fun Photo.toResponse(): PhotoResponse = PhotoResponse(id, url)
+) {
+    companion object {
+        fun from(photo: Photo) = PhotoResponse(photo.id, photo.url)
+    }
+}

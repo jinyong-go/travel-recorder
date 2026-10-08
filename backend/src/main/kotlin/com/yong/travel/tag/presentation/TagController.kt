@@ -19,5 +19,5 @@ class TagController(
     fun search(
         @RequestParam(required = false) keyword: String?,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): List<TagResponse> = tagService.search(keyword, principal?.userId).map { it.toResponse() }
+    ): List<TagResponse> = tagService.search(keyword, principal?.userId).map { TagResponse.from(it) }
 }

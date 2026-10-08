@@ -32,6 +32,29 @@
 JPA 엔티티·리포지토리·Specifications 는 `persistence`, 저장 수단과 무관한 도메인 개념
 (`Visibility`, `Category`, `InviteOutcome`)은 `domain` 에 위치.
 
+### 계층 구조와 의존 방향
+
+```
+presentation → service → persistence
+      ↘           ↓          ↙
+               domain
+```
+
+| 계층 | 담당 |
+|---|---|
+| `presentation` | 컨트롤러, 요청·응답 DTO. 요청 바인딩·검증, 요청 DTO → 도메인 입력, 도메인 객체 → 응답 DTO 변환 |
+| `service` | 비즈니스 로직, 트랜잭션 경계, 권한 판정. 필요한 조회를 끝내고 도메인 객체로 반환 |
+| `persistence` | JPA 엔티티·리포지토리·Specifications. 데이터 접근 |
+| `domain` | 저장 수단과 무관한 도메인 개념·객체. 모든 계층이 참조 |
+
+- **의존은 `presentation → service → persistence` 한 방향만 허용. 역참조 금지**
+    - `service`·`persistence`는 `presentation`을 참조하지 않음 — 요청 DTO·`PageResponse`를 서비스 시그니처에 사용 금지
+    - `persistence`는 `service`를 참조하지 않음
+- **`presentation`은 `persistence`를 건너뛰어 참조하지 않음** — 엔티티를 받거나 반환하는 변환 함수 금지
+- `domain`은 다른 계층을 참조하지 않음
+
+세부 규칙은 [CLAUDE.md](./CLAUDE.md)의 "패키지 구조"·"계층 책임" 참고.
+
 ```
 backend/
 ├─ src/main/kotlin/com/yong/travel/

@@ -11,7 +11,12 @@ data class UserResponse(
     val id: Long,
     val name: String,
     val profileImageUrl: String?,
-)
+) {
+    companion object {
+        /** 도메인 값 → 응답. 모양이 같아도 계층이 다르므로 변환을 거친다 ([User] 주석 참고). */
+        fun from(user: User) = UserResponse(user.id, user.name, user.profileImageUrl)
+    }
+}
 
 /** 로그인 사용자 본인 정보. 이메일이 포함되는 유일한 응답이다. 제공 동의를 받지 못한 계정은 null 이다. */
 data class MeResponse(
@@ -19,15 +24,14 @@ data class MeResponse(
     val name: String,
     val email: String?,
     val profileImageUrl: String?,
-)
+) {
+    companion object {
+        fun from(profile: MyProfile) = MeResponse(profile.id, profile.name, profile.email, profile.profileImageUrl)
+    }
+}
 
 /** 클라이언트 부팅용 세션 상태. 사용자 정보는 담지 않는다 — 이메일은 [MeResponse] 에만 있다. */
 data class SessionResponse(
     val authenticated: Boolean,
     val csrfToken: String,
 )
-
-fun MyProfile.toMeResponse(): MeResponse = MeResponse(id, name, email, profileImageUrl)
-
-/** 도메인 값 → 응답. 모양이 같아도 계층이 다르므로 변환을 거친다 ([User] 주석 참고). */
-fun User.toResponse(): UserResponse = UserResponse(id, name, profileImageUrl)

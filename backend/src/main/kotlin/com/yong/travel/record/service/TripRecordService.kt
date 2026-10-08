@@ -10,8 +10,7 @@ import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
-import com.yong.travel.record.domain.RecordDetail
-import com.yong.travel.record.domain.RecordSummary
+import com.yong.travel.record.domain.TripRecord
 import com.yong.travel.record.domain.RecordListQuery
 import com.yong.travel.record.domain.RecordSort
 import com.yong.travel.record.domain.TripRecordCreateCommand
@@ -20,7 +19,7 @@ import com.yong.travel.record.persistence.TripRecordEntity
 import com.yong.travel.record.persistence.TripRecordRepository
 import com.yong.travel.record.persistence.TripRecordSpecifications
 import com.yong.travel.tag.service.TagService
-import com.yong.travel.trip.domain.Trip
+import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.service.TripService
@@ -52,7 +51,7 @@ class TripRecordService(
         query: RecordListQuery,
         userId: Long?,
         pageable: Pageable,
-    ): Page<RecordSummary> {
+    ): Page<TripRecord> {
         // tripId 로 좁히면 그 여행을 볼 수 있는지 먼저 판정한다. scope 유무와 무관하게 못 보면
         // 없는 여행과 같은 404 다 (명세 §4.4.1).
         query.tripId?.let { tripService.requireViewable(it, userId) }
@@ -83,12 +82,17 @@ class TripRecordService(
         val page = recordRepository.findAll(spec, PageRequest.of(pageable.pageNumber, pageable.pageSize, sort))
 
         // 사진은 항목마다 묻지 않고 페이지 전체를 한 번에 읽는다.
-        val photos = photosOf(page.content.mapNotNull { it.id })
-        val summaries = page.content.map { it.toSummary(photos, query.lat, query.lng) }
+        val recordIds = page.content.mapNotNull { it.id }
+        val photos = photosOf(recordIds)
+        val tags = tagsOf(recordIds)
+        val records = page.content.map {
+            val recordId = requireNotNull(it.id)
+            it.toDomain(photos[recordId].orEmpty(), tags[recordId].orEmpty(), distanceOf(it, query.lat, query.lng))
+        }
         val sorted = if (query.sort == RecordSort.DISTANCE) {
-            summaries.sortedBy { it.distanceKm ?: Double.MAX_VALUE }
+            records.sortedBy { it.distanceKm ?: Double.MAX_VALUE }
         } else {
-            summaries
+            records
         }
 
         // 범위 판정이 쿼리 단계에 있어(명세 §7) 건수가 어긋나면 곧 유출이다. 기준 좌표는 남기지 않는다.
@@ -100,15 +104,15 @@ class TripRecordService(
     }
 
     /** 볼 권한이 없으면 없는 기록과 똑같이 RECORD_NOT_FOUND 로 응답한다 (존재 은닉). */
-    fun get(recordId: Long, userId: Long?): RecordDetail {
+    fun get(recordId: Long, userId: Long?): TripRecord {
         val record = findRecord(recordId)
         requireViewable(record, userId)
-        return record.toDetail()
+        return detailOf(record)
     }
 
     /** 소속 여행은 요청자가 소유한 것이어야 한다. 아니면 TRIP_NOT_FOUND 다. */
     @Transactional
-    fun create(authorId: Long, command: TripRecordCreateCommand): RecordDetail {
+    fun create(authorId: Long, command: TripRecordCreateCommand): TripRecord {
         val trip = requireOwnedTrip(command.tripId, authorId)
         val record = TripRecordEntity(
             trip = trip,
@@ -128,7 +132,7 @@ class TripRecordService(
             "기록 생성 recordId={} tripId={} authorId={} category={}",
             saved.id, trip.id, authorId, saved.category,
         )
-        return saved.toDetail()
+        return detailOf(saved)
     }
 
     @Transactional
@@ -136,7 +140,7 @@ class TripRecordService(
         recordId: Long,
         authorId: Long,
         command: TripRecordUpdateCommand,
-    ): RecordDetail {
+    ): TripRecord {
         val record = findRecord(recordId)
         requireAuthor(record, authorId)
 
@@ -149,11 +153,11 @@ class TripRecordService(
         record.longitude = command.longitude
         record.rating = command.rating
         record.memo = command.memo
-        record.tags = tagService.findOrCreateAll(command.tags).toMutableSet()
+        record.replaceTags(tagService.findOrCreateAll(command.tags))
 
         log.debug("기록 수정 recordId={} authorId={}", recordId, authorId)
         // updatedAt 을 채우는 @PreUpdate 는 flush 시점에 돈다.
-        return recordRepository.saveAndFlush(record).toDetail()
+        return detailOf(recordRepository.saveAndFlush(record))
     }
 
     /**
@@ -167,7 +171,7 @@ class TripRecordService(
         recordId: Long,
         authorId: Long,
         tripId: Long,
-    ): RecordDetail {
+    ): TripRecord {
         val record = findRecord(recordId)
         requireAuthor(record, authorId)
 
@@ -180,7 +184,7 @@ class TripRecordService(
             record.trip.clearCoverIfAmong(photoRepository.findIdsByRecordId(recordId))
             record.trip = newTrip
         }
-        return recordRepository.saveAndFlush(record).toDetail()
+        return detailOf(recordRepository.saveAndFlush(record))
     }
 
     /**
@@ -254,28 +258,39 @@ class TripRecordService(
             .groupBy { requireNotNull(it.record.id) }
     }
 
+    /** 여러 기록의 태그 이름을 한 번에 읽어 기록 id 로 묶는다. 태그가 없는 기록은 빠진다. */
+    private fun tagsOf(recordIds: List<Long>): Map<Long, List<String>> {
+        if (recordIds.isEmpty()) return emptyMap()
+        return recordRepository.findTagNamesByRecordIds(recordIds)
+            .groupBy({ (it[0] as Number).toLong() }) { it[1] as String }
+    }
+
     private fun PhotoEntity.toDomain(): Photo {
         val id = requireNotNull(id)
         return Photo(id, photoDatabaseService.urlOf(id))
     }
 
-    private fun TripEntity.toDomain() = Trip(id = requireNotNull(id), name = name)
+    private fun TripEntity.toDomain() = TripRef(id = requireNotNull(id), name = name)
 
     private fun TripEntity.toOwner() = User(requireNotNull(owner.id), owner.name, owner.profileImageUrl)
 
     /**
-     * 기록 엔티티에 사진을 붙여 [RecordDetail] 로 만든다.
+     * 기록 엔티티에 사진·거리를 붙여 [TripRecord] 로 만든다. 목록과 상세가 함께 쓴다.
      *
-     * 조회가 여기서 끝난다 — 이 함수를 지나면 응답을 만들며 리포지토리를 다시 부를 일이 없어야 한다.
+     * 사진·태그는 호출부가 미리 읽어 온다 — 목록에서 항목마다 조회하지 않기 위해서다.
+     * 조회가 여기서 끝난다. 이 함수를 지나면 응답을 만들며 리포지토리를 다시 부를 일이 없어야 한다.
      */
-    private fun TripRecordEntity.toDetail(): RecordDetail {
-        val recordId = requireNotNull(id)
-        return RecordDetail(
-            id = recordId,
+    private fun TripRecordEntity.toDomain(
+        photos: List<PhotoEntity>,
+        tagNames: List<String>,
+        distanceKm: Double?,
+    ): TripRecord =
+        TripRecord(
+            id = requireNotNull(id),
             trip = trip.toDomain(),
             name = name,
             category = category,
-            tags = tags.map { it.name }.sorted(),
+            tags = tagNames.sorted(),
             address = address,
             roadAddress = roadAddress,
             externalLink = externalLink,
@@ -283,41 +298,22 @@ class TripRecordService(
             longitude = longitude,
             rating = rating,
             memo = memo,
-            photos = photoRepository.findByRecordIdOrderByCreatedAtAsc(recordId).map { it.toDomain() },
+            photos = photos.map { it.toDomain() },
             author = trip.toOwner(),
+            distanceKm = distanceKm,
             createdAt = createdAt,
             updatedAt = updatedAt,
         )
+
+    /** 단건 응답. 이 기록의 사진·태그만 읽고, 거리는 목록에서만 계산하므로 비운다. */
+    private fun detailOf(record: TripRecordEntity): TripRecord {
+        val photos = photoRepository.findByRecordIdOrderByCreatedAtAsc(requireNotNull(record.id))
+        return record.toDomain(photos, record.tags.map { it.name }, distanceKm = null)
     }
 
-    /** 목록 한 줄. 사진은 호출부가 한 번에 모아 온 것을 받는다. */
-    private fun TripRecordEntity.toSummary(
-        photos: Map<Long, List<PhotoEntity>>,
-        lat: Double?,
-        lng: Double?,
-    ): RecordSummary {
-        val recordId = requireNotNull(id)
-        val mine = photos[recordId].orEmpty()
-        return RecordSummary(
-            id = recordId,
-            trip = trip.toDomain(),
-            name = name,
-            category = category,
-            tags = tags.map { it.name }.sorted(),
-            address = address,
-            latitude = latitude,
-            longitude = longitude,
-            rating = rating,
-            memo = memo,
-            thumbnailUrl = mine.firstOrNull()?.let { photoDatabaseService.urlOf(requireNotNull(it.id)) },
-            photoCount = mine.size.toLong(),
-            author = trip.toOwner(),
-            distanceKm = if (lat != null && lng != null) {
-                haversineKm(lat, lng, latitude, longitude).roundTo2Decimals()
-            } else {
-                null
-            },
-            createdAt = createdAt,
-        )
+    /** 기준 좌표가 둘 다 왔을 때만 계산한다. 좌표는 계산에만 쓰고 남기지 않는다 (공통 명세 §5). */
+    private fun distanceOf(record: TripRecordEntity, lat: Double?, lng: Double?): Double? {
+        if (lat == null || lng == null) return null
+        return haversineKm(lat, lng, record.latitude, record.longitude).roundTo2Decimals()
     }
 }

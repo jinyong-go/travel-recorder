@@ -48,7 +48,7 @@ class TripController(
             TripScope.PUBLIC -> principal?.userId
         }
         val trips = tripService.list(TripListQuery(scope, keyword, sort), userId, listPageRequest(page))
-        return PageResponse.of(trips).map { it.toSummaryResponse(userId) }
+        return PageResponse.of(trips).map { TripSummaryResponse.from(it, userId) }
     }
 
     /** 여행 상세 조회. 볼 수 없는 여행은 존재하지 않는 것과 같은 404 다. */
@@ -58,7 +58,7 @@ class TripController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse {
         val userId = principal?.userId
-        return tripService.get(tripId, userId).toResponse(userId)
+        return TripResponse.from(tripService.get(tripId, userId), userId)
     }
 
     /** 여행 생성. 소유자는 요청자로 고정되며 요청으로 지정할 수 없다. */
@@ -68,7 +68,7 @@ class TripController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse {
         val userId = requireLogin(principal)
-        return tripService.create(userId, request.toCommand()).toResponse(userId)
+        return TripResponse.from(tripService.create(userId, request.toCommand()), userId)
     }
 
     /** 여행 기본 정보 수정. 공개 범위는 이 경로로 바꾸지 않는다. 소유자만 할 수 있다. */
@@ -79,7 +79,7 @@ class TripController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse {
         val userId = requireLogin(principal)
-        return tripService.update(tripId, userId, request.toCommand()).toResponse(userId)
+        return TripResponse.from(tripService.update(tripId, userId, request.toCommand()), userId)
     }
 
     /** 공개 범위 변경. GROUP 이면 공유 그룹 목록도 함께 전체 교체된다. */
@@ -90,7 +90,8 @@ class TripController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse {
         val userId = requireLogin(principal)
-        return tripService.changeVisibility(tripId, userId, request.visibility, request.groupIds).toResponse(userId)
+        val trip = tripService.changeVisibility(tripId, userId, request.visibility, request.groupIds)
+        return TripResponse.from(trip, userId)
     }
 
     /** 커버 사진 지정·해제. `photoId` 가 null 이면 해제한다. */
@@ -101,7 +102,7 @@ class TripController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripResponse {
         val userId = requireLogin(principal)
-        return tripService.changeCover(tripId, userId, request.photoId).toResponse(userId)
+        return TripResponse.from(tripService.changeCover(tripId, userId, request.photoId), userId)
     }
 
     /** 여행 삭제. soft delete 이며 하위 기록도 함께 사라진다. */

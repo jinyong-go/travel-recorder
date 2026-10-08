@@ -7,8 +7,7 @@ import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.group.persistence.GroupMemberEntity
 import com.yong.travel.group.persistence.InviteHistoryEntity
-import com.yong.travel.group.domain.GroupDetail
-import com.yong.travel.group.domain.GroupSummary
+import com.yong.travel.group.domain.Group
 import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.persistence.InviteHistoryRepository
@@ -36,10 +35,14 @@ class GroupService(
      * 요청자가 소유하거나 속한 그룹 목록을 조회한다.
      *
      * @param userId 조회를 요청한 사용자 id
-     * @return 그룹 요약 목록. 멤버 행에서 출발하므로 소유자도 자기 그룹을 여기서 본다. 없으면 빈 목록
+     * @return 그룹 목록. 멤버 행에서 출발하므로 소유자도 자기 그룹을 여기서 본다. 없으면 빈 목록
      */
-    fun list(userId: Long): List<GroupSummary> =
-        groupMemberRepository.findGroupsByUserId(userId).map { it.toSummary() }
+    fun list(userId: Long): List<Group> {
+        val groups = groupMemberRepository.findGroupsByUserId(userId)
+        // 명단은 그룹마다 묻지 않고 한 번에 읽어 그룹 id 로 묶는다.
+        val members = membersOf(groups.mapNotNull { it.id })
+        return groups.map { it.toDomain(members[requireNotNull(it.id)].orEmpty()) }
+    }
 
     /**
      * 그룹 상세를 멤버 목록과 함께 조회한다.
@@ -50,7 +53,7 @@ class GroupService(
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 그룹은 있으나 요청자가 멤버가 아닐 때 (명세 §2.2.2)
      */
-    fun get(groupId: Long, userId: Long): GroupDetail {
+    fun get(groupId: Long, userId: Long): Group {
         val group = findGroup(groupId)
         if (!groupMemberRepository.existsByGroupIdAndUserId(groupId, userId)) {
             log.debug("그룹 열람 차단 groupId={} userId={}", groupId, userId)
@@ -70,7 +73,7 @@ class GroupService(
      *         계정이 지워진 뒤의 요청이라 다시 로그인하는 것 말고 할 수 있는 일이 없다
      */
     @Transactional
-    fun create(userId: Long, name: String, memo: String?): GroupDetail {
+    fun create(userId: Long, name: String, memo: String?): Group {
         val owner = userRepository.findById(userId)
             .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
         val group = groupRepository.save(
@@ -81,15 +84,7 @@ class GroupService(
         log.debug("그룹 생성 groupId={} ownerId={}", group.id, userId)
 
         // 방금 만든 멤버가 전부라 다시 읽지 않는다. detailOf 를 쓰면 flush 순서에 기대게 된다.
-        val member = ownerMember.toDomain()
-        return GroupDetail(
-            id = requireNotNull(group.id),
-            name = group.name,
-            memo = group.memo,
-            owner = member,
-            members = listOf(member),
-            memberLimit = GroupEntity.MEMBER_LIMIT,
-        )
+        return group.toDomain(listOf(ownerMember.toDomain()))
     }
 
     /**
@@ -104,7 +99,7 @@ class GroupService(
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
      */
     @Transactional
-    fun rename(groupId: Long, userId: Long, name: String, memo: String?): GroupDetail {
+    fun rename(groupId: Long, userId: Long, name: String, memo: String?): Group {
         val group = findGroup(groupId)
         requireOwner(group, userId)
         group.name = name.trim()
@@ -133,6 +128,8 @@ class GroupService(
         val pending = groupInviteRepository.findByGroupId(groupId)
         inviteHistoryRepository.saveAll(pending.map { InviteHistoryEntity.from(it, InviteOutcome.GROUP_DELETED) })
         log.debug("그룹 삭제 groupId={} ownerId={} 이력으로_넘긴_대기초대={}건", groupId, userId, pending.size)
+        // 초대 벌크 삭제가 영속성 컨텍스트를 비우므로 이 뒤로 group 은 준영속이다.
+        // groupRepository.delete 가 다시 찾아 지운다 (GroupInviteRepository.deleteByGroupId 참고).
         groupInviteRepository.deleteByGroupId(groupId)
         groupMemberRepository.deleteByGroupId(groupId)
         groupRepository.delete(group)
@@ -236,30 +233,32 @@ class GroupService(
     // 공백만 남은 메모는 "메모 없음" 과 같다. 카드에 빈 줄만 그려지지 않도록 null 로 모은다.
     private fun String?.blankToNull(): String? = this?.trim()?.takeIf { it.isNotBlank() }
 
-    // 목록용. 명단 대신 건수만 센다.
-    private fun GroupEntity.toSummary() = GroupSummary(
-        id = requireNotNull(id),
-        name = name,
-        memo = memo,
-        ownerId = requireNotNull(owner.id),
-        memberCount = groupMemberRepository.countByGroupId(requireNotNull(id)),
-        memberLimit = GroupEntity.MEMBER_LIMIT,
-    )
+    /** 단건 응답. 이 그룹의 명단만 읽어 [toDomain] 에 넘긴다. */
+    private fun detailOf(group: GroupEntity): Group {
+        val groupId = requireNotNull(group.id)
+        return group.toDomain(membersOf(listOf(groupId))[groupId].orEmpty())
+    }
+
+    /** 여러 그룹의 명단을 한 번에 읽어 그룹 id 로 묶는다. 가입 순서는 그대로 지켜진다. */
+    private fun membersOf(groupIds: List<Long>): Map<Long, List<Group.Member>> {
+        if (groupIds.isEmpty()) return emptyMap()
+        return groupMemberRepository.findWithUserByGroupIdIn(groupIds)
+            .groupBy({ requireNotNull(it.group.id) }) { it.toDomain() }
+    }
 
     /**
-     * 그룹 엔티티에 멤버 명단을 붙여 [GroupDetail] 로 만든다.
+     * 그룹 엔티티에 멤버 명단을 붙여 [Group] 으로 만든다. 목록과 단건이 함께 쓴다.
      *
-     * 명단 조회가 여기 한 번뿐이라 이후로는 추가 조회가 없다 — 응답을 만들면서 리포지토리를 다시
-     * 부르지 않기 위해 도메인 객체를 두는 것이므로, 이 함수를 지나면 조회가 끝나 있어야 한다.
+     * 명단은 호출부가 미리 읽어 온다. 응답을 만들면서 리포지토리를 다시 부르지 않기 위해 도메인
+     * 객체를 두는 것이므로, 이 함수를 지나면 조회가 끝나 있어야 한다.
      */
-    private fun detailOf(group: GroupEntity): GroupDetail {
-        val groupId = requireNotNull(group.id)
-        val ownerId = requireNotNull(group.owner.id)
-        val members = groupMemberRepository.findByGroupIdOrderByJoinedAtAsc(groupId).map { it.toDomain() }
-        return GroupDetail(
+    private fun GroupEntity.toDomain(members: List<Group.Member>): Group {
+        val groupId = requireNotNull(id)
+        val ownerId = requireNotNull(owner.id)
+        return Group(
             id = groupId,
-            name = group.name,
-            memo = group.memo,
+            name = name,
+            memo = memo,
             // 소유자는 반드시 멤버 행을 갖는다 (create 참고). 없다면 데이터가 깨진 것이라 500 이 맞다.
             owner = members.firstOrNull { it.user.id == ownerId }
                 ?: error("그룹 ${'$'}groupId 의 소유자 멤버 행이 없다"),
@@ -269,7 +268,7 @@ class GroupService(
     }
 
     // 멤버 행 → 도메인. 이름과 프로필 사진까지만 담는다 (공통 명세 §3.1).
-    private fun GroupMemberEntity.toDomain() = GroupDetail.Member(
+    private fun GroupMemberEntity.toDomain() = Group.Member(
         user = User(requireNotNull(user.id), user.name, user.profileImageUrl),
         joinedAt = joinedAt,
     )

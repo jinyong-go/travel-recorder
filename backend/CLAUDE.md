@@ -40,7 +40,7 @@ com.yong.travel
   이름(`*Controller`, `*Requests`, `*Responses`)으로 구분한다.
 - **JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 둔다.** 엔티티 클래스는 `*Entity`
   로 끝난다 (`TripEntity`). `domain` 은 저장 수단을 모르는 도메인 개념의 자리다 — `Visibility`·
-  `Category`·`InviteOutcome`, 서비스가 주고받는 도메인 객체(`Trip`·`TripDetail`), 입력(`TripCreateCommand`),
+  `Category`·`InviteOutcome`, 서비스가 주고받는 도메인 객체(`Trip`·`TripRef`·`TripRecord`·`GroupInvite`), 입력(`TripCreateCommand`),
   조회 조건(`TripListQuery`) 이 여기 있다.
 - **의존 방향은 `presentation → service → persistence → domain` 이다.** 모든 계층이 `domain` 을
   알고, `domain` 은 아무것도 모른다.
@@ -59,13 +59,24 @@ com.yong.travel
 | Persistence | 데이터 접근. 엔티티·리포지토리·`Specifications` | 로직 분기 |
 
 - **의존성은 생성자 주입**이다. 필드 주입(`@Autowired var`)을 쓰지 않는다.
+- 컨트롤러 한 메서드의 모양은 다음과 같다 — 인증 확인, 요청 DTO → `Command`, 서비스 호출,
+  도메인 객체 → 응답 DTO 순서다.
 
   ```kotlin
   @RestController
-  @RequestMapping("/api/records")
-  class TripRecordController(
-      private val recordService: TripRecordService,
-  )
+  @RequestMapping("/api/trips")
+  class TripController(
+      private val tripService: TripService,
+  ) {
+      @PostMapping
+      fun create(
+          @RequestBody @Valid request: TripCreateRequest,
+          @AuthenticationPrincipal principal: LoginUser?,
+      ): TripResponse {
+          val userId = requireLogin(principal)  // permitAll 상태라 빠뜨리면 그대로 열린다 (아래 "인가")
+          return TripResponse.from(tripService.create(userId, request.toCommand()), userId)
+      }
+  }
   ```
 
 - **엔티티를 요청·응답에 직접 쓰지 않는다.** DTO로 주고받는다. DTO는 도메인별 `presentation` 패키지에
@@ -73,9 +84,11 @@ com.yong.travel
 - **서비스는 요청 DTO 를 받지 않는다.** 필드가 많은 생성·수정은 `domain` 의 `*Command`
   (`TripCreateCommand`) 로, 한두 개짜리 입력은 파라미터로 받는다 (`changeCover(tripId, ownerId, photoId)`).
   요청 DTO 의 `toCommand()` 가 옮겨 담는다. Bean Validation 은 요청 DTO 에만 건다.
-- **서비스는 DTO 가 아니라 도메인 객체를 반환한다** (`TripDetail`, `GroupSummary`, `User` …).
-  변환 함수는 응답 DTO 파일에 확장 함수로 두고 컨트롤러가 부른다. 서비스가 응답 모양을 알면
-  화면이 바뀔 때마다 서비스가 끌려 들어온다.
+- **서비스는 DTO 가 아니라 도메인 객체를 반환한다** (`Trip`, `Group`, `User` …).
+  서비스가 응답 모양을 알면 화면이 바뀔 때마다 서비스가 끌려 들어온다.
+- **응답 DTO 는 `companion object` 의 `from(도메인 객체[, requesterId])` 로 스스로 만든다.**
+  컨트롤러가 `TripResponse.from(trip, userId)` 처럼 부른다. 도메인 객체에 `toXxxResponse()`
+  확장 함수를 두지 않는다 — 변환이 DTO 밖에 흩어지면 응답 모양을 바꿀 때 찾아다녀야 한다.
 - **응답을 만들면서 조회하지 않는다.** 변환 함수 안에서 리포지토리를 부르면 목록에서 그대로
   N+1 이 된다. 필요한 것은 서비스가 미리 모아 도메인 객체에 담는다 —
   `TripShareRepository.findByTripIdIn`, `PhotoRepository.findByRecordIdInOrderByCreatedAtAsc`
@@ -88,7 +101,7 @@ com.yong.travel
   `TagService.findOrCreateAll` 은 엔티티를 반환한다 — 컨트롤러로 나가는 경계가 아니라
   다른 서비스가 연관을 걸 때 쓰기 때문이다.
 - 서비스는 목록을 Spring Data `Page<도메인 객체>` 로 돌려준다. 페이지 안에서 재정렬하거나 직접
-  자른 목록은 `PageImpl` 로 감싼다. 응답은 컨트롤러가 `PageResponse.of(page).map { it.toXxxResponse() }`
+  자른 목록은 `PageImpl` 로 감싼다. 응답은 컨트롤러가 `PageResponse.of(page).map { XxxResponse.from(it) }`
   로 만든다.
 
 ## 인가 — 가장 조심할 자리

@@ -9,12 +9,10 @@ import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.group.persistence.GroupInviteEntity
 import com.yong.travel.group.persistence.GroupMemberEntity
 import com.yong.travel.group.persistence.InviteHistoryEntity
-import com.yong.travel.group.domain.Group
+import com.yong.travel.group.domain.GroupInvite
+import com.yong.travel.group.domain.GroupRef
 import com.yong.travel.group.domain.InviteHistoryEntry
 import com.yong.travel.group.domain.InviteOutcome
-import com.yong.travel.group.domain.PendingInvite
-import com.yong.travel.group.domain.ReceivedInvite
-import com.yong.travel.group.domain.SentInvite
 import com.yong.travel.group.domain.InviteHistoryRole
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.persistence.GroupMemberRepository
@@ -45,9 +43,9 @@ class InviteService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /** 그 그룹의 대기 중인 초대 목록. 소유자만 볼 수 있다. */
-    fun listPending(groupId: Long, ownerId: Long, pageable: Pageable): Page<PendingInvite> {
+    fun listPending(groupId: Long, ownerId: Long, pageable: Pageable): Page<GroupInvite> {
         requireOwner(findGroup(groupId), ownerId)
-        return inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, pageable).map { it.toPending() }
+        return inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, pageable).map { it.toDomain() }
     }
 
     /**
@@ -77,14 +75,14 @@ class InviteService(
         // 중복 클릭이 실패처럼 보이지 않도록 기존 초대를 그대로 돌려준다. unique(group_id, invitee_id) 가 이를 보장한다.
         inviteRepository.findByGroupIdAndInviteeId(groupId, inviteeId)?.let {
             log.debug("초대 재사용 groupId={} inviteId={} inviteeId={}", groupId, it.id, inviteeId)
-            return InviteResult(it.toPending(), created = false)
+            return InviteResult(it.toDomain(), created = false)
         }
 
         val saved = inviteRepository.save(
             GroupInviteEntity(group = group, invitee = invitee, invitedBy = group.owner),
         )
         log.debug("초대 생성 groupId={} inviteId={} ownerId={} inviteeId={}", groupId, saved.id, ownerId, inviteeId)
-        return InviteResult(saved.toPending(), created = true)
+        return InviteResult(saved.toDomain(), created = true)
     }
 
     @Transactional
@@ -100,12 +98,12 @@ class InviteService(
     }
 
     /** 내 앞으로 온 대기 초대. */
-    fun listReceived(userId: Long, pageable: Pageable): Page<ReceivedInvite> =
-        inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, pageable).map { it.toReceived() }
+    fun listReceived(userId: Long, pageable: Pageable): Page<GroupInvite> =
+        inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, pageable).map { it.toDomain() }
 
     /** 내가 보낸 대기 초대. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다 (명세 §4.8). */
-    fun listSent(userId: Long, pageable: Pageable): Page<SentInvite> =
-        inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, pageable).map { it.toSent() }
+    fun listSent(userId: Long, pageable: Pageable): Page<GroupInvite> =
+        inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, pageable).map { it.toDomain() }
 
     /**
      * 끝난 초대 이력. `role` 이 관점을 고르며, 어느 쪽이든 본인이 당사자인 것만 조회된다.
@@ -205,22 +203,11 @@ class InviteService(
         return invite
     }
 
-    private fun GroupInviteEntity.toPending() = PendingInvite(
-        id = requireNotNull(id),
-        invitee = invitee.toDomain(),
-        createdAt = createdAt,
-    )
-
-    private fun GroupInviteEntity.toSent() = SentInvite(
+    /** 대기 초대 → 도메인. 어느 관점의 목록이든 같은 모양이며, 보여 줄 필드는 응답 DTO 가 고른다. */
+    private fun GroupInviteEntity.toDomain() = GroupInvite(
         id = requireNotNull(id),
         group = group.toDomain(),
         invitee = invitee.toDomain(),
-        createdAt = createdAt,
-    )
-
-    private fun GroupInviteEntity.toReceived() = ReceivedInvite(
-        id = requireNotNull(id),
-        group = group.toDomain(),
         invitedBy = invitedBy.toDomain(),
         createdAt = createdAt,
     )
@@ -229,7 +216,7 @@ class InviteService(
     private fun InviteHistoryEntity.toDomain(role: InviteHistoryRole, groupAlive: Boolean) = InviteHistoryEntry(
         id = requireNotNull(id),
         // 그룹명은 이력에 저장된 스냅샷이다. 그룹이 지워져도 이름이 남아야 하기 때문이다 (명세 §3.1).
-        group = Group(id = groupId, name = groupName),
+        group = GroupRef(id = groupId, name = groupName),
         groupDeleted = !groupAlive,
         counterpart = when (role) {
             InviteHistoryRole.RECEIVED -> invitedBy.toDomain()
@@ -242,5 +229,5 @@ class InviteService(
 
     private fun UserEntity.toDomain() = User(requireNotNull(id), name, profileImageUrl)
 
-    private fun GroupEntity.toDomain() = Group(requireNotNull(id), name)
+    private fun GroupEntity.toDomain() = GroupRef(requireNotNull(id), name)
 }

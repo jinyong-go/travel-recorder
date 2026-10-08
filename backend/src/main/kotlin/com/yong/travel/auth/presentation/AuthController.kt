@@ -41,7 +41,7 @@ class AuthController(
      */
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal principal: LoginUser?): MeResponse =
-        authService.getCurrentUser(requireLogin(principal)).toMeResponse()
+        MeResponse.from(authService.getCurrentUser(requireLogin(principal)))
 
     /**
      * 로그아웃. 세션을 버리고 SecurityContext 를 비운다.

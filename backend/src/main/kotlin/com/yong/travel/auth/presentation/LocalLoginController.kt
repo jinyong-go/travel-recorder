@@ -82,6 +82,6 @@ class LocalLoginController(
         SecurityContextHolder.setContext(context)
         securityContextRepository.saveContext(context, httpRequest, httpResponse)
 
-        return authService.getCurrentUser((authentication.principal as LoginUser).userId).toMeResponse()
+        return MeResponse.from(authService.getCurrentUser((authentication.principal as LoginUser).userId))
     }
 }

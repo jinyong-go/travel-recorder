@@ -64,7 +64,7 @@ class TripRecordController(
             userId,
             listPageRequest(page),
         )
-        return PageResponse.of(records).map { it.toSummaryResponse(userId) }
+        return PageResponse.of(records).map { TripRecordSummaryResponse.from(it, userId) }
     }
 
     /** 기록 상세 조회. 볼 수 없는 기록은 존재하지 않는 것과 같은 404 다. */
@@ -74,7 +74,7 @@ class TripRecordController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse {
         val userId = principal?.userId
-        return recordService.get(recordId, userId).toResponse(userId)
+        return TripRecordResponse.from(recordService.get(recordId, userId), userId)
     }
 
     /** 기록 등록. 소속 여행은 요청자가 소유한 것이어야 하며, 작성자는 그 여행의 소유자다. */
@@ -84,7 +84,7 @@ class TripRecordController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse {
         val userId = requireLogin(principal)
-        return recordService.create(userId, request.toCommand()).toResponse(userId)
+        return TripRecordResponse.from(recordService.create(userId, request.toCommand()), userId)
     }
 
     /** 기록 수정. 작성자만 할 수 있다. */
@@ -95,7 +95,7 @@ class TripRecordController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse {
         val userId = requireLogin(principal)
-        return recordService.update(recordId, userId, request.toCommand()).toResponse(userId)
+        return TripRecordResponse.from(recordService.update(recordId, userId, request.toCommand()), userId)
     }
 
     /**
@@ -109,7 +109,7 @@ class TripRecordController(
         @AuthenticationPrincipal principal: LoginUser?,
     ): TripRecordResponse {
         val userId = requireLogin(principal)
-        return recordService.changeTrip(recordId, userId, request.tripId).toResponse(userId)
+        return TripRecordResponse.from(recordService.changeTrip(recordId, userId, request.tripId), userId)
     }
 
     /** 기록 삭제. soft delete 라 행은 남고 조회에서만 사라진다. */
