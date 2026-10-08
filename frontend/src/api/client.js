@@ -43,6 +43,16 @@ export function clearCsrfToken() {
  */
 export const fileUrl = (path) => (path ? `${API_BASE_URL}${path}` : null)
 
+/**
+ * API 경로를 만드는 태그 함수. 끼워 넣는 값을 전부 URL 인코딩한다.
+ *
+ * 경로 값의 출처가 화면 URL(`useParams`)일 수 있어서다. 라우터는 `%2F` 를 `/` 로 풀어 주므로
+ * 그대로 붙이면 `/groups/..%2Ftrips%2F7` 같은 링크 하나로 로그인 쿠키가 실린 요청을 다른 API 로
+ * 보낼 수 있다 (클라이언트 측 경로 조작). 고정 문자열 부분은 건드리지 않는다.
+ */
+export const apiPath = (strings, ...values) =>
+  strings.reduce((path, part, i) => path + encodeURIComponent(values[i - 1]) + part)
+
 let unauthorizedHandler = null
 
 /**
@@ -83,13 +93,16 @@ export async function apiFetch(path, { method = 'GET', body, withStatus = false 
     body: body === undefined || isForm ? body : JSON.stringify(body),
   })
 
+  // 세션 만료는 본문 형식과 무관하게 처리한다. 앞단 프록시가 HTML 401 을 돌려줘도 놓치지 않게
+  // 파싱보다 먼저 본다.
+  if (response.status === 401) unauthorizedHandler?.()
+
   // 204 와 빈 본문을 구분하지 않고 null 로 통일한다. 호출부가 매번 확인할 것이 하나 줄어든다.
+  // JSON 이 아닌 응답(Tomcat·프록시가 앞단에서 거부한 HTML 등)은 파싱 오류가 그대로 나가게 둔다.
+  // ApiError 로 감싸면 화면이 준비한 실패 문구 대신 공통 기본 문구가 보인다.
   const text = await response.text()
   const payload = text ? JSON.parse(text) : null
 
-  if (!response.ok) {
-    if (response.status === 401) unauthorizedHandler?.()
-    throw new ApiError({ ...(payload ?? {}), status: response.status })
-  }
+  if (!response.ok) throw new ApiError({ ...(payload ?? {}), status: response.status })
   return withStatus ? { data: payload, status: response.status } : payload
 }

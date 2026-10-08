@@ -1,4 +1,4 @@
-import { apiFetch } from './client.js'
+import { apiFetch, apiPath } from './client.js'
 
 /**
  * 기록·사진 API 호출 모음 (backend §4.4, §4.6).
@@ -12,9 +12,9 @@ import { apiFetch } from './client.js'
  * 등록순이며, 기준 좌표를 함께 보내 거리를 받는다.
  */
 export const fetchTripRecords = (tripId, { lat, lng }, page) =>
-  apiFetch(`/api/records?tripId=${tripId}&sort=oldest&lat=${lat}&lng=${lng}&page=${page}`)
+  apiFetch(apiPath`/api/records?tripId=${tripId}&sort=oldest&lat=${lat}&lng=${lng}&page=${page}`)
 
-export const fetchRecord = (recordId) => apiFetch(`/api/records/${recordId}`)
+export const fetchRecord = (recordId) => apiFetch(apiPath`/api/records/${recordId}`)
 
 export const createRecord = (body) => apiFetch('/api/records', { method: 'POST', body })
 
@@ -23,16 +23,16 @@ export const createRecord = (body) => apiFetch('/api/records', { method: 'POST',
  * 실어 보내야 지워지지 않는다 (backend §4.4).
  */
 export const updateRecord = (recordId, body) =>
-  apiFetch(`/api/records/${recordId}`, { method: 'PUT', body })
+  apiFetch(apiPath`/api/records/${recordId}`, { method: 'PUT', body })
 
-export const deleteRecord = (recordId) => apiFetch(`/api/records/${recordId}`, { method: 'DELETE' })
+export const deleteRecord = (recordId) => apiFetch(apiPath`/api/records/${recordId}`, { method: 'DELETE' })
 
 /** 여러 장을 한 요청에 올린다. 올라간 사진 목록(`{ id, url }`)을 돌려준다. */
 export const uploadPhotos = (recordId, files) => {
   const form = new FormData()
   files.forEach((file) => form.append('files', file))
-  return apiFetch(`/api/records/${recordId}/photos`, { method: 'POST', body: form })
+  return apiFetch(apiPath`/api/records/${recordId}/photos`, { method: 'POST', body: form })
 }
 
 export const deletePhoto = (recordId, photoId) =>
-  apiFetch(`/api/records/${recordId}/photos/${photoId}`, { method: 'DELETE' })
+  apiFetch(apiPath`/api/records/${recordId}/photos/${photoId}`, { method: 'DELETE' })

@@ -1,4 +1,4 @@
-import { apiFetch } from './client.js'
+import { apiFetch, apiPath } from './client.js'
 
 /**
  * 그룹·초대 API 호출 모음 (backend §4.7, §4.8).
@@ -11,7 +11,7 @@ import { apiFetch } from './client.js'
 
 export const fetchGroups = () => apiFetch('/api/groups')
 
-export const fetchGroup = (groupId) => apiFetch(`/api/groups/${groupId}`)
+export const fetchGroup = (groupId) => apiFetch(apiPath`/api/groups/${groupId}`)
 
 export const createGroup = (name, memo) =>
   apiFetch('/api/groups', { method: 'POST', body: { name, memo } })
@@ -22,18 +22,18 @@ export const createGroup = (name, memo) =>
  * 아직 화면에 진입점이 없다 (명세 §10.2). 수정 UI 가 생기면 그대로 쓰면 된다.
  */
 export const updateGroup = (groupId, name, memo) =>
-  apiFetch(`/api/groups/${groupId}`, { method: 'PUT', body: { name, memo } })
+  apiFetch(apiPath`/api/groups/${groupId}`, { method: 'PUT', body: { name, memo } })
 
-export const deleteGroup = (groupId) => apiFetch(`/api/groups/${groupId}`, { method: 'DELETE' })
+export const deleteGroup = (groupId) => apiFetch(apiPath`/api/groups/${groupId}`, { method: 'DELETE' })
 
 export const removeMember = (groupId, userId) =>
-  apiFetch(`/api/groups/${groupId}/members/${userId}`, { method: 'DELETE' })
+  apiFetch(apiPath`/api/groups/${groupId}/members/${userId}`, { method: 'DELETE' })
 
 export const leaveGroup = (groupId) =>
-  apiFetch(`/api/groups/${groupId}/members/me`, { method: 'DELETE' })
+  apiFetch(apiPath`/api/groups/${groupId}/members/me`, { method: 'DELETE' })
 
 export const fetchPendingInvites = (groupId, page) =>
-  apiFetch(`/api/groups/${groupId}/invites?page=${page}`)
+  apiFetch(apiPath`/api/groups/${groupId}/invites?page=${page}`)
 
 /**
  * 이메일로 초대 보내기.
@@ -43,21 +43,21 @@ export const fetchPendingInvites = (groupId, page) =>
  * "이미 초대한 상대입니다" 로 알린다 (명세 §5.8.3).
  */
 export const sendInvite = (groupId, email) =>
-  apiFetch(`/api/groups/${groupId}/invites`, { method: 'POST', body: { email }, withStatus: true })
+  apiFetch(apiPath`/api/groups/${groupId}/invites`, { method: 'POST', body: { email }, withStatus: true })
 
 export const revokeInvite = (groupId, inviteId) =>
-  apiFetch(`/api/groups/${groupId}/invites/${inviteId}`, { method: 'DELETE' })
+  apiFetch(apiPath`/api/groups/${groupId}/invites/${inviteId}`, { method: 'DELETE' })
 
-export const fetchReceivedInvites = (page) => apiFetch(`/api/invites?page=${page}`)
+export const fetchReceivedInvites = (page) => apiFetch(apiPath`/api/invites?page=${page}`)
 
-export const fetchSentInvites = (page) => apiFetch(`/api/invites/sent?page=${page}`)
+export const fetchSentInvites = (page) => apiFetch(apiPath`/api/invites/sent?page=${page}`)
 
 /** `role` 은 `RECEIVED` 또는 `SENT`. 어느 쪽이든 본인이 당사자인 이력만 온다 (backend §4.8). */
 export const fetchInviteHistory = (role, page) =>
-  apiFetch(`/api/invites/history?role=${role}&page=${page}`)
+  apiFetch(apiPath`/api/invites/history?role=${role}&page=${page}`)
 
 export const acceptInvite = (inviteId) =>
-  apiFetch(`/api/invites/${inviteId}/accept`, { method: 'POST' })
+  apiFetch(apiPath`/api/invites/${inviteId}/accept`, { method: 'POST' })
 
 export const rejectInvite = (inviteId) =>
-  apiFetch(`/api/invites/${inviteId}/reject`, { method: 'POST' })
+  apiFetch(apiPath`/api/invites/${inviteId}/reject`, { method: 'POST' })
