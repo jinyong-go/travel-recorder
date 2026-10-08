@@ -1017,9 +1017,6 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 [공통 명세 §7](../SPECIFICATION.md) 에 있다. 여기서는 **백엔드가 해야 할 일**만 둔다.
 
 ### 8.1 구현 잔여 작업
-- **초대 이력이 명세만 개정된 상태다** (§3, §4.8). `invite_history` 테이블과 세 조회
-  엔드포인트(`/api/invites/sent`, `/api/invites/history`)가 아직 없고, 초대를 지우는 네 경로도
-  이력을 남기지 않는다. 기존에 끝난 초대는 복원할 수 없으므로 **이력은 전환 시점부터 쌓인다.**
 - **네이버 OAuth 로그인을 복구한다** (§2.1). 임시 인메모리 로그인으로 대체된 상태이며,
   되돌릴 지점은 셋이다 — `SecurityConfig` 의 주석 처리된 `oauth2Login` 블록, `local`·`dev`
   전용인 `LocalLoginConfig`·`LocalLoginController`(들어내면 된다), 그리고 프론트엔드의 로그인
