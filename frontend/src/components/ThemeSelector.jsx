@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { THEMES, applyTheme, getInitialTheme, storeTheme } from '../theme/themes.js'
 import { MoonIcon, SunIcon } from './icons.jsx'
+import './ThemeSelector.css'
 
 /**
  * 라이트 / 다크 두 가지 모드를 즉시 전환하는 토글 버튼.

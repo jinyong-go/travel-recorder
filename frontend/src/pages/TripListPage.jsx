@@ -12,6 +12,7 @@ import HeaderAuth from '../components/HeaderAuth.jsx'
 import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import { MapPinIcon, PlusIcon } from '../components/icons.jsx'
+import './TripListPage.css'
 
 export default function TripListPage() {
   const { isLoggedIn, status: authStatus } = useAuth()

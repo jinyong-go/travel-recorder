@@ -1,0 +1,24 @@
+/* 테마 선택 (라이트/다크 토글) */
+.theme-selector-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 9px 16px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.theme-selector-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.theme-selector-label {
+  line-height: 1;
+}

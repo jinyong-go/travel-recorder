@@ -1,0 +1,16 @@
+.map-modal-panel {
+  max-width: 480px;
+  text-align: left;
+}
+
+.map-embed-link {
+  align-self: flex-start;
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: 13.5px;
+  text-decoration: none;
+}
+
+.map-embed-link:hover {
+  text-decoration: underline;
+}

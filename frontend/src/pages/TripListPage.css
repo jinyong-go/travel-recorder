@@ -1,0 +1,256 @@
+.app-main {
+  flex: 1;
+  padding: 8px clamp(16px, 4vw, 48px) 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 목록 영역 */
+.list-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(16px, 3vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.list-count {
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.list-count strong {
+  color: var(--accent-strong);
+  font-size: 18px;
+}
+
+.sort-select-wrap {
+  position: relative;
+}
+
+.sort-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23497f3d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 14px center;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 36px 10px 16px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.sort-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 등록 버튼 (FAB) */
+.register-fab {
+  position: fixed;
+  right: clamp(16px, 4vw, 48px);
+  bottom: clamp(16px, 4vw, 40px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  padding: 14px 22px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: var(--shadow);
+  z-index: 20;
+  text-decoration: none;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+/* 인라인 svg 는 baseline 에 놓여 아래에 여백이 생기므로 block 으로 바꿔 라벨과 높이를 맞춘다. */
+.register-fab svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* 기본 line-height(1.5) 의 위아래 여백 때문에 글자가 아이콘보다 내려가 보인다. */
+.register-fab-label {
+  line-height: 1;
+}
+
+.register-fab:hover {
+  background: var(--accent-strong);
+  transform: translateY(-2px);
+}
+
+/* 범위 탭 — 내 여행 / 공유받은 여행 / 둘러보기. 목록을 나누는 탭은 이 한 줄뿐이다. */
+.scope-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.scope-tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.scope-tab:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.scope-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 여행 카드 */
+.trip-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.trip-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.trip-card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+/* 대표 사진 자리. 지정된 사진이 없으면 첫 여행지의 카테고리 아이콘이 들어온다. */
+.trip-cover {
+  height: 148px;
+  background: linear-gradient(135deg, var(--thumb-grad-a), var(--thumb-grad-b));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trip-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trip-cover-icon {
+  font-size: 46px;
+}
+
+.trip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px 18px;
+}
+
+.trip-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.trip-card-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.trip-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.trip-card-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.trip-card:hover .trip-card-link {
+  color: var(--accent-strong);
+}
+
+.trip-period {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.trip-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trip-owner {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+/* 설명이 길면 두 줄에서 자른다. 자르는 위치는 글자 폭에 따라 달라져야 한다. */
+.trip-memo {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 반응형 */
+@media (max-width: 640px) {
+  .trip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-cover {
+    height: 120px;
+  }
+
+  .list-toolbar {
+    align-items: flex-start;
+  }
+}

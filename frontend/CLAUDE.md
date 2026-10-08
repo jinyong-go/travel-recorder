@@ -67,10 +67,18 @@ src/
 
 - **일반 CSS 파일**을 쓴다. CSS Modules·Tailwind·CSS-in-JS 를 도입하지 않는다.
 - 컴포넌트 `Foo.jsx` 의 스타일은 **같은 위치의 `Foo.css`** 에 두고 컴포넌트가 직접 import 한다.
-- **두 화면 이상이 함께 쓰는 스타일만 `src/styles/`** 에 둔다 (입력 폼·상세 화면 틀·확인 모달·그룹 화면 틀).
+- **범용 UI 요소**(헤더·모달 틀·버튼·링크·오류 문구·빈 상태·페이지네이션)는 `App.css` 에 둔다.
+- **두 화면 이상이 함께 쓰는 화면 틀만 `src/styles/`** 에 둔다 (입력 폼·상세 화면 틀·확인 모달·그룹 화면 틀).
   쓰는 쪽이 각자 import 하며, **공유 CSS 를 먼저, 자기 CSS 를 나중에** 불러온다 — 전용 규칙이 공유
   규칙을 덮어야 하기 때문이다. 다른 화면의 CSS 파일을 가져다 쓰지 않는다 (예외: 별점 표시가 입력의
   `StarRatingInput.css` 를 함께 쓴다 — 쓰는 곳이 둘뿐이라 공통화 기준에 못 미친다).
+
+  ```js
+  // TripDetailPage.jsx
+  import '../styles/detailPage.css'
+  import '../styles/confirmPanel.css'
+  import './TripDetailPage.css'   // 자기 CSS 는 마지막
+  ```
 - 클래스명은 kebab-case 이며 컴포넌트 이름을 접두사로 쓴다 (`visibility-badge-icon`).
 - **색상은 CSS 변수로만 쓴다.** 라이트/다크 두 모드가 같은 변수를 공유해야 하므로 값을
   하드코딩하지 않는다. 브랜드 색은 파스텔 연두다 (명세 §6).
@@ -115,7 +123,14 @@ src/
 
 - 모든 요청은 `credentials: 'include'`, 쓰기 요청에는 `X-XSRF-TOKEN` 헤더를 붙인다.
 - **오류 분기는 HTTP 상태가 아니라 응답의 `code` 로** 한다. 백엔드가 모든 실패를 같은 스키마로
-  내려준다.
+  내려준다. 문구는 `code` 별 표에서 고르고, 표에 없으면 기본 문구로 떨어진다.
+
+  ```js
+  } catch (err) {
+    const code = err instanceof ApiError ? err.code : null
+    setInviteMessage({ type: 'error', text: INVITE_ERROR[code] ?? '초대를 보내지 못했습니다.' })
+  }
+  ```
 - 네이버 지역 검색·OAuth 키를 브라우저에 두지 않는다. 장소 검색은 **반드시 백엔드를 경유**한다.
   프론트엔드가 갖는 키는 지도 Client ID(`VITE_NAVER_MAP_CLIENT_ID`) 하나뿐이다.
 - 백엔드와 같아야 하는 값(사진 제한 등)은 `config/` 에 환경변수로 외부화한다. 컴포넌트에

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MAP_MODES, hasNaverMapClientId } from '../config/mapSettings.js'
 import { ChevronDownIcon, GearIcon } from './icons.jsx'
+import './SettingsMenu.css'
 
 export default function SettingsMenu({ mapMode, onChangeMapMode }) {
   const [open, setOpen] = useState(false)

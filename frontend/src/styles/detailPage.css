@@ -102,5 +102,12 @@
 .detail-delete-btn:hover {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--danger-contrast);
+}
+
+.detail-shared-groups,
+.detail-trip-link {
+  margin-left: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }

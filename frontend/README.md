@@ -80,6 +80,11 @@ frontend/
 │  │  ├─ uploadLimits.js               # 사진 용량·형식 제한 및 검증
 │  │  └─ referenceLocation.js          # 기준 위치 저장/조회, 기본값(서울역)
 │  ├─ data/                            # 화면 표기용 값·함수(records·trips)와 장소 검색 목업(placeSearchResults.js)
+│  ├─ styles/                          # 두 화면 이상이 함께 쓰는 CSS
+│  │  ├─ form.css                      # 입력 폼
+│  │  ├─ detailPage.css                # 상세 화면 틀
+│  │  ├─ confirmPanel.css              # 확인 모달
+│  │  └─ groupPages.css                # 그룹 화면 틀
 │  ├─ theme/themes.js                  # 라이트/다크 테마 정의 및 로컬 저장
 │  └─ utils/geo.js                     # 하버사인 거리 계산
 ├─ index.html

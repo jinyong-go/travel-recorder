@@ -22,6 +22,7 @@ import { ArrowLeftIcon, MapPinIcon, MapViewIcon, PlusIcon } from '../components/
 // 상세 화면의 공통 레이아웃(.detail-page / .detail-inner / .detail-section)은 기록 상세와 같다.
 import '../styles/detailPage.css'
 import '../styles/confirmPanel.css'
+import './TripDetailPage.css'
 /** 여행을 서버에서 읽고, 읽는 중·없음·실패를 처리한다. 화면은 여행이 도착한 뒤 TripDetailView 가 그린다. */
 export default function TripDetailPage() {
   const { tripId } = useParams()
@@ -276,9 +277,13 @@ function TripDetailView({ trip, onTripChange }) {
 
           <section className="detail-section">
             <div className="trip-records-head">
-              <h2 className="detail-section-title">여행지 {recordCount}곳</h2>
+              <h2 className="detail-section-title">여행지 ({recordCount}곳)</h2>
               {isOwner && (
-                <button type="button" className="btn-secondary" onClick={() => setRegisterOpen(true)}>
+                <button
+                  type="button"
+                  className="btn-primary trip-records-add-btn"
+                  onClick={() => setRegisterOpen(true)}
+                >
                   <PlusIcon />
                   여행지 추가
                 </button>
