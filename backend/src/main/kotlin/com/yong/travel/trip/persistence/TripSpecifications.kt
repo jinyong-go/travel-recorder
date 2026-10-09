@@ -1,10 +1,12 @@
 package com.yong.travel.trip.persistence
 
 import com.yong.travel.auth.persistence.UserEntity
+import com.yong.travel.common.util.LIKE_ESCAPE
+import com.yong.travel.common.util.containsPattern
 import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
-import com.yong.travel.trip.domain.Visibility
+import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.domain.TripScope
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
@@ -15,7 +17,7 @@ import org.springframework.data.jpa.domain.Specification
 object TripSpecifications {
 
     /**
-     * 조회 범위 조건 (명세 §4.1).
+     * 조회 범위 조건.
      *
      * 공개 범위 판정을 조회 쿼리에 실어 보내는 것이 핵심이다. 전부 읽어 온 뒤 애플리케이션에서
      * 걸러 내면 페이지네이션 건수가 어긋나고, 거르는 걸 한 번 빠뜨리는 순간 곧바로 정보 유출이 된다.
@@ -30,7 +32,7 @@ object TripSpecifications {
                     if (userId == null) cb.disjunction() else cb.equal(ownerId(root), userId)
 
                 TripScope.PUBLIC ->
-                    cb.equal(root.get<Visibility>("visibility"), Visibility.PUBLIC)
+                    cb.equal(root.get<TripVisibility>("visibility"), TripVisibility.PUBLIC)
 
                 TripScope.SHARED -> {
                     if (userId == null || groupIds.isEmpty()) {
@@ -38,7 +40,7 @@ object TripSpecifications {
                     } else {
                         // 내 여행은 MINE 에서 전부 보이므로 여기서 빼 중복 노출을 막는다.
                         cb.and(
-                            cb.equal(root.get<Visibility>("visibility"), Visibility.GROUP),
+                            cb.equal(root.get<TripVisibility>("visibility"), TripVisibility.GROUP),
                             cb.notEqual(ownerId(root), userId),
                             cb.exists(sharedWithGroups(root, query, cb, groupIds)),
                         )
@@ -52,7 +54,7 @@ object TripSpecifications {
         Specification { root, _, cb ->
             val trimmed = keyword?.trim()?.takeIf { it.isNotEmpty() }
                 ?: return@Specification cb.conjunction()
-            cb.like(root.get("name"), "%$trimmed%")
+            cb.like(root.get("name"), containsPattern(trimmed), LIKE_ESCAPE)
         }
 
     private fun ownerId(root: Root<TripEntity>) = root.get<UserEntity>("owner").get<Long>("id")

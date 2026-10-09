@@ -6,7 +6,7 @@ package com.yong.travel.record.domain
  * 권한을 넓히는 수단이 아니라 이미 볼 수 있는 것 중에서 고르는 수단이다 —
  * 어떤 값을 줘도 서버는 요청자가 볼 권한이 있는 기록만 반환한다.
  *
- * 판정 근거는 기록이 아니라 소속 여행에 있다 (명세 §4.4.1).
+ * 판정 근거는 기록이 아니라 소속 여행에 있다.
  */
 enum class RecordScope {
     /** 내 여행의 기록 전부 (공개 범위 무관) */
@@ -22,17 +22,17 @@ enum class RecordScope {
 enum class RecordSort {
     RECENT,
 
-    /** 등록순. 여행 상세의 하위 기록이 쓴다 (명세 §4.4.1). */
+    /** 등록순. 여행 상세의 하위 기록이 쓴다. */
     OLDEST,
     RATING,
     DISTANCE,
 }
 
 data class RecordListQuery(
-    /** null 이면 `tripId` 가 반드시 있고, 그 여행의 하위 기록 전부다 (명세 §4.4.1). */
+    /** null 이면 `tripId` 가 반드시 있고, 그 여행의 하위 기록 전부다. */
     val scope: RecordScope?,
 
-    /** 특정 여행의 하위 기록으로 한정한다. 여행 상세 화면이 이 경우다 (명세 §4.4.1). */
+    /** 특정 여행의 하위 기록으로 한정한다. 여행 상세 화면이 이 경우다. */
     val tripId: Long? = null,
 
     val category: Category? = null,

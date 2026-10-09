@@ -1,6 +1,8 @@
 package com.yong.travel.record.persistence
 
 import com.yong.travel.auth.persistence.UserEntity
+import com.yong.travel.common.util.LIKE_ESCAPE
+import com.yong.travel.common.util.containsPattern
 import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.persistence.TripRecordEntity
@@ -8,7 +10,7 @@ import com.yong.travel.record.domain.RecordScope
 import com.yong.travel.tag.persistence.TagEntity
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
-import com.yong.travel.trip.domain.Visibility
+import com.yong.travel.trip.domain.TripVisibility
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Join
@@ -21,7 +23,7 @@ object TripRecordSpecifications {
     /**
      * 조회 범위 조건.
      *
-     * **판정 대상은 기록이 아니라 소속 여행이다** (명세 §4.4.1). 기록에는 공개 범위도 작성자도
+     * **판정 대상은 기록이 아니라 소속 여행이다**. 기록에는 공개 범위도 작성자도
      * 없으므로 여행을 조인하지 않으면 판정할 근거가 없다.
      *
      * 공개 범위 판정을 조회 쿼리에 실어 보내는 것이 핵심이다. 전부 읽어 온 뒤 애플리케이션에서
@@ -41,7 +43,7 @@ object TripRecordSpecifications {
                     if (userId == null) cb.disjunction() else cb.equal(ownerId(trip), userId)
 
                 RecordScope.PUBLIC ->
-                    cb.equal(trip.get<Visibility>("visibility"), Visibility.PUBLIC)
+                    cb.equal(trip.get<TripVisibility>("visibility"), TripVisibility.PUBLIC)
 
                 RecordScope.SHARED -> {
                     if (userId == null || groupIds.isEmpty()) {
@@ -49,7 +51,7 @@ object TripRecordSpecifications {
                     } else {
                         // 내 여행의 기록은 MINE 에서 전부 보이므로 여기서 빼 중복 노출을 막는다.
                         cb.and(
-                            cb.equal(trip.get<Visibility>("visibility"), Visibility.GROUP),
+                            cb.equal(trip.get<TripVisibility>("visibility"), TripVisibility.GROUP),
                             cb.notEqual(ownerId(trip), userId),
                             cb.exists(sharedWithGroups(trip, query, cb, groupIds)),
                         )
@@ -62,7 +64,7 @@ object TripRecordSpecifications {
      * 목록 필터.
      *
      * `tripId` 는 여행 상세 화면이 하위 기록을 가져올 때 쓴다. 범위 조건과 AND 로 묶이므로,
-     * 볼 수 없는 여행의 id 를 넣어도 결과가 새지 않고 빈 목록이 된다 (명세 §4.4.1).
+     * 볼 수 없는 여행의 id 를 넣어도 결과가 새지 않고 빈 목록이 된다.
      */
     fun withFilters(
         tripId: Long?,
@@ -78,11 +80,11 @@ object TripRecordSpecifications {
             category?.let { predicates.add(cb.equal(root.get<Category>("category"), it)) }
 
             keyword?.takeIf { it.isNotBlank() }?.let {
-                val like = "%${it.trim()}%"
+                val like = containsPattern(it.trim())
                 predicates.add(
                     cb.or(
-                        cb.like(root.get("name"), like),
-                        cb.like(root.get("address"), like),
+                        cb.like(root.get("name"), like, LIKE_ESCAPE),
+                        cb.like(root.get("address"), like, LIKE_ESCAPE),
                     ),
                 )
             }

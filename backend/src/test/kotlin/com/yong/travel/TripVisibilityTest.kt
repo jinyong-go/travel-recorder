@@ -10,7 +10,7 @@ import com.yong.travel.group.service.InviteService
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
-import com.yong.travel.trip.domain.Visibility
+import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.presentation.TripCreateRequest
 import com.yong.travel.trip.domain.TripListQuery
 import com.yong.travel.trip.domain.TripScope
@@ -59,7 +59,7 @@ class TripVisibilityTest {
         val tripId = newTrip(owner)
         flush()
 
-        assertEquals(Visibility.PRIVATE, tripService.get(tripId, owner).visibility)
+        assertEquals(TripVisibility.PRIVATE, tripService.get(tripId, owner).visibility)
         assertEquals(ErrorCode.TRIP_NOT_FOUND, assertThrows<ApiException> { tripService.get(tripId, other) }.errorCode)
         assertEquals(ErrorCode.TRIP_NOT_FOUND, assertThrows<ApiException> { tripService.get(tripId, null) }.errorCode)
     }
@@ -69,19 +69,19 @@ class TripVisibilityTest {
         val owner = newUser()
         val guest = newUser()
         val groupId = newGroupWith(owner, guest)
-        val tripId = newTrip(owner, Visibility.GROUP, listOf(groupId), budget = 1_250_000L)
+        val tripId = newTrip(owner, TripVisibility.GROUP, listOf(groupId), budget = 1_250_000L)
         flush()
 
         val asOwner = tripService.get(tripId, owner)
         assertTrue(asOwner.isOwnedBy(owner))
-        assertEquals(Visibility.GROUP, asOwner.visibility)
+        assertEquals(TripVisibility.GROUP, asOwner.visibility)
         assertEquals(listOf(groupId), asOwner.sharedGroups?.map { it.id })
 
         val asGuest = tripService.get(tripId, guest)
         assertFalse(asGuest.isOwnedBy(guest))
         assertNull(asGuest.visibility, "누구에게 공유했는지는 열람자에게 알릴 이유가 없다")
         assertNull(asGuest.sharedGroups)
-        // 예산은 공개 범위를 그대로 따르는 값이라 열람자에게도 보인다 (명세 §4.3.1).
+        // 예산은 공개 범위를 그대로 따르는 값이라 열람자에게도 보인다.
         assertEquals(1_250_000L, asGuest.budget)
     }
 
@@ -94,7 +94,7 @@ class TripVisibilityTest {
 
         // 403 이면 "그런 그룹이 있다" 는 뜻이 되므로 여기서도 404 다.
         val onCreate = assertThrows<ApiException> {
-            newTrip(owner, Visibility.GROUP, listOf(foreignGroupId))
+            newTrip(owner, TripVisibility.GROUP, listOf(foreignGroupId))
         }
         assertEquals(ErrorCode.GROUP_NOT_FOUND, onCreate.errorCode)
 
@@ -103,7 +103,7 @@ class TripVisibilityTest {
             tripService.changeVisibility(
                 tripId,
                 owner,
-                Visibility.GROUP,
+                TripVisibility.GROUP,
                 listOf(foreignGroupId),
             )
         }
@@ -115,11 +115,11 @@ class TripVisibilityTest {
         val owner = newUser()
         val member = newUser()
         val groupId = newGroupWith(owner, member)
-        val tripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val tripId = newTrip(owner, TripVisibility.GROUP, listOf(groupId))
         flush()
         assertEquals(1L, count("select count(*) from trip_shares where trip_id = $tripId"))
 
-        tripService.changeVisibility(tripId, owner, Visibility.PRIVATE, emptyList())
+        tripService.changeVisibility(tripId, owner, TripVisibility.PRIVATE, emptyList())
         flush()
 
         // 남겨 두면 나중에 다시 GROUP 으로 되돌렸을 때 예전 공유가 의도치 않게 되살아난다.
@@ -134,14 +134,14 @@ class TripVisibilityTest {
         val dropped = newUser()
         val keepGroupId = newGroupWith(owner, keeper)
         val dropGroupId = newGroupWith(owner, dropped)
-        val tripId = newTrip(owner, Visibility.GROUP, listOf(keepGroupId, dropGroupId))
+        val tripId = newTrip(owner, TripVisibility.GROUP, listOf(keepGroupId, dropGroupId))
         flush()
         assertEquals(tripId, tripService.get(tripId, dropped).id)
 
         tripService.changeVisibility(
             tripId,
             owner,
-            Visibility.GROUP,
+            TripVisibility.GROUP,
             listOf(keepGroupId),
         )
         flush()
@@ -153,7 +153,7 @@ class TripVisibilityTest {
     @Test
     fun `여행을 삭제하면 하위 기록도 함께 사라지지만 행은 남는다`() {
         val owner = newUser()
-        val tripId = newTrip(owner, Visibility.PUBLIC)
+        val tripId = newTrip(owner, TripVisibility.PUBLIC)
         val recordId = newRecord(tripId, owner)
         flush()
 
@@ -174,7 +174,7 @@ class TripVisibilityTest {
         val guest = newUser()
         val stranger = newUser()
         val groupId = newGroupWith(owner, guest)
-        val tripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val tripId = newTrip(owner, TripVisibility.GROUP, listOf(groupId))
         flush()
 
         // 볼 수 있는 사람에게는 403 이다 — 여행의 존재는 이미 알고 있다.
@@ -182,7 +182,7 @@ class TripVisibilityTest {
         assertEquals(
             ErrorCode.FORBIDDEN,
             assertThrows<ApiException> {
-                tripService.changeVisibility(tripId, guest, Visibility.PUBLIC, emptyList())
+                tripService.changeVisibility(tripId, guest, TripVisibility.PUBLIC, emptyList())
             }.errorCode,
         )
         // 볼 수도 없는 사람에게는 존재부터 숨긴다.
@@ -197,8 +197,8 @@ class TripVisibilityTest {
         val groupId = newGroupWith(owner, member)
 
         val privateId = newTrip(owner)
-        val sharedId = newTrip(owner, Visibility.GROUP, listOf(groupId))
-        val publicId = newTrip(owner, Visibility.PUBLIC)
+        val sharedId = newTrip(owner, TripVisibility.GROUP, listOf(groupId))
+        val publicId = newTrip(owner, TripVisibility.PUBLIC)
         flush()
 
         assertTrue(list(TripScope.MINE, stranger).isEmpty())
@@ -216,8 +216,8 @@ class TripVisibilityTest {
     @Test
     fun `기록 수는 삭제된 기록을 빼고 세며 기록이 없으면 0 이다`() {
         val owner = newUser()
-        val emptyTripId = newTrip(owner, Visibility.PUBLIC)
-        val tripId = newTrip(owner, Visibility.PUBLIC)
+        val emptyTripId = newTrip(owner, TripVisibility.PUBLIC)
+        val tripId = newTrip(owner, TripVisibility.PUBLIC)
         val kept = newRecord(tripId, owner)
         val removed = newRecord(tripId, owner)
         flush()
@@ -272,8 +272,8 @@ class TripVisibilityTest {
     fun `이름으로 검색할 수 있고 권한을 넘지 않는다`() {
         val owner = newUser()
         val stranger = newUser()
-        newTrip(owner, Visibility.PUBLIC, name = "제주 3박 4일")
-        newTrip(owner, Visibility.PUBLIC, name = "부산 여행")
+        newTrip(owner, TripVisibility.PUBLIC, name = "제주 3박 4일")
+        newTrip(owner, TripVisibility.PUBLIC, name = "부산 여행")
         val hidden = newTrip(owner, name = "제주 비밀 여행")
         flush()
 
@@ -326,7 +326,7 @@ class TripVisibilityTest {
         val owner = newUser()
         val member = newUser()
         val groupId = newGroupWith(owner, member)
-        val tripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val tripId = newTrip(owner, TripVisibility.GROUP, listOf(groupId))
         flush()
 
         tripService.update(
@@ -343,7 +343,7 @@ class TripVisibilityTest {
 
         val updated = tripService.get(tripId, owner)
         assertEquals("이름만 바꾼 여행", updated.name)
-        assertEquals(Visibility.GROUP, updated.visibility)
+        assertEquals(TripVisibility.GROUP, updated.visibility)
         assertEquals(listOf(groupId), updated.sharedGroups?.map { it.id })
         assertEquals(tripId, tripService.get(tripId, member).id, "공유받은 사람은 그대로 볼 수 있다")
     }
@@ -381,7 +381,7 @@ class TripVisibilityTest {
 
     private fun newTrip(
         ownerId: Long,
-        visibility: Visibility = Visibility.PRIVATE,
+        visibility: TripVisibility = TripVisibility.PRIVATE,
         groupIds: List<Long> = emptyList(),
         name: String = "테스트 여행",
         startDate: LocalDate = LocalDate.of(2026, 9, 5),

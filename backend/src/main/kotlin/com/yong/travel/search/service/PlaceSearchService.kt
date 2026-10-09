@@ -36,7 +36,7 @@ class PlaceSearchService(
             candidates
         }
 
-        // 기준 좌표(lat,lng)는 남기지 않는다. 계산에만 쓰고 사용자와 묶지 않기로 한 값이다 (명세 §7).
+        // 기준 좌표(lat,lng)는 남기지 않는다. 계산에만 쓰고 사용자와 묶지 않기로 한 값이다.
         log.debug("장소 검색 page={} 거리정렬={} 후보={}건", page, lat != null && lng != null, sorted.size)
 
         // 원본 API 가 페이지를 모르므로 모아 온 후보를 여기서 자른다.
@@ -46,7 +46,7 @@ class PlaceSearchService(
         return PageImpl(sorted.subList(fromIndex, toIndex), pageable, sorted.size.toLong())
     }
 
-    /** 원본 응답 → 후보. 좌표 환산과 HTML 태그 제거가 여기서 끝난다 (명세 §1.3). */
+    /** 원본 응답 → 후보. 좌표 환산과 HTML 태그 제거가 여기서 끝난다. */
     private fun NaverLocalSearchItem.toCandidate(lat: Double?, lng: Double?): PlaceCandidate {
         val longitude = (mapx.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE
         val latitude = (mapy.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE
@@ -69,8 +69,8 @@ class PlaceSearchService(
 
     companion object {
         /**
-         * 한 페이지 5건. 원본 API 가 호출당 5건까지만 주므로 더 키워도 첫 페이지조차 채울 수 없다
-         * (명세 §4.1, §4.5). 검색어 변형 집계로 후보 풀이 늘어나면 이 값을 다시 볼 자리다.
+         * 한 페이지 5건. 원본 API 가 호출당 5건까지만 주므로 더 키워도 첫 페이지조차 채울 수 없다.
+         * 검색어 변형 집계로 후보 풀이 늘어나면 이 값을 다시 볼 자리다.
          */
         private const val PAGE_SIZE = 5
 

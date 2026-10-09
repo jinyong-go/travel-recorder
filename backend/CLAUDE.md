@@ -39,7 +39,7 @@ com.yong.travel
 - **`presentation` 에 컨트롤러와 요청·응답 DTO 를 함께 둔다.** 하위 패키지로 나누지 않고 파일
   이름(`*Controller`, `*Requests`, `*Responses`)으로 구분한다.
 - **JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 둔다.** 엔티티 클래스는 `*Entity`
-  로 끝난다 (`TripEntity`). `domain` 은 저장 수단을 모르는 도메인 개념의 자리다 — `Visibility`·
+  로 끝난다 (`TripEntity`). `domain` 은 저장 수단을 모르는 도메인 개념의 자리다 — `TripVisibility`·
   `Category`·`InviteOutcome`, 서비스가 주고받는 도메인 객체(`Trip`·`TripRef`·`TripRecord`·`GroupInvite`), 입력(`TripCreateCommand`),
   조회 조건(`TripListQuery`) 이 여기 있다.
 - **의존 방향은 `presentation → service → persistence → domain` 이다.** 모든 계층이 `domain` 을

@@ -1,5 +1,18 @@
 # 공통 설정. 환경별로 달라지는 값(데이터소스, 스키마 초기화, CORS, 로깅)은
 # application-{local,dev,prod}.yml 에 둔다.
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        # 모든 프로파일에 Secure 를 건다. 주요 브라우저는 http://localhost 를 보안
+        # 컨텍스트로 보아 로컬에서도 받는다. 받지 않는 브라우저로 개발할 때만 false 로 끈다.
+        secure: ${SESSION_COOKIE_SECURE:true}
+        same-site: lax
+  # TLS 를 프록시에서 끝내는 배포에서 Secure 판정·리다이렉트 주소가 맞도록 X-Forwarded-* 를 해석한다.
+  # native(Tomcat RemoteIpValve)는 사설망 프록시만 신뢰하므로 외부에서 헤더를 위조해도 반영되지 않는다.
+  forward-headers-strategy: native
+
 spring:
   application:
     name: backend

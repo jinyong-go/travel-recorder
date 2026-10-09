@@ -36,7 +36,7 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
     fun deleteByTripId(@Param("tripId") tripId: Long): Int
 
     /**
-     * 그룹이 사라지면 그 그룹으로 공유되던 관계도 함께 사라진다 (명세 §3.1).
+     * 그룹이 사라지면 그 그룹으로 공유되던 관계도 함께 사라진다.
      *
      * 벌크 삭제로 두는 이유는 [deleteByTripId] 와 같다.
      */

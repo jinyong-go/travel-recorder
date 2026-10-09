@@ -38,7 +38,7 @@ interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpeci
      * 여행별 살아 있는 기록 수.
      *
      * 목록 한 페이지(10건)마다 count 를 열 번 쏘지 않으려고 한 번에 묶는다.
-     * 기록이 0건인 여행은 결과에 나오지 않으므로 호출부가 0으로 채운다 (명세 §4.3.1).
+     * 기록이 0건인 여행은 결과에 나오지 않으므로 호출부가 0으로 채운다.
      */
     @Query(
         """

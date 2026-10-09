@@ -1,10 +1,12 @@
 package com.yong.travel.tag.service
 
+import com.yong.travel.common.util.containsPattern
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.tag.domain.Tag
 import com.yong.travel.tag.persistence.TagEntity
 import com.yong.travel.tag.persistence.TagRepository
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Limit
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -20,9 +22,10 @@ class TagService(
     /** 자동완성 후보는 요청자가 볼 수 있는 기록에 쓰인 태그로 제한된다. */
     fun search(keyword: String?, userId: Long?): List<Tag> {
         val groupIds = groupService.groupIdsOf(userId).ifEmpty { listOf(NO_MATCH) }
+        val pattern = keyword?.trim()?.takeIf { it.isNotBlank() }?.let { containsPattern(it) }
         val tags = tagRepository
-            .findVisibleTags(keyword?.trim()?.takeIf { it.isNotBlank() }, userId ?: NO_MATCH, groupIds)
-        // 자동완성도 볼 수 있는 기록의 태그로만 제한된다. 건수가 튀면 판정이 샌 것이다 (명세 §7).
+            .findVisibleTags(pattern, userId ?: NO_MATCH, groupIds, Limit.of(AUTOCOMPLETE_LIMIT))
+        // 자동완성도 볼 수 있는 기록의 태그로만 제한된다. 건수가 튀면 판정이 샌 것이다.
         log.debug("태그 자동완성 userId={} 건수={}", userId, tags.size)
         return tags.map { Tag(requireNotNull(it.id), it.name) }
     }
@@ -50,5 +53,8 @@ class TagService(
     private companion object {
         /** 어떤 사용자·그룹 id 와도 일치하지 않는 값. JPQL 파라미터에 null 과 빈 목록을 넘기지 않으려고 쓴다. */
         const val NO_MATCH = -1L
+
+        /** 자동완성 결과 상한. 후보라 그 이상은 쓰이지 않는다. */
+        const val AUTOCOMPLETE_LIMIT = 20
     }
 }

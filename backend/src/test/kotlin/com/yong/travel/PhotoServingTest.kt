@@ -6,7 +6,7 @@ import com.yong.travel.photo.service.PhotoService
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
-import com.yong.travel.trip.domain.Visibility
+import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.presentation.TripCreateRequest
 import com.yong.travel.trip.service.TripService
 import jakarta.persistence.EntityManager
@@ -26,7 +26,7 @@ import java.time.LocalDate
 import kotlin.test.assertTrue
 
 /**
- * DB 에 저장한 사진 바이너리의 서빙 검증 (명세 §4.6, §5.1).
+ * DB 에 저장한 사진 바이너리의 서빙 검증.
  *
  * 응답의 `url` 을 그대로 요청해 올린 바이트가 그대로 나오는지, 사진을 지우면 바이너리도 함께
  * 사라지는지(ON DELETE CASCADE) 확인한다.
@@ -47,7 +47,7 @@ class PhotoServingTest {
     fun `올린 사진이 응답 url 에서 같은 바이트와 형식으로 나온다`() {
         val owner = newUser()
         val recordId = newRecord(newTrip(owner), owner)
-        val bytes = byteArrayOf(1, 2, 3, 4, 5)
+        val bytes = JPEG_HEAD + byteArrayOf(1, 2, 3, 4, 5)
 
         val photo = photoService.upload(recordId, owner, listOf(jpeg(bytes))).single()
 
@@ -62,7 +62,7 @@ class PhotoServingTest {
     fun `사진을 지우면 바이너리도 사라져 404 PHOTO_NOT_FOUND 다`() {
         val owner = newUser()
         val recordId = newRecord(newTrip(owner), owner)
-        val photo = photoService.upload(recordId, owner, listOf(jpeg(byteArrayOf(9)))).single()
+        val photo = photoService.upload(recordId, owner, listOf(jpeg(JPEG_HEAD + byteArrayOf(9)))).single()
         // 업로드와 삭제는 실제로 별도 요청이다. 같은 컨텍스트에 바이너리 엔티티가 남아 있으면
         // 지워진 사진을 참조한 채 flush 되므로 요청 경계를 흉내 낸다.
         flush()
@@ -108,7 +108,7 @@ class PhotoServingTest {
                 startDate = LocalDate.of(2026, 9, 5),
                 endDate = LocalDate.of(2026, 9, 8),
                 headcount = 2,
-                visibility = Visibility.PRIVATE,
+                visibility = TripVisibility.PRIVATE,
             ).toCommand(),
         ).id
 
@@ -124,4 +124,9 @@ class PhotoServingTest {
             rating = 4.5,
         ).toCommand(),
     ).id
+
+    private companion object {
+        /** 서버가 파일 앞부분의 시그니처를 확인하므로 JPEG 시그니처로 시작해야 한다. */
+        val JPEG_HEAD = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte())
+    }
 }

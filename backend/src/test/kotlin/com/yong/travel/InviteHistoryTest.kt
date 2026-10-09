@@ -21,7 +21,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * 끝난 초대가 이력으로 남는지 검증 (공통 명세 §3.7).
+ * 끝난 초대가 이력으로 남는지 검증.
  *
  * 이력을 남기는 지점이 넷(수락·거절·취소·그룹 삭제)이라 **한 곳만 빠져도 조용히 비는** 자리다.
  * 조회 시점에는 "원래 없었던 것"과 구분되지 않으므로 네 경로를 각각 고정한다.
@@ -64,7 +64,7 @@ class InviteHistoryTest {
         inviteService.reject(inviteId, invitee)
         flush()
 
-        // 거절을 감추지 않는 것이 이번 개정의 결정이다 (공통 명세 §3.7).
+        // 거절을 감추지 않는 것이 이번 개정의 결정이다.
         val sent = historyOf(owner, InviteHistoryRole.SENT)
         assertEquals(InviteOutcome.REJECTED, sent.single().outcome)
         assertEquals(InviteOutcome.REJECTED, historyOf(invitee, InviteHistoryRole.RECEIVED).single().outcome)
@@ -160,7 +160,7 @@ class InviteHistoryTest {
 
         inviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
-        // unique(group_id, invitee_id) 가 비어 있어야 재초대가 가능하다 (명세 §3.2).
+        // unique(group_id, invitee_id) 가 비어 있어야 재초대가 가능하다.
         inviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
 

@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
  * 사진 바이너리 서빙.
  *
  * ⚠️ 로그인도 공개 범위도 요구하지 않는다. URL 을 아는 사람은 비공개 여행의 사진도 볼 수 있으며,
- * 추측 불가능한 UUID 에만 의존한다 (명세 §4.6, §8.2).
+ * 추측 불가능한 UUID 에만 의존한다.
  */
 @RestController
 class PhotoFileController(

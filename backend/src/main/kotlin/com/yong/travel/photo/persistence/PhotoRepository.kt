@@ -19,7 +19,7 @@ interface PhotoRepository : JpaRepository<PhotoEntity, UUID> {
     fun findByIdAndRecordId(id: UUID, recordId: Long): PhotoEntity?
 
     /**
-     * 커버로 지정할 수 있는 사진인지 확인한다 — 그 여행의 하위 기록에 속한 사진만이다 (명세 §4.3.2).
+     * 커버로 지정할 수 있는 사진인지 확인한다 — 그 여행의 하위 기록에 속한 사진만이다.
      *
      * 삭제된 기록의 사진은 제외한다. 사진 행은 기록이 soft delete 되어도 남아 있어서,
      * 조건을 빼면 지워진 기록의 사진이 여행 커버가 될 수 있다.

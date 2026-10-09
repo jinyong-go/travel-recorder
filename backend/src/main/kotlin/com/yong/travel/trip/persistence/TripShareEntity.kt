@@ -15,7 +15,7 @@ import jakarta.persistence.UniqueConstraint
  * 여행 ↔ 그룹 공유 관계. `visibility = GROUP` 일 때만 의미가 있다.
  *
  * 공개 범위를 PRIVATE/PUBLIC 으로 바꿀 때 이 행들을 지운다. 남겨 두면 나중에 다시 GROUP 으로
- * 되돌렸을 때 예전 공유가 의도치 않게 되살아난다 (명세 §3.1).
+ * 되돌렸을 때 예전 공유가 의도치 않게 되살아난다.
  *
  * 기록 단위의 공유 관계는 존재하지 않는다. 공유는 여행에서 한 번만 정해진다.
  */

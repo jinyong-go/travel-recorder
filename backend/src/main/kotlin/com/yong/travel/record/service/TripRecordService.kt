@@ -53,11 +53,11 @@ class TripRecordService(
         pageable: Pageable,
     ): Page<TripRecord> {
         // tripId 로 좁히면 그 여행을 볼 수 있는지 먼저 판정한다. scope 유무와 무관하게 못 보면
-        // 없는 여행과 같은 404 다 (명세 §4.4.1).
+        // 없는 여행과 같은 404 다.
         query.tripId?.let { tripService.requireViewable(it, userId) }
 
         // scope 가 없으면 tripId 가 있다는 뜻이고(컨트롤러가 보장), 그 여행을 볼 수 있음은 위에서
-        // 확인했다. 볼 수 있는 여행의 하위 기록은 전부 보이므로 범위 조건을 더하지 않는다 (공통 명세 §3.5).
+        // 확인했다. 볼 수 있는 여행의 하위 기록은 전부 보이므로 범위 조건을 더하지 않는다.
         val scopeSpec = query.scope
             ?.let { TripRecordSpecifications.withScope(it, userId, groupService.groupIdsOf(userId)) }
             ?: Specification.unrestricted()
@@ -75,7 +75,7 @@ class TripRecordService(
         // 거리만 저장된 값이 아니라 요청 좌표에 따라 매번 달라져 페이지 안에서 재정렬한다.
         val sort = when (query.sort) {
             RecordSort.RECENT, RecordSort.DISTANCE -> Sort.by(Sort.Direction.DESC, "createdAt")
-            // 여행 상세는 여행을 따라가며 읽으므로 등록순이다 (명세 §4.4.1).
+            // 여행 상세는 여행을 따라가며 읽으므로 등록순이다.
             RecordSort.OLDEST -> Sort.by(Sort.Direction.ASC, "createdAt")
             RecordSort.RATING -> Sort.by(Sort.Direction.DESC, "rating").and(Sort.by(Sort.Direction.DESC, "createdAt"))
         }
@@ -95,7 +95,7 @@ class TripRecordService(
             records
         }
 
-        // 범위 판정이 쿼리 단계에 있어(명세 §7) 건수가 어긋나면 곧 유출이다. 기준 좌표는 남기지 않는다.
+        // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 기준 좌표는 남기지 않는다.
         log.debug(
             "기록 목록 scope={} tripId={} userId={} 건수={}",
             query.scope, query.tripId, userId, page.totalElements,
@@ -161,10 +161,10 @@ class TripRecordService(
     }
 
     /**
-     * 소속 여행 변경. 옮기는 순간 이 기록의 공개 범위는 새 여행의 것이 된다 (명세 §4.4).
+     * 소속 여행 변경. 옮기는 순간 이 기록의 공개 범위는 새 여행의 것이 된다.
      *
      * 이 기록의 사진이 이전 여행의 커버였다면 그 지정을 푼다 — 커버는 자기 여행의 사진만
-     * 가리킬 수 있기 때문이다 (명세 §4.4, §3.1).
+     * 가리킬 수 있기 때문이다.
      */
     @Transactional
     fun changeTrip(
@@ -192,7 +192,7 @@ class TripRecordService(
      * 기록이 보이지 않는 동안에는 어차피 조회 경로가 없다.
      *
      * 다만 이 기록의 사진이 여행 커버였다면 지정을 푼다. 지워진 기록의 사진이 여행을 계속
-     * 대표하게 두면 "커버는 그 여행의 하위 기록에 속한 사진" 이라는 불변식이 깨진다 (명세 §3.2).
+     * 대표하게 두면 "커버는 그 여행의 하위 기록에 속한 사진" 이라는 불변식이 깨진다.
      *
      * 공유 관계는 손대지 않는다 — 공유는 여행에 걸려 있고 기록은 갖고 있지 않다.
      */
@@ -208,7 +208,7 @@ class TripRecordService(
 
     /**
      * 기록을 담거나 옮길 여행을 찾는다. **소유한 여행이 아니면 404** 다 —
-     * 남의 여행에 기록을 넣을 수 없고, 403 으로 답하면 그 여행의 존재가 드러난다 (명세 §2.2).
+     * 남의 여행에 기록을 넣을 수 없고, 403 으로 답하면 그 여행의 존재가 드러난다.
      */
     private fun requireOwnedTrip(tripId: Long, userId: Long): TripEntity {
         val trip = tripRepository.findById(tripId)
@@ -227,21 +227,21 @@ class TripRecordService(
 
     private fun requireViewable(record: TripRecordEntity, userId: Long?) {
         if (canView(record, userId)) return
-        // 존재 은닉 때문에 응답이 "없음"과 같다. 왜 가려졌는지는 이 로그에만 드러난다 (명세 §2.2).
+        // 존재 은닉 때문에 응답이 "없음"과 같다. 왜 가려졌는지는 이 로그에만 드러난다.
         log.debug(
             "기록 열람 차단 recordId={} tripId={} userId={} visibility={}",
             record.id, record.trip.id, userId, record.trip.visibility,
         )
         // 권한 없음(403)이 아니라 없는 기록(404)으로 답한다. 403 은 "그 기록이 있다"는 뜻이 되기 때문이다.
         // 소속 여행을 못 봐서 가려지는 경우도 RECORD_NOT_FOUND 다. TRIP_NOT_FOUND 를 내려주면
-        // "기록은 있는데 여행을 못 본다" 는 사실이 새어 나간다 (명세 §2.2).
+        // "기록은 있는데 여행을 못 본다" 는 사실이 새어 나간다.
         throw ApiException(ErrorCode.RECORD_NOT_FOUND)
     }
 
-    /** 기록을 볼 수 있는지는 **전적으로 소속 여행이 정한다** (명세 §3.5). 판정식은 여행 서비스에 하나만 둔다. */
+    /** 기록을 볼 수 있는지는 **전적으로 소속 여행이 정한다**. 판정식은 여행 서비스에 하나만 둔다. */
     private fun canView(record: TripRecordEntity, userId: Long?): Boolean = tripService.canView(record.trip, userId)
 
-    /** 고칠 수 있는 사람은 여행 소유자뿐이다. 기록에는 작성자 컬럼이 없다 (명세 §3.1). */
+    /** 고칠 수 있는 사람은 여행 소유자뿐이다. 기록에는 작성자 컬럼이 없다. */
     private fun requireAuthor(record: TripRecordEntity, userId: Long) {
         // 볼 수도 없는 기록이면 존재부터 숨긴다. 볼 수 있는데 소유자가 아닌 경우에만 403 이다.
         requireViewable(record, userId)
@@ -311,7 +311,7 @@ class TripRecordService(
         return record.toDomain(photos, record.tags.map { it.name }, distanceKm = null)
     }
 
-    /** 기준 좌표가 둘 다 왔을 때만 계산한다. 좌표는 계산에만 쓰고 남기지 않는다 (공통 명세 §5). */
+    /** 기준 좌표가 둘 다 왔을 때만 계산한다. 좌표는 계산에만 쓰고 남기지 않는다. */
     private fun distanceOf(record: TripRecordEntity, lat: Double?, lng: Double?): Double? {
         if (lat == null || lng == null) return null
         return haversineKm(lat, lng, record.latitude, record.longitude).roundTo2Decimals()

@@ -14,7 +14,7 @@ import java.util.UUID
  * 사진 바이너리. [PhotoEntity] 와 1:1 이며 id 를 공유한다.
  *
  * 메타데이터와 테이블을 나눈 것은 기록 목록·여행 커버처럼 사진을 읽는 경로에 수 MB 가 딸려 오지
- * 않게 하기 위해서다. 컬럼 단위 지연 로딩은 바이트코드 enhancement 없이는 동작하지 않는다 (명세 §5.1).
+ * 않게 하기 위해서다. 컬럼 단위 지연 로딩은 바이트코드 enhancement 없이는 동작하지 않는다.
  * 사진 행이 지워지면 DB 의 ON DELETE CASCADE 가 이 행도 지운다.
  */
 @Entity

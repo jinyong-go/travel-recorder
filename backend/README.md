@@ -30,7 +30,7 @@
 
 도메인별 패키지 안에 `presentation` / `service` / `domain` / `persistence` 계층을 두는 구조.
 JPA 엔티티·리포지토리·Specifications 는 `persistence`, 저장 수단과 무관한 도메인 개념
-(`Visibility`, `Category`, `InviteOutcome`)은 `domain` 에 위치.
+(`TripVisibility`, `Category`, `InviteOutcome`)은 `domain` 에 위치.
 
 ### 계층 구조와 의존 방향
 
@@ -69,7 +69,7 @@ backend/
 │  ├─ trip/                        # 여행 — 기록의 상위 그룹이자 공유의 단위
 │  │  ├─ persistence/TripEntity.kt, TripShareEntity.kt
 │  │  ├─ persistence/TripSpecifications.kt  # 공개 범위 판정 (scope 조건)
-│  │  ├─ domain/Visibility.kt
+│  │  ├─ domain/TripVisibility.kt
 │  │  └─ service·presentation
 │  ├─ record/                      # 여행 기록 CRUD 및 목록 조회 (반드시 여행 하나에 속한다)
 │  │  ├─ persistence/TripRecordEntity.kt

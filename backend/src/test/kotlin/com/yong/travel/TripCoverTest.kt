@@ -8,7 +8,7 @@ import com.yong.travel.photo.service.PhotoService
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
-import com.yong.travel.trip.domain.Visibility
+import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.presentation.TripCreateRequest
 import com.yong.travel.trip.service.TripService
 import jakarta.persistence.EntityManager
@@ -29,7 +29,7 @@ import kotlin.test.assertTrue
 /**
  * 커버 사진 지정·해제 검증.
  *
- * `cover_photo_id` 에 외래키를 두지 않기로 했으므로(명세 §3), 사진이 여행에서 사라지는 경로마다
+ * `cover_photo_id` 에 외래키를 두지 않기로 했으므로, 사진이 여행에서 사라지는 경로마다
  * 커버가 풀리는지 직접 확인해야 한다. 빠뜨리면 없는 사진을 가리키는 커버가 남아 조회가 깨진다.
  */
 @SpringBootTest
@@ -51,7 +51,7 @@ class TripCoverTest {
 
         assertNotNull(tripService.changeCover(tripId, owner, photoId).coverPhotoUrl)
 
-        // 다른 여행의 사진은 404 다. 아예 없는 사진과 구분되지 않아야 한다 (명세 §4.3.2).
+        // 다른 여행의 사진은 404 다. 아예 없는 사진과 구분되지 않아야 한다.
         val otherTripId = newTrip(owner)
         assertEquals(
             ErrorCode.PHOTO_NOT_FOUND,
@@ -79,7 +79,7 @@ class TripCoverTest {
         tripService.changeCover(tripId, owner, null)
         flush()
 
-        // 커버가 없으면 null 이다. 서버는 대체 이미지를 고르지 않는다 (명세 §4.3.1).
+        // 커버가 없으면 null 이다. 서버는 대체 이미지를 고르지 않는다.
         assertNull(tripService.get(tripId, owner).coverPhotoUrl)
     }
 
@@ -143,7 +143,7 @@ class TripCoverTest {
         recordService.changeTrip(recordId, owner, toTripId)
         flush()
 
-        // 커버는 자기 여행의 사진만 가리킬 수 있다 (명세 §4.4).
+        // 커버는 자기 여행의 사진만 가리킬 수 있다.
         assertNull(tripService.get(fromTripId, owner).coverPhotoUrl)
         // 옮겨 간 여행이 자동으로 커버를 물려받지는 않는다.
         assertNull(tripService.get(toTripId, owner).coverPhotoUrl)
@@ -173,7 +173,7 @@ class TripCoverTest {
     fun `소유자가 아니면 커버를 바꿀 수 없다`() {
         val owner = newUser()
         val stranger = newUser()
-        val tripId = newTrip(owner, Visibility.PUBLIC)
+        val tripId = newTrip(owner, TripVisibility.PUBLIC)
         val photoId = newPhoto(newRecord(tripId, owner), owner)
         flush()
 
@@ -189,7 +189,7 @@ class TripCoverTest {
     @Test
     fun `커버가 지정되면 목록에도 같은 url 이 나온다`() {
         val owner = newUser()
-        val tripId = newTrip(owner, Visibility.PUBLIC)
+        val tripId = newTrip(owner, TripVisibility.PUBLIC)
         val photoId = newPhoto(newRecord(tripId, owner), owner)
         val url = tripService.changeCover(tripId, owner, photoId).coverPhotoUrl
         flush()
@@ -214,7 +214,7 @@ class TripCoverTest {
         ).id,
     )
 
-    private fun newTrip(ownerId: Long, visibility: Visibility = Visibility.PRIVATE): Long =
+    private fun newTrip(ownerId: Long, visibility: TripVisibility = TripVisibility.PRIVATE): Long =
         tripService.create(
             ownerId,
             TripCreateRequest(
@@ -247,7 +247,8 @@ class TripCoverTest {
                 "files",
                 "photo-${System.nanoTime()}.jpg",
                 MediaType.IMAGE_JPEG_VALUE,
-                byteArrayOf(1, 2, 3),
+                // 서버가 파일 앞부분의 시그니처를 확인하므로 JPEG 시그니처로 시작해야 한다.
+                byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte()),
             ),
         ),
     ).single().id

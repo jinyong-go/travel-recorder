@@ -15,7 +15,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 /**
  * 세션 조회로 받은 CSRF 토큰이 쓰기 요청에 그대로 통하는지, 토큰 쿠키가 JS 에 닫혀 있는지,
- * 로그아웃이 토큰을 비우는지 확인한다 (명세 §7).
+ * 로그아웃이 토큰을 비우는지 확인한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

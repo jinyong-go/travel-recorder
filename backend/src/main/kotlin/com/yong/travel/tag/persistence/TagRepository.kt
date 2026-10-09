@@ -1,6 +1,7 @@
 package com.yong.travel.tag.persistence
 
 import com.yong.travel.tag.persistence.TagEntity
+import org.springframework.data.domain.Limit
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -18,18 +19,21 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
      *
      * 파라미터에 null 을 넣지 않으려고 호출부에서 비로그인은 userId = -1,
      * 소속 그룹이 없으면 groupIds = [-1] 로 바꿔 넘긴다 (어느 행에도 매칭되지 않는 값).
+     *
+     * `keywordPattern` 은 이스케이프까지 마친 LIKE 패턴이다 (`containsPattern`). escape 문자는
+     * `LIKE_ESCAPE` 와 같은 `\` 다. 결과 건수는 `limit` 으로 자른다.
      */
     @Query(
         """
         select distinct t from TripRecordEntity r
         join r.trip p
         join r.tags t
-        where (:keyword is null or lower(t.name) like lower(concat('%', :keyword, '%')))
+        where (:keywordPattern is null or lower(t.name) like lower(:keywordPattern) escape '\')
           and (
-            p.visibility = com.yong.travel.trip.domain.Visibility.PUBLIC
+            p.visibility = com.yong.travel.trip.domain.TripVisibility.PUBLIC
             or p.owner.id = :userId
             or (
-              p.visibility = com.yong.travel.trip.domain.Visibility.GROUP
+              p.visibility = com.yong.travel.trip.domain.TripVisibility.GROUP
               and exists (
                 select 1 from TripShareEntity s
                 where s.trip = p and s.group.id in :groupIds
@@ -40,8 +44,9 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
         """,
     )
     fun findVisibleTags(
-        @Param("keyword") keyword: String?,
+        @Param("keywordPattern") keywordPattern: String?,
         @Param("userId") userId: Long,
         @Param("groupIds") groupIds: Collection<Long>,
+        limit: Limit,
     ): List<TagEntity>
 }

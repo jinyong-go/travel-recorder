@@ -11,7 +11,7 @@ import java.time.Instant
  * 기록 상세.
  *
  * **공개 범위와 공유 그룹은 담지 않는다** — 소유자에게도 마찬가지다. 그 값은 여행에 있으므로
- * `GET /api/trips/{id}` 로 내려간다 (명세 §4.4.1).
+ * `GET /api/trips/{id}` 로 내려간다.
  */
 data class TripRecordResponse(
     val id: Long,
@@ -27,10 +27,10 @@ data class TripRecordResponse(
     val rating: Double,
     val memo: String?,
     val photos: List<PhotoResponse>,
-    /** `trip.owner` 를 그대로 옮긴 값이다. 기록은 작성자 컬럼을 갖지 않는다 (명세 §3.1). */
+    /** `trip.owner` 를 그대로 옮긴 값이다. 기록은 작성자 컬럼을 갖지 않는다. */
     val author: UserResponse,
 
-    /** 요청자가 `trip.owner` 인지. 필드 이름은 이전 판 그대로 유지한다 (명세 §4.4.1). */
+    /** 요청자가 `trip.owner` 인지. 필드 이름은 이전 판 그대로 유지한다. */
     val isAuthor: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -40,7 +40,7 @@ data class TripRecordResponse(
          * 기록 상세 → 응답.
          *
          * `isAuthor` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 필드 이름은 이전 판
-         * 그대로 유지한다 (명세 §4.4.1).
+         * 그대로 유지한다.
          */
         fun from(record: TripRecord, requesterId: Long?) = TripRecordResponse(
             id = record.id,

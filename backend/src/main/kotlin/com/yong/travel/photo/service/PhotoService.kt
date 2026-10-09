@@ -41,14 +41,16 @@ class PhotoService(
 
         return files.map { file ->
             if (file.contentType !in uploadProperties.allowedContentTypes ||
-                file.size > uploadProperties.maxPhotoSize.toBytes()
+                file.size > uploadProperties.maxPhotoSize.toBytes() ||
+                !hasSignatureOf(file, requireNotNull(file.contentType))
             ) {
                 throw ApiException(ErrorCode.INVALID_FILE)
             }
             val photo = photoRepository.save(
                 PhotoEntity(
                     record = record,
-                    originalFileName = file.originalFilename.orEmpty(),
+                    // 표시용 값이라 길면 잘라 저장한다. 업로드를 거부할 이유가 없다.
+                    originalFileName = file.originalFilename.orEmpty().take(MAX_FILE_NAME_LENGTH),
                     contentType = requireNotNull(file.contentType),
                     fileSizeBytes = file.size,
                 ),
@@ -66,10 +68,10 @@ class PhotoService(
             ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
 
         // 외래키가 없어 ON DELETE SET NULL 이 돌지 않는다. 여기서 직접 풀지 않으면
-        // 없는 사진을 가리키는 커버가 남아 여행 조회가 깨진다 (명세 §3, §4.6).
+        // 없는 사진을 가리키는 커버가 남아 여행 조회가 깨진다.
         record.trip.clearCoverIfAmong(listOf(photoId))
 
-        // 바이너리(photo_data)는 ON DELETE CASCADE 로 함께 지워진다 (명세 §5.1).
+        // 바이너리(photo_data)는 ON DELETE CASCADE 로 함께 지워진다.
         photoRepository.delete(photo)
         log.debug("사진 삭제 recordId={} photoId={} requesterId={}", recordId, photoId, requesterId)
     }
@@ -84,7 +86,7 @@ class PhotoService(
         val record = recordRepository.findById(recordId)
             .orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
         if (record.trip.owner.id != requesterId) {
-            // 존재 은닉 때문에 응답이 "없는 기록"과 같다 (명세 §2.2).
+            // 존재 은닉 때문에 응답이 "없는 기록"과 같다.
             log.debug(
                 "사진 접근 차단 recordId={} requesterId={} ownerId={}",
                 recordId, requesterId, record.trip.owner.id,
@@ -92,5 +94,35 @@ class PhotoService(
             throw ApiException(ErrorCode.RECORD_NOT_FOUND)
         }
         return record
+    }
+
+    /**
+     * 파일 앞부분이 선언된 형식의 시그니처와 맞는지 본다.
+     *
+     * Content-Type 은 클라이언트가 적어 보내는 값이라 그대로 믿지 않는다. 시그니처를 아는 형식은
+     * 아래 셋뿐이며, 허용 형식 설정에 다른 형식을 더해도 여기에 추가하기 전까지는 거부된다.
+     */
+    private fun hasSignatureOf(file: MultipartFile, contentType: String): Boolean {
+        val head = file.inputStream.use { it.readNBytes(12) }
+        return when (contentType) {
+            "image/jpeg" -> head.startsWith(JPEG)
+            "image/png" -> head.startsWith(PNG)
+            // RIFF 컨테이너라 앞 4바이트(RIFF)와 8~11바이트(WEBP)를 함께 본다.
+            "image/webp" -> head.startsWith(RIFF) && head.size >= 12 && head.copyOfRange(8, 12).contentEquals(WEBP)
+            else -> false
+        }
+    }
+
+    private fun ByteArray.startsWith(prefix: ByteArray) =
+        size >= prefix.size && copyOfRange(0, prefix.size).contentEquals(prefix)
+
+    private companion object {
+        /** photos.original_file_name 컬럼 길이. */
+        const val MAX_FILE_NAME_LENGTH = 255
+
+        val JPEG = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte())
+        val PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+        val RIFF = "RIFF".toByteArray()
+        val WEBP = "WEBP".toByteArray()
     }
 }

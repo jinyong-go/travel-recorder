@@ -146,7 +146,7 @@ Trip                            // 여행 — 여행 기록의 상위 그룹이�
   budget: Long?                 // 총 예산 (원)
   memo: String?                 // 여행 설명
   coverPhoto: Photo?            // 커버 사진 (하위 기록의 사진 중 하나)
-  visibility: Visibility        // PRIVATE | GROUP | PUBLIC
+  visibility: TripVisibility    // PRIVATE | GROUP | PUBLIC
   createdAt: Instant
   updatedAt: Instant
   deletedAt: Instant?           // soft delete (§3.2)
@@ -626,6 +626,9 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 - **`tripId` 는 필수다.** 생략하면 `400 VALIDATION_ERROR`, 요청자가 소유하지 않은 여행이면
   `404 TRIP_NOT_FOUND` 다 (존재 은닉, §2.2).
 - **`visibility` 와 `groupIds` 는 이 요청에 없다.** 공개 범위는 여행이 이미 갖고 있다 (§4.3).
+- 장소명·주소·도로명주소·원본 링크의 길이, 원본 링크의 스킴, 태그 개수·길이 상한은 공통 명세
+  §3.3 이 유일한 출처다. 위반하면 `400 VALIDATION_ERROR` 다. 수정 요청(`PUT`)도 같다.
+  태그 개수는 요청에 담긴 그대로 센다(중복·공백 항목 포함). 저장할 때는 공백을 지우고 같은 이름을 합친다.
 
 **GET `/api/records/{id}` 응답 예시 (요청자가 소유자인 경우)**
 ```json
@@ -676,7 +679,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 | Method | Path | 설명 | 인증 |
 |---|---|---|:---:|
-| GET | `/api/places/search?keyword={keyword}&lat={lat}&lng={lng}&page={page}` | 지역 검색 결과를 집계·정렬·페이지네이션하여 반환 | 선택 |
+| GET | `/api/places/search?keyword={keyword}&lat={lat}&lng={lng}&page={page}` | 지역 검색 결과를 집계·정렬·페이지네이션하여 반환. 비로그인은 `401` | 필요 |
 
 **동작 방식**
 1. 원 검색어 및 보조 변형(지역명 결합 등)으로 **여러 번 호출**해 후보를 모으고 `(name, address)`
@@ -722,7 +725,11 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 - 업로드 제약(크기·포맷)은 **공통 명세 §6.3이 유일한 출처**이며 양쪽 모듈이 같은 값을 쓴다.
   백엔드는 이를 설정값으로 외부화한다.
-  서버는 Content-Type/확장자를 검증하고 위반 시 `400 INVALID_FILE` 을 반환한다.
+  서버는 Content-Type 을 검증하고, **파일 앞부분의 시그니처가 선언된 형식과 일치하는지도 확인한다.**
+  선언만 이미지이고 내용은 다른 파일을 막기 위해서다. 위반 시 `400 INVALID_FILE` 을 반환한다.
+  시그니처를 아는 형식은 JPEG·PNG·WebP 뿐이라, 허용 형식 설정에 다른 형식을 더해도 시그니처
+  확인을 함께 추가하기 전까지는 거부된다.
+- 원본 파일명은 255자를 넘으면 잘라 저장한다. 표시용 값일 뿐이라 업로드를 거부할 이유가 없다.
 - **사진을 올리고 지울 수 있는 사람은 소속 여행의 소유자뿐이다.**
 - 삭제된 사진이 어느 여행의 커버였다면 그 여행의 `cover_photo_id` 는 `NULL` 이 된다. 외래키가 없어
   사진 삭제 처리가 직접 해제해야 한다 (§3).
@@ -890,6 +897,8 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
   내려주면 비공개 기록에만 쓰인 태그가 노출되기 때문이다.
 - 볼 수 있는지는 §2.2 대로 **소속 여행을 조인해서** 판정한다. 태그 조회라고 해서 판정을
   건너뛰면 그대로 정보 유출이 된다.
+- 결과는 이름순 **상위 20건**까지다. 자동완성 후보라 그 이상은 쓰이지 않는다.
+- `keyword` 의 `%`·`_` 는 와일드카드가 아니라 글자 그대로 찾는다. 여행·기록 목록의 `keyword` 도 같다.
 
 ## 5. 사진 저장소 설계
 
@@ -965,7 +974,12 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 **보안 구현**
 
-- 세션 쿠키는 `HttpOnly`, 운영 환경에서는 `Secure` 속성을 적용한다.
+- 세션 쿠키는 `HttpOnly`·`Secure`·`SameSite=Lax` 를 **모든 프로파일에** 적용한다 (`application.yml`).
+  주요 브라우저는 `http://localhost` 를 보안 컨텍스트로 보아 로컬에서도 `Secure` 쿠키를 받는다.
+  받지 않는 브라우저(Safari 등)로 로컬 개발할 때만 `SESSION_COOKIE_SECURE=false` 로 끈다.
+- TLS 를 프록시에서 끝내는 배포에서도 `Secure` 판정과 리다이렉트 주소가 맞도록 프록시 헤더를
+  해석한다(`server.forward-headers-strategy: native`). Tomcat 은 사설망 주소의 프록시만 신뢰하므로
+  외부에서 `X-Forwarded-*` 를 위조해도 반영되지 않는다.
 - CSRF 토큰은 `XSRF-TOKEN` 쿠키(`HttpOnly`)에 두고, 클라이언트에는 `GET /api/auth/session`
   응답 본문으로 준다. 클라이언트는 `X-XSRF-TOKEN` 헤더로 돌려보내며, 헤더가 없으면 `403` 이다.
   본문의 토큰은 응답마다 다른 값으로 가린다(XOR 마스킹) — 압축된 응답 크기로 토큰을 추측하는

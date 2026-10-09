@@ -12,7 +12,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 /**
  * 쿼리 파라미터의 열거형 표기 검증.
  *
- * 명세(§4.1, §4.3.1, §4.4.1)는 소문자·camelCase 로 규정하는데 Spring 기본 변환기는 대문자만
+ * 명세는 소문자·camelCase 로 규정하는데 Spring 기본 변환기는 대문자만
  * 받는다. 프론트엔드가 명세대로 보내면 전부 400 이 되던 자리라 회귀 테스트로 고정한다.
  */
 @SpringBootTest

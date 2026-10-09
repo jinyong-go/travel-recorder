@@ -1,7 +1,10 @@
 package com.yong.travel.search.presentation
 
+import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.presentation.PageResponse
+import com.yong.travel.common.web.requireLogin
 import com.yong.travel.search.service.PlaceSearchService
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -20,13 +23,22 @@ class PlaceSearchController(
     private val placeSearchService: PlaceSearchService,
 ) {
 
-    /** 장소 검색. 네이버 지역 검색 결과를 집계해 페이지로 돌려준다. */
+    /**
+     * 장소 검색. 네이버 지역 검색 결과를 집계해 페이지로 돌려준다.
+     *
+     * 로그인을 요구한다. 검색 한 번이 외부 API 를 여러 번 부르므로, 열어 두면
+     * 익명 요청만으로 일일 호출 한도가 소진된다.
+     */
     @GetMapping("/search")
     fun search(
         @RequestParam keyword: String,
         @RequestParam(required = false) lat: Double?,
         @RequestParam(required = false) lng: Double?,
         @RequestParam(defaultValue = "0") page: Int,
-    ): PageResponse<PlaceSearchResultResponse> =
-        PageResponse.of(placeSearchService.search(keyword, lat, lng, page)).map { PlaceSearchResultResponse.from(it) }
+        @AuthenticationPrincipal principal: LoginUser?,
+    ): PageResponse<PlaceSearchResultResponse> {
+        requireLogin(principal)
+        return PageResponse.of(placeSearchService.search(keyword, lat, lng, page))
+            .map { PlaceSearchResultResponse.from(it) }
+    }
 }

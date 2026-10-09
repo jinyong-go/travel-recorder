@@ -6,7 +6,7 @@ package com.yong.travel.record.domain
  * 요청 DTO 와 나눠 두는 이유는 `TripCreateCommand` 와 같다 — 서비스가 HTTP 요청 모양을 모르게 한다.
  */
 data class TripRecordCreateCommand(
-    /** 소속 여행. 요청자가 소유한 여행이어야 한다 (명세 §4.4). */
+    /** 소속 여행. 요청자가 소유한 여행이어야 한다. */
     val tripId: Long,
     val name: String,
     val category: Category,

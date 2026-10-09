@@ -17,7 +17,7 @@ import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
-import com.yong.travel.trip.domain.Visibility
+import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.persistence.TripShareRepository
 import jakarta.persistence.EntityManager
@@ -80,7 +80,7 @@ class RecordVisibilityTest {
     fun `전체 공개 여행의 기록은 비로그인도 볼 수 있고 소속 여행을 가리킨다`() {
         val owner = newUser()
         val other = newUser()
-        val tripId = newTrip(owner, Visibility.PUBLIC)
+        val tripId = newTrip(owner, TripVisibility.PUBLIC)
         val recordId = newRecord(tripId)
         flush()
 
@@ -102,7 +102,7 @@ class RecordVisibilityTest {
         val stranger = newUser()
         val groupId = newGroupWith(owner, member)
 
-        val recordId = newRecord(newTrip(owner, Visibility.GROUP, listOf(groupId)))
+        val recordId = newRecord(newTrip(owner, TripVisibility.GROUP, listOf(groupId)))
         flush()
 
         assertEquals(recordId, recordService.get(recordId, member).id)
@@ -115,13 +115,13 @@ class RecordVisibilityTest {
         val owner = newUser()
         val member = newUser()
         val groupId = newGroupWith(owner, member)
-        val tripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val tripId = newTrip(owner, TripVisibility.GROUP, listOf(groupId))
         val recordId = newRecord(tripId)
         flush()
         assertEquals(recordId, recordService.get(recordId, member).id)
 
         // 기록은 손대지 않는다. 범위는 여행 한 곳에만 있어서 여행만 바꾸면 하위가 전부 따라온다.
-        changeTripVisibility(tripId, Visibility.PRIVATE)
+        changeTripVisibility(tripId, TripVisibility.PRIVATE)
         flush()
 
         assertThrows<ApiException> { recordService.get(recordId, member) }
@@ -133,7 +133,7 @@ class RecordVisibilityTest {
         val owner = newUser()
         val member = newUser()
         val groupId = newGroupWith(owner, member)
-        val recordId = newRecord(newTrip(owner, Visibility.GROUP, listOf(groupId)))
+        val recordId = newRecord(newTrip(owner, TripVisibility.GROUP, listOf(groupId)))
         flush()
 
         groupService.leave(groupId, member)
@@ -147,7 +147,7 @@ class RecordVisibilityTest {
         val owner = newUser()
         val member = newUser()
         val groupId = newGroupWith(owner, member)
-        val tripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val tripId = newTrip(owner, TripVisibility.GROUP, listOf(groupId))
         val recordId = newRecord(tripId)
         flush()
 
@@ -164,7 +164,7 @@ class RecordVisibilityTest {
     fun `남의 여행에는 기록을 넣을 수도 옮길 수도 없다`() {
         val owner = newUser()
         val stranger = newUser()
-        val foreignTripId = newTrip(owner, Visibility.PUBLIC)
+        val foreignTripId = newTrip(owner, TripVisibility.PUBLIC)
         val myTripId = newTrip(stranger)
         val myRecordId = newRecord(myTripId, authorId = stranger)
         flush()
@@ -187,7 +187,7 @@ class RecordVisibilityTest {
         val owner = newUser()
         val stranger = newUser()
         val privateTripId = newTrip(owner)
-        val publicTripId = newTrip(owner, Visibility.PUBLIC)
+        val publicTripId = newTrip(owner, TripVisibility.PUBLIC)
         val recordId = newRecord(privateTripId)
         flush()
 
@@ -207,8 +207,8 @@ class RecordVisibilityTest {
         val groupId = newGroupWith(owner, member)
 
         val privateId = newRecord(newTrip(owner), name = "비공개")
-        val sharedId = newRecord(newTrip(owner, Visibility.GROUP, listOf(groupId)), name = "그룹공유")
-        val publicId = newRecord(newTrip(owner, Visibility.PUBLIC), name = "전체공개")
+        val sharedId = newRecord(newTrip(owner, TripVisibility.GROUP, listOf(groupId)), name = "그룹공유")
+        val publicId = newRecord(newTrip(owner, TripVisibility.PUBLIC), name = "전체공개")
         flush()
 
         // 남이 MINE 으로 조회해도 남의 기록이 딸려 나오지 않는다.
@@ -233,7 +233,7 @@ class RecordVisibilityTest {
         val recordId = newRecord(privateTripId)
         flush()
 
-        // 볼 수 없는 여행의 id 를 찍으면 scope 와 무관하게 없는 여행과 같은 404 다 (명세 §4.4.1).
+        // 볼 수 없는 여행의 id 를 찍으면 scope 와 무관하게 없는 여행과 같은 404 다.
         listOf(RecordScope.PUBLIC, RecordScope.MINE, null).forEach { scope ->
             val error = assertThrows<ApiException> { list(scope, stranger, privateTripId) }
             assertEquals(ErrorCode.TRIP_NOT_FOUND, error.errorCode)
@@ -245,7 +245,7 @@ class RecordVisibilityTest {
     fun `볼 수 있는 여행이라도 scope 가 어긋나면 빈 목록이다`() {
         val owner = newUser()
         val stranger = newUser()
-        val publicTripId = newTrip(owner, Visibility.PUBLIC)
+        val publicTripId = newTrip(owner, TripVisibility.PUBLIC)
         newRecord(publicTripId)
         flush()
 
@@ -258,9 +258,9 @@ class RecordVisibilityTest {
         val member = newUser()
         val stranger = newUser()
         val groupId = newGroupWith(owner, member)
-        val groupTripId = newTrip(owner, Visibility.GROUP, listOf(groupId))
+        val groupTripId = newTrip(owner, TripVisibility.GROUP, listOf(groupId))
         val groupRecordId = newRecord(groupTripId)
-        val publicTripId = newTrip(owner, Visibility.PUBLIC)
+        val publicTripId = newTrip(owner, TripVisibility.PUBLIC)
         val publicRecordId = newRecord(publicTripId)
         flush()
 
@@ -286,7 +286,7 @@ class RecordVisibilityTest {
     @Test
     fun `기록을 삭제하면 목록과 상세에서 사라지지만 행은 남는다`() {
         val owner = newUser()
-        val recordId = newRecord(newTrip(owner, Visibility.PUBLIC))
+        val recordId = newRecord(newTrip(owner, TripVisibility.PUBLIC))
         flush()
 
         recordService.delete(recordId, owner)
@@ -443,7 +443,7 @@ class RecordVisibilityTest {
         )
     }
 
-    /** 목록 검증은 첫 페이지만 본다. 페이지 크기는 서버가 정하므로(명세 §4.1) 테스트도 그 값을 그대로 쓴다. */
+    /** 목록 검증은 첫 페이지만 본다. 페이지 크기는 서버가 정하므로 테스트도 그 값을 그대로 쓴다. */
     private fun firstPage() = PageRequest.of(0, DEFAULT_PAGE_SIZE)
 
     private fun list(
@@ -484,7 +484,7 @@ class RecordVisibilityTest {
      */
     private fun newTrip(
         ownerId: Long,
-        visibility: Visibility = Visibility.PRIVATE,
+        visibility: TripVisibility = TripVisibility.PRIVATE,
         groupIds: List<Long> = emptyList(),
     ): Long {
         val trip = tripRepository.save(
@@ -503,7 +503,7 @@ class RecordVisibilityTest {
         return requireNotNull(trip.id)
     }
 
-    private fun changeTripVisibility(tripId: Long, visibility: Visibility) {
+    private fun changeTripVisibility(tripId: Long, visibility: TripVisibility) {
         val trip = tripRepository.findById(tripId).orElseThrow()
         trip.visibility = visibility
         tripRepository.saveAndFlush(trip)

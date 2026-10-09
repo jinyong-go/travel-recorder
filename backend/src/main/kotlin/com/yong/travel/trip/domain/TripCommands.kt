@@ -15,13 +15,13 @@ data class TripCreateCommand(
     val headcount: Int,
     val budget: Long?,
     val memo: String?,
-    val visibility: Visibility,
+    val visibility: TripVisibility,
 
     /** visibility = GROUP 일 때만 의미가 있다. 그 외 값이면 무시된다. */
     val groupIds: List<Long>,
 )
 
-/** 여행 기본 정보 수정 입력. 공개 범위는 담지 않는다 — `TripService.changeVisibility` 의 몫이다 (명세 §4.3). */
+/** 여행 기본 정보 수정 입력. 공개 범위는 담지 않는다 — `TripService.changeVisibility` 의 몫이다. */
 data class TripUpdateCommand(
     val name: String,
     val startDate: LocalDate,

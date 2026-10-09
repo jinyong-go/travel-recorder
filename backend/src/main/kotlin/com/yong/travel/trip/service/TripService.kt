@@ -12,7 +12,7 @@ import com.yong.travel.record.persistence.TripRecordRepository
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
 import com.yong.travel.trip.domain.Trip
-import com.yong.travel.trip.domain.Visibility
+import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.domain.TripCreateCommand
 import com.yong.travel.trip.domain.TripListQuery
 import com.yong.travel.trip.domain.TripSort
@@ -64,7 +64,7 @@ class TripService(
         val counts = recordCounts(*page.content.mapNotNull { it.id }.toLongArray())
         // 공유 그룹은 소유자 본인의 항목에만 필요하다. 그 여행들만 골라 한 번에 읽는다.
         val shares = sharesOf(page.content.filter { userId != null && it.owner.id == userId })
-        // 범위 판정이 쿼리 단계에 있어(명세 §7) 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
+        // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
         log.debug("여행 목록 scope={} userId={} 건수={}", query.scope, userId, page.totalElements)
         return page.map { it.toDomain(userId, counts[requireNotNull(it.id)] ?: 0L, shares) }
     }
@@ -123,7 +123,7 @@ class TripService(
     fun changeVisibility(
         tripId: Long,
         ownerId: Long,
-        visibility: Visibility,
+        visibility: TripVisibility,
         groupIds: List<Long>,
     ): Trip {
         val trip = findTrip(tripId)
@@ -140,7 +140,7 @@ class TripService(
 
     /**
      * 커버 사진 지정·해제. `photoId` 가 null 이면 해제한다.
-     * 그 여행의 하위 기록에 속한 사진만 지정할 수 있으며, 아니면 PHOTO_NOT_FOUND 다 (존재 은닉, 명세 §4.3.2).
+     * 그 여행의 하위 기록에 속한 사진만 지정할 수 있으며, 아니면 PHOTO_NOT_FOUND 다 (존재 은닉).
      */
     @Transactional
     fun changeCover(
@@ -152,7 +152,7 @@ class TripService(
         requireOwner(trip, ownerId)
 
         trip.coverPhoto = photoId?.let {
-            // 다른 여행의 사진인지 아예 없는 사진인지 구분되지 않아야 한다 (명세 §4.3.2).
+            // 다른 여행의 사진인지 아예 없는 사진인지 구분되지 않아야 한다.
             photoRepository.findByIdAndTripId(it, tripId) ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
         }
         log.debug("여행 커버 변경 tripId={} ownerId={} photoId={}", tripId, ownerId, photoId)
@@ -161,10 +161,10 @@ class TripService(
 
     /**
      * 여행 삭제. **하위 기록도 함께 soft delete 한다** — 기록은 여행 없이 존재할 수 없어
-     * 남겨 둘 자리가 없다 (명세 §4.3).
+     * 남겨 둘 자리가 없다.
      *
      * 공유 행은 물리 삭제한다. 여행이 조회에서 사라지므로 당장 새는 것은 아니지만, 남아 있는
-     * 공유 행이 권한 판정에 끼어들 여지를 만들지 않는다 (명세 §3.1).
+     * 공유 행이 권한 판정에 끼어들 여지를 만들지 않는다.
      */
     @Transactional
     fun delete(tripId: Long, ownerId: Long) {
@@ -186,11 +186,11 @@ class TripService(
      * 공유 그룹 목록을 통째로 갈아 끼운다.
      *
      * GROUP 이 아닌 값으로 바뀌면 기존 공유를 지운다 — 남겨 두면 나중에 다시 GROUP 으로
-     * 되돌렸을 때 예전 공유가 의도치 않게 되살아난다 (명세 §4.3.1).
+     * 되돌렸을 때 예전 공유가 의도치 않게 되살아난다.
      */
     private fun applyShares(
         trip: TripEntity,
-        visibility: Visibility,
+        visibility: TripVisibility,
         groupIds: List<Long>,
         ownerId: Long,
     ) {
@@ -198,7 +198,7 @@ class TripService(
         // 벌크 삭제라 호출 즉시 DB 에 반영된다. 아래 INSERT 보다 늦게 나가 교체 후에도 남는 그룹에서
         // unique(trip_id, group_id) 위반이 나는 일이 없다.
         tripShareRepository.deleteByTripId(tripId)
-        if (visibility != Visibility.GROUP) return
+        if (visibility != TripVisibility.GROUP) return
 
         // 속하지 않은 그룹에는 공유할 수 없다. 그런 그룹 id 는 404 로 막아 존재 여부도 알리지 않는다.
         val groups = groupService.requireAccessibleGroups(groupIds, ownerId)
@@ -212,7 +212,7 @@ class TripService(
     /**
      * 여행을 볼 수 있는지 판정만 한다. 못 보면 없는 여행과 같은 TRIP_NOT_FOUND 다.
      *
-     * 기록 목록을 `tripId` 로 좁힐 때 기록 서비스가 부른다 (명세 §4.4.1). 여행 상세 조회와 같은
+     * 기록 목록을 `tripId` 로 좁힐 때 기록 서비스가 부른다. 여행 상세 조회와 같은
      * 판정을 거쳐야 목록으로 우회해 여행의 존재를 떠볼 수 없다.
      */
     fun requireViewable(tripId: Long, userId: Long?) {
@@ -221,22 +221,22 @@ class TripService(
 
     private fun requireViewable(trip: TripEntity, userId: Long?) {
         if (canView(trip, userId)) return
-        // 존재 은닉 때문에 응답이 "없음"과 같다. 왜 가려졌는지는 이 로그에만 드러난다 (명세 §2.2).
+        // 존재 은닉 때문에 응답이 "없음"과 같다. 왜 가려졌는지는 이 로그에만 드러난다.
         log.debug("여행 열람 차단 tripId={} userId={} visibility={}", trip.id, userId, trip.visibility)
         // 권한 없음(403)이 아니라 없는 여행(404)으로 답한다. 403 은 "그 여행이 있다" 는 뜻이 된다.
         throw ApiException(ErrorCode.TRIP_NOT_FOUND)
     }
 
     /**
-     * 내 여행이거나, 전체 공개이거나, 내가 속한 그룹으로 공유됐거나 셋 중 하나다 (명세 §2.2).
+     * 내 여행이거나, 전체 공개이거나, 내가 속한 그룹으로 공유됐거나 셋 중 하나다.
      *
-     * 기록의 열람도 전적으로 소속 여행이 정하므로(명세 §3.5) 기록 서비스가 이 판정을 그대로 쓴다.
+     * 기록의 열람도 전적으로 소속 여행이 정하므로 기록 서비스가 이 판정을 그대로 쓴다.
      * 판정식이 두 곳에 있으면 한쪽만 고쳐졌을 때 여행과 기록의 공개 범위가 어긋난다.
      */
     fun canView(trip: TripEntity, userId: Long?): Boolean {
         if (userId != null && trip.owner.id == userId) return true
-        if (trip.visibility == Visibility.PUBLIC) return true
-        if (trip.visibility != Visibility.GROUP || userId == null) return false
+        if (trip.visibility == TripVisibility.PUBLIC) return true
+        if (trip.visibility != TripVisibility.GROUP || userId == null) return false
 
         val groupIds = groupService.groupIdsOf(userId)
         return groupIds.isNotEmpty() &&
@@ -263,10 +263,10 @@ class TripService(
      * 여행별 공유 그룹을 한 번에 읽는다.
      *
      * **소유자 본인의 여행만 넘겨야 한다.** 누구에게 공유했는지는 소유자만 아는 정보라
-     * (공통 명세 §3.5), 응답에서 가리는 대신 애초에 읽지 않는다.
+     * 응답에서 가리는 대신 애초에 읽지 않는다.
      */
     private fun sharesOf(trips: List<TripEntity>): Map<Long, List<GroupRef>> {
-        val tripIds = trips.filter { it.visibility == Visibility.GROUP }.mapNotNull { it.id }
+        val tripIds = trips.filter { it.visibility == TripVisibility.GROUP }.mapNotNull { it.id }
         if (tripIds.isEmpty()) return emptyMap()
         return tripShareRepository.findByTripIdIn(tripIds)
             .groupBy({ requireNotNull(it.trip.id) }) { GroupRef(requireNotNull(it.group.id), it.group.name) }
@@ -309,7 +309,7 @@ class TripService(
             recordCount = recordCount,
             owner = toOwner(),
             visibility = if (mine) visibility else null,
-            sharedGroups = if (mine && visibility == Visibility.GROUP) shares[tripId].orEmpty() else null,
+            sharedGroups = if (mine && visibility == TripVisibility.GROUP) shares[tripId].orEmpty() else null,
             createdAt = createdAt,
             updatedAt = updatedAt,
         )

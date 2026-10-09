@@ -36,7 +36,7 @@ class TripRecordController(
      *
      * `scope` 는 `tripId` 가 없으면 필수다. "무엇을 보는 목록인지" 가 화면마다 다르고, 기본값을
      * 두면 실수로 넓은 범위를 조회하는 쪽이 조용히 기본이 되기 때문이다. `tripId` 만 주면 그 여행의
-     * 하위 기록이다 — 열람자는 남의 여행이 공유인지 공개인지 몰라 scope 를 고를 수 없다 (명세 §4.4.1).
+     * 하위 기록이다 — 열람자는 남의 여행이 공유인지 공개인지 몰라 scope 를 고를 수 없다.
      * MINE/SHARED 는 로그인해야 하며, 비로그인은 PUBLIC 과 tripId 조회만 할 수 있다.
      */
     @GetMapping
@@ -100,7 +100,7 @@ class TripRecordController(
 
     /**
      * 소속 여행 변경. 공개 범위를 바꾸는 수단은 기록에 없다 —
-     * `PATCH /api/trips/{id}/visibility` 로 여행에서 바꾼다 (명세 §4.4).
+     * `PATCH /api/trips/{id}/visibility` 로 여행에서 바꾼다.
      */
     @PatchMapping("/{recordId}/trip")
     fun changeTrip(
