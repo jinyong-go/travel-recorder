@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: batch
+
+  profiles:
+    default: local

@@ -37,7 +37,7 @@
 
 ```bash
 # 터미널 1 — 백엔드 (local 프로파일, 인메모리 H2)
-cd backend && ./gradlew bootRun
+cd backend && ./gradlew :external-api:bootRun
 
 # 터미널 2 — 프론트엔드
 cd frontend && npm install && npm run dev

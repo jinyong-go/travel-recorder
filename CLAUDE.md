@@ -171,17 +171,18 @@ fun findVisibleTrips(requester: User?, scope: Scope, page: Int): PageResult<Trip
 ## 5. 프로젝트 구조
 
 ```
-backend/   Kotlin + Spring Boot. 도메인별 패키지 (auth, record, group, photo, search, tag, common)
+backend/   Kotlin + Spring Boot 멀티 모듈 — external-api(API 서버), batch(정기 정리 작업)
+           external-api 는 도메인별 패키지 (auth, record, group, photo, search, tag, common)
            각 도메인은 presentation / service / domain / persistence 로 나뉜다.
            persistence 에 JPA 엔티티·리포지토리·Specifications 가 함께 있고, domain 에는
            도메인 개념(공개 범위·카테고리 등)이 있다
 frontend/  React + Vite. components / context / config / utils / pages
 ```
 
-- 백엔드 실행: `cd backend && ./gradlew bootRun` (기본 `local` 프로파일, H2 인메모리)
+- 백엔드 실행: `cd backend && ./gradlew :external-api:bootRun` (기본 `local` 프로파일, H2 인메모리)
 - 프론트엔드 실행: `cd frontend && npm run dev` (5173 포트)
 - 프론트엔드 린트: `cd frontend && npm run lint` (oxlint)
-- 백엔드 테스트: `cd backend && ./gradlew test`
+- 백엔드 테스트: `cd backend && ./gradlew test` (모든 모듈)
 
 ### 5.1 현재 구현 상태
 

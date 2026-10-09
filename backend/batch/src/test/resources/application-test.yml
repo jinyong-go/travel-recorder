@@ -1,0 +1,11 @@
+# 테스트 전용. local 과 같은 인메모리 H2 를 쓰되 이름을 나눠 다른 컨텍스트와 섞이지 않게 한다.
+spring:
+  datasource:
+    url: jdbc:h2:mem:travel-recorder-batch-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  batch:
+    jdbc:
+      initialize-schema: embedded

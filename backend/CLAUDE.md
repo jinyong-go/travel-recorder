@@ -9,18 +9,36 @@
 ## 명령
 
 ```bash
-./gradlew bootRun     # 실행 (기본 local 프로파일, H2 인메모리)
-./gradlew test        # 테스트
-./gradlew build       # 빌드 (테스트 포함)
+./gradlew :external-api:bootRun   # API 서버 실행 (기본 local 프로파일, H2 인메모리)
+./gradlew :batch:bootRun          # 배치 실행 (잡을 돌리고 종료)
+./gradlew test                    # 모든 모듈 테스트
+./gradlew build                   # 빌드 (테스트 포함)
 ```
+
+- **모듈을 지정하지 않은 `./gradlew bootRun` 은 쓰지 않는다.** 두 모듈의 `bootRun` 이 함께 잡히고,
+  API 서버가 프로세스를 붙잡아 배치는 돌지 않는다.
 
 - 프로파일: `local`(H2, `MODE=PostgreSQL`) / `dev` / `prod`(PostgreSQL)
 - **세 프로파일 모두 `ddl-auto: validate`** 다. 엔티티와 `schema.sql` 이 어긋나면 기동조차 되지
   않으므로, **엔티티를 고치면 `schema.sql` 도 같이 고친다.**
 
+## 모듈
+
+| 모듈 | 하는 일 | 의존성 |
+|---|---|---|
+| `external-api` | 프론트엔드가 부르는 API 서버 | Web MVC, Data JPA, Security, Validation |
+| `batch` | 정기 정리 작업 (예: 로그인 이력 보관 기간 정리). 웹 서버 없이 잡을 돌리고 종료 | Spring Batch(JDBC 저장소) |
+
+- 공통 빌드 설정(플러그인 버전·Kotlin 옵션·Java 17·JUnit)은 루트 `build.gradle.kts` 의
+  `subprojects` 에 있다. 모듈 `build.gradle.kts` 에는 그 모듈의 의존성만 둔다.
+- **두 모듈은 서로 의존하지 않는다.** 배치가 API 모듈의 엔티티를 가져다 쓰지 않는다.
+- 배치는 아직 잡이 없고 `local` 프로파일(H2) 설정만 있다. dev/prod 설정은 첫 잡을 만들 때
+  PostgreSQL 의 배치 메타데이터 테이블을 누가 만들지와 함께 정한다.
+- 아래 패키지 구조·계층 책임·인가·영속성 규칙은 `external-api` 기준이다.
+
 ## 스택
 
-Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client / Bean Validation
+Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client / Bean Validation / Spring Batch 6
 
 ## 패키지 구조
 
@@ -145,7 +163,7 @@ com.yong.travel
 
 ## 테스트
 
-- 위치: `src/test/kotlin/com/yong/travel/`, 파일명 `XxxTest.kt`. JUnit 5 + `kotlin-test-junit5`.
+- 위치: `external-api/src/test/kotlin/com/yong/travel/` (배치는 `batch/src/test/...`), 파일명 `XxxTest.kt`. JUnit 5 + `kotlin-test-junit5`.
 - **인가와 공개 범위는 반드시 테스트한다.** 기존 `RecordVisibilityTest` 가 기준이다 —
   비공개 접근 시 404, 그룹 탈퇴·삭제 시 즉시 차단, `scope` 로 권한이 넓어지지 않는지.
 - 값 검증(평점 단위 등)은 경계값으로 확인한다.

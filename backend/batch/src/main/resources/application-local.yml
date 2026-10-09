@@ -1,0 +1,14 @@
+# 로컬 개발용. 인메모리 H2 를 PostgreSQL 호환 모드로 띄운다.
+# dev/prod 설정은 첫 잡을 만들 때 함께 정한다 — PostgreSQL 에서 배치 메타데이터 테이블을 누가
+# 만들지(Spring Batch 스크립트는 IF NOT EXISTS 가 없어 기동마다 돌릴 수 없다)가 먼저 정해져야 한다.
+spring:
+  datasource:
+    url: jdbc:h2:mem:travel-recorder-batch;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  batch:
+    jdbc:
+      # 인메모리 DB 라 기동마다 배치 메타데이터 테이블을 새로 만든다.
+      initialize-schema: embedded

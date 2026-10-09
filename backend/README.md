@@ -19,14 +19,32 @@
 | 인증 | Spring Security (현재 임시 폼 로그인, 네이버 OAuth2 Client 복구 예정) | Boot 관리 |
 | 직렬화 | Jackson (`jackson-module-kotlin`) | Boot 관리 |
 | 입력 검증 | Bean Validation | Boot 관리 |
+| 배치 | Spring Batch (JDBC 메타데이터 저장소) | Boot 관리 |
 | 빌드 도구 | Gradle (Kotlin DSL, Wrapper 포함) | 9.7.1 |
 | 테스트 | JUnit 5, `kotlin-test-junit5`, Spring Boot Test | — |
 
-- 요구 JDK 버전: **17 이상** (`build.gradle.kts`의 toolchain이 17로 고정)
+- 요구 JDK 버전: **17 이상** (루트 `build.gradle.kts`의 toolchain이 17로 고정)
 - 세션 쿠키(`JSESSIONID`) 기반 인증. JWT 미사용
 - 외부 API는 **네이버 검색 오픈API의 지역(Local) 검색**만 사용. 지도 렌더링은 프론트엔드 담당
 
-## 디렉터리 구조
+## 모듈 구성
+
+Gradle 멀티 모듈. 두 모듈은 서로 의존하지 않음.
+
+```
+backend/
+├─ settings.gradle.kts     # 모듈 목록
+├─ build.gradle.kts        # 공통 빌드 설정 (플러그인 버전, Kotlin 옵션, Java 17, JUnit)
+├─ external-api/           # API 서버 — 아래 디렉터리 구조 참고
+├─ batch/                  # 정기 정리 작업 (Spring Batch). 웹 서버 없이 잡 실행 후 종료
+│  ├─ build.gradle.kts
+│  └─ src/main/kotlin/com/yong/travel/batch/BatchApplication.kt
+└─ gradlew / gradlew.bat
+```
+
+- `batch`는 아직 잡이 없고 `local` 프로파일(H2) 설정만 존재. dev/prod 설정은 첫 잡과 함께 추가 예정
+
+## 디렉터리 구조 (`external-api`)
 
 도메인별 패키지 안에 `presentation` / `service` / `domain` / `persistence` 계층을 두는 구조.
 JPA 엔티티·리포지토리·Specifications 는 `persistence`, 저장 수단과 무관한 도메인 개념
@@ -56,7 +74,7 @@ presentation → service → persistence
 세부 규칙은 [CLAUDE.md](./CLAUDE.md)의 "패키지 구조"·"계층 책임" 참고.
 
 ```
-backend/
+external-api/
 ├─ src/main/kotlin/com/yong/travel/
 │  ├─ BackendApplication.kt        # 엔트리 포인트
 │  ├─ auth/                        # 인증·사용자
@@ -105,8 +123,7 @@ backend/
 │  ├─ application-prod.yml        # 운영 (PostgreSQL)
 │  └─ schema.sql                  # 엔티티 기준 DDL
 ├─ src/test/kotlin/com/yong/travel/
-├─ build.gradle.kts
-└─ gradlew / gradlew.bat
+└─ build.gradle.kts               # 이 모듈의 의존성
 ```
 
 ## 시작하기
@@ -156,7 +173,7 @@ export NAVER_SEARCH_CLIENT_SECRET=...
 
 ```bash
 cd backend
-./gradlew bootRun
+./gradlew :external-api:bootRun
 ```
 
 기본 주소는 http://localhost:8080. (Windows는 `./gradlew` 대신 `gradlew.bat`)
@@ -164,7 +181,7 @@ cd backend
 프로파일 미지정 시 `local` 적용. 다른 프로파일은 다음과 같이 지정.
 
 ```bash
-./gradlew bootRun --args='--spring.profiles.active=dev'
+./gradlew :external-api:bootRun --args='--spring.profiles.active=dev'
 ```
 
 기동 후 확인 가능한 주소.
@@ -181,20 +198,21 @@ cd backend
 
 | 명령 | 설명 |
 |---|---|
-| `./gradlew bootRun` | 개발 서버 실행 (기본 포트 8080) |
-| `./gradlew build` | 컴파일 + 테스트 + 실행 가능한 JAR 생성 → `build/libs/` |
-| `./gradlew test` | 테스트만 실행 |
+| `./gradlew :external-api:bootRun` | API 서버 실행 (기본 포트 8080) |
+| `./gradlew :batch:bootRun` | 배치 실행 (잡을 돌리고 종료) |
+| `./gradlew build` | 컴파일 + 테스트 + 실행 가능한 JAR 생성 → `<모듈>/build/libs/` |
+| `./gradlew test` | 모든 모듈 테스트 실행 |
 | `./gradlew clean` | 빌드 산출물 삭제 |
 
 ## 빌드 및 배포
 
 ```bash
-./gradlew build                                  # build/libs/backend-0.0.1-SNAPSHOT.jar 생성
-java -jar build/libs/backend-0.0.1-SNAPSHOT.jar  # 빌드 결과 실행
+./gradlew build                                                    # external-api/build/libs/external-api-0.0.1-SNAPSHOT.jar 생성
+java -jar external-api/build/libs/external-api-0.0.1-SNAPSHOT.jar  # 빌드 결과 실행
 ```
 
 ```bash
-java -jar build/libs/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
+java -jar external-api/build/libs/external-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
 `prod` 프로파일 배포 시 위 [환경 변수](#2-환경-변수-설정) 표의 값 전부 주입 필요. `spring.sql.init.mode`가 `never`라 **`schema.sql`은 배포 절차에서 직접 적용.**
@@ -202,7 +220,7 @@ java -jar build/libs/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 > `prod`에는 임시 로그인 구성이 없고 OAuth도 꺼져 있어 **현재 로그인 수단 없음.**
 
 ```bash
-psql "$DB_URL" -f src/main/resources/schema.sql
+psql "$DB_URL" -f external-api/src/main/resources/schema.sql
 ```
 
 ## 프로파일
@@ -217,7 +235,7 @@ psql "$DB_URL" -f src/main/resources/schema.sql
 
 ## 데이터베이스 스키마
 
-`src/main/resources/schema.sql`이 스키마의 기준. 엔티티(`com.yong.travel.*.persistence`)로부터 Hibernate가 생성하는 DDL에 맞춰 작성.
+`external-api/src/main/resources/schema.sql`이 스키마의 기준. 엔티티(`com.yong.travel.*.persistence`)로부터 Hibernate가 생성하는 DDL에 맞춰 작성.
 
 - 모든 프로파일이 `ddl-auto: validate`라 **엔티티와 `schema.sql`이 어긋나면 기동 실패.** 엔티티 변경 시 `schema.sql`도 함께 수정.
 - 스크립트는 `CREATE TABLE IF NOT EXISTS` 기반이고 외래키를 `CREATE TABLE` 안에 인라인으로 선언해 **재실행해도 안전.** 이 때문에 테이블은 참조 순서(`users` → `tags` → `share_group` → `trips` → `trip_records` → 나머지)로 정의.
