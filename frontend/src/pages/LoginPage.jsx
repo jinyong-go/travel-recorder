@@ -72,7 +72,7 @@ export default function LoginPage() {
           <p className="login-desc">
             네이버 로그인을 준비하는 동안 임시 계정으로 로그인할 수 있어요.
             <br />
-            로그인하면 여행지를 등록하고 리뷰를 남길 수 있습니다.
+            로그인하면 여행을 만들고 다녀온 곳을 기록할 수 있습니다.
           </p>
 
           {errorMessage && (
@@ -127,7 +127,7 @@ export default function LoginPage() {
           <p className="login-note">
             로그인 없이도 등록된 여행지를 둘러볼 수 있어요.
           </p>
-          <Link to="/records?scope=public" className="login-browse-link">
+          <Link to="/trips?scope=public" className="login-browse-link">
             <ArrowLeftIcon /> 여행지 둘러보기
           </Link>
         </div>

@@ -8,8 +8,6 @@ import org.springframework.data.repository.query.Param
 
 interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
 
-    fun findByTripId(tripId: Long): List<TripShareEntity>
-
     /**
      * 여러 여행의 공유 행을 한 번에 읽는다.
      *

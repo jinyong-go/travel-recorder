@@ -316,23 +316,3 @@ export function GlobeIcon(props) {
     </svg>
   )
 }
-
-export function LinkIcon(props) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width="18"
-      height="18"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.2 1.2" />
-      <path d="M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.2-1.2" />
-    </svg>
-  )
-}
