@@ -224,6 +224,15 @@
   flex-wrap: wrap;
 }
 
+/* 수정·삭제는 여행 전체에 대한 동작이라 이름 줄에 둔다. 목록이 길어도 찾으러 내려가지 않게
+   하기 위해서다. 버튼 묶음 모양은 styles/detailPage.css 의 .detail-author-actions 다. */
+.trip-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 /* 소유자가 이 화면에서 가장 자주 하는 동작이라 채움 버튼으로 두되, 16px 섹션 제목 옆에 놓이므로
    공통 버튼(높이 약 38px)보다 낮춰 제목 줄 높이를 늘리지 않는다. */
 .trip-records-add-btn {

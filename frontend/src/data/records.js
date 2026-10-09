@@ -27,19 +27,19 @@ export const VISIBILITIES = [
   {
     key: 'PRIVATE',
     label: '나만 보기',
-    description: '나만 볼 수 있습니다',
+    description: '다른 사람에게는 보이지 않습니다',
     icon: 'lock',
   },
   {
     key: 'GROUP',
     label: '그룹 공유',
-    description: '선택한 그룹의 멤버가 볼 수 있습니다',
+    description: '선택한 그룹 멤버가 여행지와 예산을 모두 볼 수 있습니다',
     icon: 'users',
   },
   {
     key: 'PUBLIC',
     label: '전체 공개',
-    description: '링크를 아는 누구나, 로그인하지 않아도 볼 수 있습니다',
+    description: '누구나 로그인 없이 여행지와 예산을 모두 볼 수 있습니다',
     icon: 'globe',
   },
 ]

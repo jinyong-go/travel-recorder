@@ -10,18 +10,12 @@ import {
 } from '../config/uploadLimits.js'
 import PlaceSearchModal from './PlaceSearchModal.jsx'
 import StarRatingInput from './StarRatingInput.jsx'
+import RequiredNote from './RequiredNote.jsx'
 import { CloseIcon, PhotoIcon, SearchIcon } from './icons.jsx'
 import '../styles/form.css'
 import './RecordRegisterModal.css'
+
 const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
-
-
-const REFERENCE_LOCATION_LABEL = {
-  locating: '현재 위치 확인 중...',
-  geo: '현재 위치 사용 중',
-  manual: '직접 지정한 위치 사용 중',
-  default: '기본 위치(서울역) 사용 중',
-}
 
 /**
  * 여행 상세에서 여는 기록 등록 모달 (명세 §5.3).
@@ -29,22 +23,20 @@ const REFERENCE_LOCATION_LABEL = {
  * 소속 여행은 지금 보고 있는 여행으로 정해져 있어 고르는 단계가 없다. 여는 쪽(여행 상세)이
  * 소유자에게만 버튼을 보여주므로 `trip.visibility` 가 채워져 있다.
  *
- * 기준 위치(`reference`)는 여는 쪽이 가진 `useReferenceLocation()` 결과를 그대로 받는다. 따로
- * 부르면 상태가 둘로 갈라져, 여기서 위치를 직접 지정해도 뒤의 여행 상세 거리가 바뀌지 않는다.
+ * 기준 위치(`reference`)는 여는 쪽이 가진 `useReferenceLocation()` 결과를 그대로 받아 장소 검색
+ * 모달에 넘긴다. 따로 부르면 상태가 둘로 갈라져, 검색 모달에서 위치를 직접 지정해도 뒤의 여행
+ * 상세 거리가 바뀌지 않는다.
  *
  * 제출은 기록 생성 → 사진 업로드 두 단계다 (공통 명세 §6.2). 사진만 실패하면 기록을 되돌리지
  * 않고 `onCreated(record, { photoFailed: true })` 로 알린다 — 기록 자체는 유효하기 때문이다.
  */
 export default function RecordRegisterModal({ trip, reference, onClose, onCreated }) {
-  const { location: referenceLocation, source, status, setManualLocation } = reference
-
   const [category, setCategory] = useState('')
   const [selectedPlace, setSelectedPlace] = useState(null)
   const [rating, setRating] = useState(0)
   const [memo, setMemo] = useState('')
   const [photos, setPhotos] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
-  const [manualLocationOpen, setManualLocationOpen] = useState(false)
   const [photoErrors, setPhotoErrors] = useState([])
   const [errors, setErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
@@ -61,9 +53,6 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
     },
     [],
   )
-
-  const referenceStatusLabel =
-    status === 'locating' ? REFERENCE_LOCATION_LABEL.locating : REFERENCE_LOCATION_LABEL[source]
 
   const handlePhotoChange = (e) => {
     const files = Array.from(e.target.files ?? [])
@@ -166,11 +155,14 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
           </p>
 
           <form className="register-form" onSubmit={handleSubmit} noValidate>
+            <RequiredNote />
+
             <div className="form-field">
-              <label htmlFor="place-name">장소명</label>
+              <label htmlFor="place-name" className="field-required">장소명</label>
               <div className="place-search-row">
                 <input
                   id="place-name"
+                  aria-required="true"
                   type="text"
                   value={selectedPlace?.name ?? ''}
                   placeholder="검색 버튼으로 장소를 선택해주세요"
@@ -186,19 +178,18 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
                   검색
                 </button>
               </div>
+              {selectedPlace?.address && <p className="field-hint">{selectedPlace.address}</p>}
               {errors.place && <p className="field-error">{errors.place}</p>}
             </div>
 
-            {selectedPlace && (
-              <div className="form-field">
-                <span className="field-label">위치</span>
-                <p className="selected-address">{selectedPlace.address}</p>
-              </div>
-            )}
-
             <div className="form-field">
-              <span className="field-label">카테고리</span>
-              <div className="category-choice-group" role="radiogroup" aria-label="카테고리">
+              <span className="field-label field-required">카테고리</span>
+              <div
+                className="category-choice-group"
+                role="radiogroup"
+                aria-label="카테고리"
+                aria-required="true"
+              >
                 {SELECTABLE_CATEGORIES.map((c) => (
                   <button
                     key={c.key}
@@ -216,7 +207,7 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
             </div>
 
             <div className="form-field">
-              <span className="field-label">평점</span>
+              <span className="field-label field-required">평점</span>
               <StarRatingInput value={rating} onChange={setRating} />
               {errors.rating && <p className="field-error">{errors.rating}</p>}
             </div>
@@ -237,9 +228,7 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
                   사진 선택
                 </label>
                 <span className="photo-upload-hint">
-                  {photos.length > 0
-                    ? `${photos.length}장 선택됨`
-                    : `JPG · PNG · WEBP, 한 장당 ${MAX_PHOTO_SIZE_MB}MB · 합계 ${MAX_PHOTO_TOTAL_MB}MB 이하`}
+                  JPG·PNG·WEBP, 장당 {MAX_PHOTO_SIZE_MB}MB · 합계 {MAX_PHOTO_TOTAL_MB}MB 이하
                 </span>
               </div>
               {photoErrors.map((message) => (
@@ -273,17 +262,6 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
               {errors.memo && <p className="field-error">{errors.memo}</p>}
             </div>
 
-            <div className="reference-location-note">
-              <span>기준 위치: {referenceStatusLabel}</span>
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => setManualLocationOpen(true)}
-              >
-                위치 직접 지정
-              </button>
-            </div>
-
             {submitError && <p className="field-error">{submitError}</p>}
 
             <div className="form-actions">
@@ -302,24 +280,12 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
           바깥 클릭으로 전달되어 등록 모달까지 닫힌다. */}
       {searchOpen && (
         <PlaceSearchModal
-          referenceLocation={referenceLocation}
+          reference={reference}
           onClose={() => setSearchOpen(false)}
           onSelect={(place) => {
             setSelectedPlace(place)
             setSearchOpen(false)
             setErrors((prev) => ({ ...prev, place: undefined }))
-          }}
-        />
-      )}
-
-      {manualLocationOpen && (
-        <PlaceSearchModal
-          referenceLocation={referenceLocation}
-          title="내 위치 지정"
-          onClose={() => setManualLocationOpen(false)}
-          onSelect={(place) => {
-            setManualLocation(place.location)
-            setManualLocationOpen(false)
           }}
         />
       )}

@@ -17,7 +17,6 @@ import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import RecordRegisterModal from '../components/RecordRegisterModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import VisibilitySelect from '../components/VisibilitySelect.jsx'
-import TripForm from '../components/TripForm.jsx'
 import { ArrowLeftIcon, MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
 // 상세 화면의 공통 레이아웃(.detail-page / .detail-inner / .detail-section)은 기록 상세와 같다.
 import '../styles/detailPage.css'
@@ -85,11 +84,7 @@ function TripDetailView({ trip, onTripChange }) {
   const [visibilityDraft, setVisibilityDraft] = useState(trip.visibility ?? 'PRIVATE')
   const [groupDraft, setGroupDraft] = useState(sharedGroups.map((g) => g.id))
   const [savedMessage, setSavedMessage] = useState('')
-  const [editOpen, setEditOpen] = useState(false)
-  const [editedMessage, setEditedMessage] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  // 확인을 누르기 전까지 수정 값을 들고만 있는다. 반영은 confirmEdit 이 한다.
-  const [pendingEdit, setPendingEdit] = useState(null)
   // 요청이 나가 있는 동안 같은 버튼을 다시 누르지 못하게 한다.
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
@@ -119,24 +114,6 @@ function TripDetailView({ trip, onTripChange }) {
       onTripChange(await tripApi.fetchTrip(trip.id))
     } catch {
       // 여행지 수만 늦게 맞춰진다. 다음에 화면에 들어오면 다시 읽는다.
-    }
-  }
-
-  /** 폼 제출은 확인 모달을 여는 데서 끝난다. 실제 반영은 확인을 눌러야 일어난다. */
-  const handleEditSubmit = (values) => setPendingEdit(values)
-
-  const confirmEdit = async () => {
-    setBusy(true)
-    try {
-      onTripChange(await tripApi.updateTrip(trip.id, pendingEdit))
-      setPendingEdit(null)
-      setEditOpen(false)
-      setEditedMessage('여행 정보를 수정했습니다.')
-    } catch (err) {
-      // 모달을 닫지 않는다. 입력값이 pendingEdit 에 남아 있어 그대로 다시 시도할 수 있다.
-      setActionError(errorText(err, '여행 정보를 수정하지 못했습니다.'))
-    } finally {
-      setBusy(false)
     }
   }
 
@@ -197,7 +174,24 @@ function TripDetailView({ trip, onTripChange }) {
           </Link>
 
           <section className="trip-detail-head">
-            <h1 className="detail-name">{trip.name}</h1>
+            <div className="trip-detail-title-row">
+              <h1 className="detail-name">{trip.name}</h1>
+              {isOwner && (
+                <div className="detail-author-actions">
+                  <Link to={`/trips/${trip.id}/edit`} className="btn-secondary">
+                    수정
+                  </Link>
+                  <button
+                    type="button"
+                    className="detail-delete-btn"
+                    aria-label="여행 삭제"
+                    onClick={() => setConfirmingDelete(true)}
+                  >
+                    삭제
+                  </button>
+                </div>
+              )}
+            </div>
             <p className="trip-detail-period">
               {tripPeriodLabel(trip)} ({tripDurationLabel(trip)}) · 인원 {trip.headcount}명 ·
               여행지 {recordCount}곳
@@ -212,67 +206,45 @@ function TripDetailView({ trip, onTripChange }) {
             {trip.memo && <p className="trip-detail-memo">{trip.memo}</p>}
           </section>
 
+          {/*
+            접기는 details/summary 로 만든다. 직접 만든 토글보다 짧고 키보드·스크린리더
+            동작이 기본으로 따라온다. 접혀 있어도 지금 누구에게 보이는지는 요약 줄에 남긴다.
+          */}
           {isOwner && (
-            <>
-              {/*
-                접기는 details/summary 로 만든다. 직접 만든 토글보다 짧고 키보드·스크린리더
-                동작이 기본으로 따라온다. 접혀 있어도 지금 누구에게 보이는지는 요약 줄에 남긴다.
-              */}
-              <details className="detail-section collapsible-section">
-                <summary className="collapsible-summary">
-                  <span className="detail-section-title">공개 범위</span>
-                  <span className="detail-visibility-current">
-                    <VisibilityBadge visibility={trip.visibility} />
-                    {trip.visibility === 'GROUP' && sharedGroups.length > 0 && (
-                      <span className="detail-shared-groups">
-                        {sharedGroups.map((g) => g.name).join(', ')}
-                      </span>
-                    )}
-                  </span>
-                </summary>
-                <div className="collapsible-body">
-                  {/* 범위는 여행에만 있다. 기록 화면에는 바꾸는 수단을 두지 않는다 (공통 명세 §3.5). */}
-                  <VisibilitySelect
-                    value={visibilityDraft}
-                    onChange={setVisibilityDraft}
-                    selectedGroupIds={groupDraft}
-                    onChangeGroups={setGroupDraft}
-                    onCreateGroupClick={() => navigate('/groups')}
-                  />
-                  <div className="detail-visibility-actions">
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      disabled={!visibilityChanged || busy}
-                      onClick={handleVisibilitySave}
-                    >
-                      저장
-                    </button>
-                    {savedMessage && <span className="detail-saved-msg">{savedMessage}</span>}
-                  </div>
+            <details className="detail-section collapsible-section">
+              <summary className="collapsible-summary">
+                <span className="detail-section-title">공개 범위</span>
+                <span className="detail-visibility-current">
+                  <VisibilityBadge visibility={trip.visibility} />
+                  {trip.visibility === 'GROUP' && sharedGroups.length > 0 && (
+                    <span className="detail-shared-groups">
+                      {sharedGroups.map((g) => g.name).join(', ')}
+                    </span>
+                  )}
+                </span>
+              </summary>
+              <div className="collapsible-body">
+                {/* 범위는 여행에만 있다. 기록 화면에는 바꾸는 수단을 두지 않는다 (공통 명세 §3.5). */}
+                <VisibilitySelect
+                  value={visibilityDraft}
+                  onChange={setVisibilityDraft}
+                  selectedGroupIds={groupDraft}
+                  onChangeGroups={setGroupDraft}
+                  onCreateGroupClick={() => navigate('/groups')}
+                />
+                <div className="detail-visibility-actions">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={!visibilityChanged || busy}
+                    onClick={handleVisibilitySave}
+                  >
+                    저장
+                  </button>
+                  {savedMessage && <span className="detail-saved-msg">{savedMessage}</span>}
                 </div>
-              </details>
-
-              <details
-                className="detail-section collapsible-section"
-                open={editOpen}
-                onToggle={(e) => setEditOpen(e.currentTarget.open)}
-              >
-                <summary className="collapsible-summary">
-                  <span className="detail-section-title">여행 정보 수정</span>
-                  {editedMessage && <span className="detail-saved-msg">{editedMessage}</span>}
-                </summary>
-                <div className="collapsible-body">
-                  {/* 공개 범위는 이 폼에 없다. 위의 전용 섹션에서만 바꾼다. */}
-                  <TripForm
-                    initialTrip={trip}
-                    submitLabel="수정"
-                    onSubmit={handleEditSubmit}
-                    onCancel={() => setEditOpen(false)}
-                  />
-                </div>
-              </details>
-            </>
+              </div>
+            </details>
           )}
 
           <section className="detail-section">
@@ -358,17 +330,6 @@ function TripDetailView({ trip, onTripChange }) {
               </button>
             )}
           </section>
-          {isOwner && (
-            <section className="detail-section detail-danger-zone">
-              <button
-                type="button"
-                className="detail-delete-btn"
-                onClick={() => setConfirmingDelete(true)}
-              >
-                여행 삭제
-              </button>
-            </section>
-          )}
         </div>
       </main>
 
@@ -397,42 +358,6 @@ function TripDetailView({ trip, onTripChange }) {
               </button>
               <button type="button" className="confirm-ok" disabled={busy} onClick={handleDelete}>
                 삭제
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {pendingEdit && (
-        <div className="modal-overlay" onClick={closeModal(() => setPendingEdit(null))}>
-          <div
-            className="modal-panel confirm-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="여행 정보 수정 확인"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>여행 정보를 수정할까요?</h2>
-            {/* 공개 범위는 이 폼에 없다는 사실을 문구로 확인시킨다 (§9). */}
-            <p className="confirm-desc">
-              입력한 내용으로 여행 정보가 바뀝니다. 공개 범위는 그대로입니다.
-            </p>
-            {actionError && <p className="field-error">{actionError}</p>}
-            <div className="confirm-actions">
-              <button
-                type="button"
-                className="confirm-cancel"
-                onClick={closeModal(() => setPendingEdit(null))}
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                className="confirm-ok confirm-ok-safe"
-                disabled={busy}
-                onClick={confirmEdit}
-              >
-                수정
               </button>
             </div>
           </div>

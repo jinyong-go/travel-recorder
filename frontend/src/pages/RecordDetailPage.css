@@ -83,7 +83,7 @@
 /* 섹션 제목과 작성자용 버튼을 한 줄에 둔다 */
 .detail-section-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }

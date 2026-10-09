@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DEFAULT_VISIBILITY } from '../data/records.js'
 import { tripDurationLabel } from '../data/trips.js'
 import VisibilitySelect from './VisibilitySelect.jsx'
+import RequiredNote from './RequiredNote.jsx'
 import '../styles/form.css'
 import './TripForm.css'
 const EMPTY = {
@@ -81,10 +82,13 @@ export default function TripForm({
 
   return (
     <form className="trip-form" onSubmit={handleSubmit} noValidate>
+      <RequiredNote />
+
       <div className="form-field">
-        <label htmlFor="trip-name">여행 이름</label>
+        <label htmlFor="trip-name" className="field-required">여행 이름</label>
         <input
           id="trip-name"
+          aria-required="true"
           type="text"
           value={name}
           maxLength={50}
@@ -95,9 +99,10 @@ export default function TripForm({
       </div>
 
       <div className="form-field">
-        <label htmlFor="trip-start">시작일</label>
+        <label htmlFor="trip-start" className="field-required">시작일</label>
         <input
           id="trip-start"
+          aria-required="true"
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
@@ -106,9 +111,10 @@ export default function TripForm({
       </div>
 
       <div className="form-field">
-        <label htmlFor="trip-end">종료일</label>
+        <label htmlFor="trip-end" className="field-required">종료일</label>
         <input
           id="trip-end"
+          aria-required="true"
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
@@ -120,9 +126,10 @@ export default function TripForm({
       </div>
 
       <div className="form-field">
-        <label htmlFor="trip-headcount">인원</label>
+        <label htmlFor="trip-headcount" className="field-required">인원</label>
         <input
           id="trip-headcount"
+          aria-required="true"
           type="number"
           min={1}
           value={headcount}
@@ -130,11 +137,11 @@ export default function TripForm({
         />
         {errors.headcount && <p className="field-error">{errors.headcount}</p>}
         {/* 인원과 공유 그룹을 혼동하는 것이 이 화면에서 가장 흔한 오해다. */}
-        <p className="field-hint">함께 간 사람 수입니다. 공유 대상과는 무관합니다.</p>
+        <p className="field-hint">함께 간 사람 수입니다 (공유 대상과 무관)</p>
       </div>
 
       <div className="form-field">
-        <label htmlFor="trip-budget">예산 (선택)</label>
+        <label htmlFor="trip-budget">예산</label>
         <input
           id="trip-budget"
           type="number"
@@ -144,13 +151,11 @@ export default function TripForm({
           onChange={(e) => setBudget(e.target.value)}
         />
         {errors.budget && <p className="field-error">{errors.budget}</p>}
-        <p className="field-hint">
-          여행 전체 총액 하나만 받습니다. 이 여행을 볼 수 있는 사람에게 함께 보입니다.
-        </p>
+        <p className="field-hint">여행 전체 총액입니다. 여행을 볼 수 있는 사람에게 함께 보입니다.</p>
       </div>
 
       <div className="form-field">
-        <label htmlFor="trip-memo">여행 설명 (선택)</label>
+        <label htmlFor="trip-memo">여행 설명</label>
         <textarea
           id="trip-memo"
           rows={4}
@@ -162,17 +167,15 @@ export default function TripForm({
         {errors.memo && <p className="field-error">{errors.memo}</p>}
       </div>
 
+      {/* 공유하면 여행지와 예산이 함께 보인다는 경고는 선택지 설명이 맡는다 (명세 §5.7). */}
       {showVisibility && (
-        <div className="form-field">
-          <VisibilitySelect
-            value={visibility}
-            onChange={setVisibility}
-            selectedGroupIds={sharedGroupIds}
-            onChangeGroups={setSharedGroupIds}
-            onCreateGroupClick={onCreateGroupClick}
-          />
-          <p className="field-hint">여행을 공유하면 그 안의 여행지와 예산이 모두 함께 보입니다.</p>
-        </div>
+        <VisibilitySelect
+          value={visibility}
+          onChange={setVisibility}
+          selectedGroupIds={sharedGroupIds}
+          onChangeGroups={setSharedGroupIds}
+          onCreateGroupClick={onCreateGroupClick}
+        />
       )}
 
       {/* 대표 사진은 이 폼에 없다. 하위 기록의 사진 중에서 고르는 값이다 (공통 명세 §3.2). */}

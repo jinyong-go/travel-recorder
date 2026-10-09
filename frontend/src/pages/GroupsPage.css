@@ -47,11 +47,6 @@
   outline-offset: 1px;
 }
 
-.field-optional {
-  font-weight: 500;
-  color: var(--text-faint);
-}
-
 .group-list {
   list-style: none;
   margin: 0;

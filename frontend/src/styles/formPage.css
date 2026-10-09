@@ -1,3 +1,5 @@
+/* 폼 하나를 가운데에 두는 화면의 틀 — 여행 만들기·여행 정보 수정이 함께 쓴다. */
+
 .register-page {
   flex: 1;
   padding: 24px clamp(16px, 4vw, 48px) 64px;

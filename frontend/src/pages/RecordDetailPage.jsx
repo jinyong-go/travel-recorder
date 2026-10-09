@@ -27,6 +27,7 @@ import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
 import StarRatingDisplay from '../components/StarRatingDisplay.jsx'
 import StarRatingInput from '../components/StarRatingInput.jsx'
+import RequiredNote from '../components/RequiredNote.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import PlaceSearchModal from '../components/PlaceSearchModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
@@ -52,7 +53,9 @@ export default function RecordDetailPage() {
   const { recordId } = useParams()
   const navigate = useNavigate()
   const { isEmbed } = useMapMode()
-  const { location: referenceLocation } = useReferenceLocation()
+  // 수정 폼의 장소 검색 모달에서 기준 위치를 바꾸면 이 화면의 거리도 함께 바뀐다.
+  const reference = useReferenceLocation()
+  const referenceLocation = reference.location
 
   // 404 는 없는 기록과 볼 수 없는 기록을 구분하지 않는다.
   const [record, setRecord] = useState(null)
@@ -308,12 +311,15 @@ export default function RecordDetailPage() {
           <section className="detail-summary">
             {editing ? (
               <div className="detail-edit-form">
+                <RequiredNote />
+
                 <div className="form-field">
-                  <label htmlFor="edit-place-name">장소명</label>
+                  <label htmlFor="edit-place-name" className="field-required">장소명</label>
                   {/* 장소명은 직접 입력할 수 없다. 검색 결과에서만 채운다 (§5.3). */}
                   <div className="place-search-row">
                     <input
                       id="edit-place-name"
+                      aria-required="true"
                       type="text"
                       value={placeDraft?.name ?? ''}
                       placeholder="검색 버튼으로 장소를 선택해주세요"
@@ -333,8 +339,13 @@ export default function RecordDetailPage() {
                 </div>
 
                 <div className="form-field">
-                  <span className="field-label">카테고리</span>
-                  <div className="category-choice-group" role="radiogroup" aria-label="카테고리">
+                  <span className="field-label field-required">카테고리</span>
+                  <div
+                    className="category-choice-group"
+                    role="radiogroup"
+                    aria-label="카테고리"
+                    aria-required="true"
+                  >
                     {SELECTABLE_CATEGORIES.map((c) => (
                       <button
                         key={c.key}
@@ -351,7 +362,7 @@ export default function RecordDetailPage() {
                 </div>
 
                 <div className="form-field">
-                  <span className="field-label">평점</span>
+                  <span className="field-label field-required">평점</span>
                   <StarRatingInput value={ratingDraft} onChange={setRatingDraft} />
                 </div>
 
@@ -383,9 +394,7 @@ export default function RecordDetailPage() {
                       사진 추가
                     </label>
                     <span className="photo-upload-hint">
-                      {photosDraft.length > 0
-                        ? `${photosDraft.length}장`
-                        : `JPG · PNG · WEBP, 한 장당 ${MAX_PHOTO_SIZE_MB}MB · 합계 ${MAX_PHOTO_TOTAL_MB}MB 이하`}
+                      JPG·PNG·WEBP, 장당 {MAX_PHOTO_SIZE_MB}MB · 합계 {MAX_PHOTO_TOTAL_MB}MB 이하
                     </span>
                   </div>
                   {photoErrors.map((message) => (
@@ -444,9 +453,19 @@ export default function RecordDetailPage() {
                     <p className="detail-region">{record.address}</p>
                   </div>
                   {isAuthor && (
-                    <button type="button" className="btn-secondary" onClick={startEdit}>
-                      수정
-                    </button>
+                    <div className="detail-author-actions">
+                      <button type="button" className="btn-secondary" onClick={startEdit}>
+                        수정
+                      </button>
+                      <button
+                        type="button"
+                        className="detail-delete-btn"
+                        aria-label="기록 삭제"
+                        onClick={() => setConfirmingDelete(true)}
+                      >
+                        삭제
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -537,18 +556,6 @@ export default function RecordDetailPage() {
               공개 범위는 여행 단위로 정해집니다. 바꾸려면 여행 화면에서 변경해주세요.
             </p>
           </section>
-
-          {isAuthor && (
-            <section className="detail-section detail-danger-zone">
-              <button
-                type="button"
-                className="detail-delete-btn"
-                onClick={() => setConfirmingDelete(true)}
-              >
-                기록 삭제
-              </button>
-            </section>
-          )}
         </div>
       </main>
 
@@ -620,7 +627,7 @@ export default function RecordDetailPage() {
 
       {searchOpen && (
         <PlaceSearchModal
-          referenceLocation={referenceLocation}
+          reference={reference}
           onSelect={(place) => {
             setPlaceDraft(place)
             setSearchOpen(false)

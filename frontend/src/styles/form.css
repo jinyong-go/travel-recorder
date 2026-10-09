@@ -148,3 +148,15 @@
   gap: 10px;
   margin-top: 4px;
 }
+
+/* 필수 항목 표시. 기호는 CSS 로 붙이고 대체 텍스트를 비워 스크린리더가 읽지 않게 한다 —
+   필수라는 사실은 입력 요소의 aria-required 가 전한다. 글자로 읽혀야 하므로 오류 문구와 같은
+   --error 색을 쓴다 (대비 4.5:1 이상, 명세 §6). */
+.field-required::after {
+  content: ' *' / '';
+  color: var(--error);
+}
+
+.required-mark {
+  color: var(--error);
+}

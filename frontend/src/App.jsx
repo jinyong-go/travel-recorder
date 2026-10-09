@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage.jsx'
 import MyInfoPage from './pages/MyInfoPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
 import TripRegisterPage from './pages/TripRegisterPage.jsx'
+import TripEditPage from './pages/TripEditPage.jsx'
 import RecordDetailPage from './pages/RecordDetailPage.jsx'
 import TripDetailPage from './pages/TripDetailPage.jsx'
 import TripListPage from './pages/TripListPage.jsx'
@@ -34,6 +35,7 @@ function App() {
         <Route element={<RequireAuth />}>
           {/* react-router 는 구체적인 경로를 우선 매칭하므로 /trips/new 가 tripId 로 잡히지 않는다. */}
           <Route path="/trips/new" element={<TripRegisterPage />} />
+          <Route path="/trips/:tripId/edit" element={<TripEditPage />} />
           <Route path="/me" element={<MyInfoPage />} />
           {/* 받은/보낸은 담기는 항목과 동작이 다른 별개 목록이라 경로로 나눈다 (명세 §5.8.4). */}
           <Route path="/invites" element={<Navigate to="/invites/received" replace />} />

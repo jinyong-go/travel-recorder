@@ -83,11 +83,6 @@
   gap: 8px;
 }
 
-.detail-danger-zone {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .detail-delete-btn {
   border: 1px solid var(--danger-border);
   background: var(--surface);
@@ -110,4 +105,22 @@
   margin-left: 8px;
   font-size: 0.9rem;
   color: var(--text-muted);
+}
+
+/* 수정과 삭제를 제목 줄 오른쪽에 묶는다 — 여행·기록 상세가 같은 자리에 둔다. 삭제는 테두리만
+   붉은 모양이라 수정과 나란히 두어도 주 동작처럼 보이지 않는다. 이름이 길면 이름 쪽이 줄바꿈된다. */
+.detail-author-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* 수정 버튼(.btn-secondary)과 나란히 놓이므로 글자 모양과 높이를 맞춘다. 색은 되돌릴 수 없는
+   동작이라 붉은 테두리를 유지한다. 그룹 상세처럼 홀로 놓인 삭제 버튼은 건드리지 않는다. */
+.detail-author-actions .detail-delete-btn {
+  padding: 11px 24px;
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1;
 }

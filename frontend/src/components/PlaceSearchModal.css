@@ -115,3 +115,14 @@
   font-size: 12.5px;
   color: var(--text-muted);
 }
+
+/* 검색 결과 거리의 기준과 그 기준을 바꾸는 버튼. 기록 폼이 아니라 여기 두는 이유는, 기준 위치가
+   정렬에만 쓰이는데 폼에 있으면 기록이 그 위치로 저장된다고 오해하기 쉬워서다 (명세 §5.4). */
+.place-search-reference {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}

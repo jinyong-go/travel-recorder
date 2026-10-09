@@ -10,6 +10,7 @@ import {REQUEST_STATUS} from '../api/requestStatus.js'
 import useLatestRequest from '../hooks/useLatestRequest.js'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
+import RequiredNote from '../components/RequiredNote.jsx'
 import {ArrowLeftIcon, MapPinIcon, PlusIcon} from '../components/icons.jsx'
 import '../styles/form.css'
 import '../styles/confirmPanel.css'
@@ -182,9 +183,12 @@ export default function GroupsPage() {
                     >
                         <h2>새 그룹 만들기</h2>
                         <form className="group-form" onSubmit={handleCreate}>
-                            <label htmlFor="group-name">이름</label>
+                            <RequiredNote/>
+
+                            <label htmlFor="group-name" className="field-required">이름</label>
                             <input
                                 id="group-name"
+                                aria-required="true"
                                 type="text"
                                 value={name}
                                 maxLength={30}
@@ -193,9 +197,7 @@ export default function GroupsPage() {
                                 onChange={(e) => setName(e.target.value)}
                             />
 
-                            <label htmlFor="group-memo">
-                                메모 <span className="field-optional">(선택)</span>
-                            </label>
+                            <label htmlFor="group-memo">메모</label>
                             <textarea
                                 id="group-memo"
                                 value={memo}
