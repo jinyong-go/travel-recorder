@@ -1,15 +1,15 @@
-package com.yong.travel.record.presentation
+package com.yong.travel.trip.record.presentation
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.common.web.requireLogin
-import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.RecordListQuery
-import com.yong.travel.record.domain.RecordScope
-import com.yong.travel.record.domain.RecordSort
-import com.yong.travel.record.service.TripRecordService
+import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.RecordListQuery
+import com.yong.travel.trip.record.domain.RecordScope
+import com.yong.travel.trip.record.domain.RecordSort
+import com.yong.travel.trip.record.service.TripRecordService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal

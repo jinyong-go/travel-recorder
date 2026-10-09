@@ -1,4 +1,4 @@
-package com.yong.travel.record.domain
+package com.yong.travel.trip.record.domain
 
 enum class Category {
     SIGHT,

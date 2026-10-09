@@ -88,12 +88,12 @@ external-api/
 │  │  ├─ persistence/TripEntity.kt, TripShareEntity.kt
 │  │  ├─ persistence/TripSpecifications.kt  # 공개 범위 판정 (scope 조건)
 │  │  ├─ domain/TripVisibility.kt
-│  │  └─ service·presentation
-│  ├─ record/                      # 여행 기록 CRUD 및 목록 조회 (반드시 여행 하나에 속한다)
-│  │  ├─ persistence/TripRecordEntity.kt
-│  │  ├─ persistence/TripRecordSpecifications.kt  # 소속 여행 조인 판정 + 카테고리·태그·키워드 조건
-│  │  ├─ domain/Category.kt
-│  │  └─ service·presentation
+│  │  ├─ service·presentation
+│  │  └─ record/                   # 여행 기록 CRUD 및 목록 조회 (반드시 여행 하나에 속한다)
+│  │     ├─ persistence/TripRecordEntity.kt
+│  │     ├─ persistence/TripRecordSpecifications.kt  # 소속 여행 조인 판정 + 카테고리·태그·키워드 조건
+│  │     ├─ domain/Category.kt
+│  │     └─ service·presentation
 │  ├─ group/                       # 공유 그룹 (조회 전용 대상 목록), 초대와 초대 이력
 │  │  ├─ persistence/GroupEntity.kt, GroupMemberEntity.kt, GroupInviteEntity.kt, InviteHistoryEntity.kt
 │  │  ├─ domain/InviteOutcome.kt

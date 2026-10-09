@@ -6,9 +6,9 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.GroupInviteService
-import com.yong.travel.record.domain.Category
-import com.yong.travel.record.presentation.TripRecordCreateRequest
-import com.yong.travel.record.service.TripRecordService
+import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.presentation.TripRecordCreateRequest
+import com.yong.travel.trip.record.service.TripRecordService
 import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.presentation.TripCreateRequest
 import com.yong.travel.trip.domain.TripListQuery

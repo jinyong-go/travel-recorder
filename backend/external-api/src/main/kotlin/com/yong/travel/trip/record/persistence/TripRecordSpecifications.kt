@@ -1,12 +1,12 @@
-package com.yong.travel.record.persistence
+package com.yong.travel.trip.record.persistence
 
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
 import com.yong.travel.group.persistence.GroupEntity
-import com.yong.travel.record.domain.Category
-import com.yong.travel.record.persistence.TripRecordEntity
-import com.yong.travel.record.domain.RecordScope
+import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.persistence.TripRecordEntity
+import com.yong.travel.trip.record.domain.RecordScope
 import com.yong.travel.tag.persistence.TagEntity
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity

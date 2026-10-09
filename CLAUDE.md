@@ -172,7 +172,7 @@ fun findVisibleTrips(requester: User?, scope: Scope, page: Int): PageResult<Trip
 
 ```
 backend/   Kotlin + Spring Boot 멀티 모듈 — external-api(API 서버), batch(정기 정리 작업)
-           external-api 는 도메인별 패키지 (auth, record, group, photo, search, tag, common)
+           external-api 는 도메인별 패키지 (auth, trip(하위에 record), group, photo, search, tag, common)
            각 도메인은 presentation / service / domain / persistence 로 나뉜다.
            persistence 에 JPA 엔티티·리포지토리·Specifications 가 함께 있고, domain 에는
            도메인 개념(공개 범위·카테고리 등)이 있다

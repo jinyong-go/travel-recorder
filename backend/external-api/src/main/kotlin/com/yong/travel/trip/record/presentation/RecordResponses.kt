@@ -1,9 +1,9 @@
-package com.yong.travel.record.presentation
+package com.yong.travel.trip.record.presentation
 
 import com.yong.travel.auth.presentation.UserResponse
 import com.yong.travel.photo.presentation.PhotoResponse
-import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.TripRecord
+import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.TripRecord
 import com.yong.travel.trip.presentation.TripRefResponse
 import java.time.Instant
 

@@ -1,4 +1,4 @@
-package com.yong.travel.record.domain
+package com.yong.travel.trip.record.domain
 
 /**
  * 기록 등록 입력. 형식 검증(평점 0.5 단위 등)은 요청 DTO 에서 끝났고, 컨트롤러가 옮겨 담아 넘긴다.

@@ -1,6 +1,6 @@
 package com.yong.travel.photo.persistence
 
-import com.yong.travel.record.persistence.TripRecordEntity
+import com.yong.travel.trip.record.persistence.TripRecordEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType

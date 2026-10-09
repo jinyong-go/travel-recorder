@@ -2,10 +2,10 @@ package com.yong.travel
 
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
-import com.yong.travel.record.domain.Category
-import com.yong.travel.record.persistence.TripRecordEntity
-import com.yong.travel.record.presentation.TripRecordCreateRequest
-import com.yong.travel.record.persistence.TripRecordRepository
+import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.persistence.TripRecordEntity
+import com.yong.travel.trip.record.presentation.TripRecordCreateRequest
+import com.yong.travel.trip.record.persistence.TripRecordRepository
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripRepository
 import jakarta.validation.Validator

@@ -1,6 +1,6 @@
-package com.yong.travel.record.persistence
+package com.yong.travel.trip.record.persistence
 
-import com.yong.travel.record.domain.Category
+import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.tag.persistence.TagEntity
 import com.yong.travel.trip.persistence.TripEntity
 import jakarta.persistence.Column

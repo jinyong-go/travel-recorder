@@ -11,7 +11,7 @@ import com.yong.travel.group.domain.GroupRef
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
-import com.yong.travel.record.persistence.TripRecordRepository
+import com.yong.travel.trip.record.persistence.TripRecordRepository
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
 import com.yong.travel.trip.domain.Trip

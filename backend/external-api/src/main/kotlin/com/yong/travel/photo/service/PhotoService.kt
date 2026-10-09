@@ -7,8 +7,8 @@ import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
-import com.yong.travel.record.persistence.TripRecordEntity
-import com.yong.travel.record.persistence.TripRecordRepository
+import com.yong.travel.trip.record.persistence.TripRecordEntity
+import com.yong.travel.trip.record.persistence.TripRecordRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

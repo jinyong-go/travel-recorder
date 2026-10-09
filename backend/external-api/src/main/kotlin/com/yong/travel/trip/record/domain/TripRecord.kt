@@ -1,4 +1,4 @@
-package com.yong.travel.record.domain
+package com.yong.travel.trip.record.domain
 
 import com.yong.travel.auth.domain.User
 import com.yong.travel.photo.domain.Photo

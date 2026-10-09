@@ -5,11 +5,11 @@ import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.photo.service.PhotoService
-import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.RecordListQuery
-import com.yong.travel.record.domain.TripRecordCreateCommand
-import com.yong.travel.record.presentation.TripRecordCreateRequest
-import com.yong.travel.record.service.TripRecordService
+import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.RecordListQuery
+import com.yong.travel.trip.record.domain.TripRecordCreateCommand
+import com.yong.travel.trip.record.presentation.TripRecordCreateRequest
+import com.yong.travel.trip.record.service.TripRecordService
 import com.yong.travel.tag.service.TagService
 import com.yong.travel.trip.domain.TripCreateCommand
 import com.yong.travel.trip.domain.TripVisibility

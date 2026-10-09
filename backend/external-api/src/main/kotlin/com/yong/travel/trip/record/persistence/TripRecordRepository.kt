@@ -1,6 +1,6 @@
-package com.yong.travel.record.persistence
+package com.yong.travel.trip.record.persistence
 
-import com.yong.travel.record.persistence.TripRecordEntity
+import com.yong.travel.trip.record.persistence.TripRecordEntity
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.domain.Specification

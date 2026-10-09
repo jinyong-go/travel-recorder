@@ -1,8 +1,8 @@
-package com.yong.travel.record.presentation
+package com.yong.travel.trip.record.presentation
 
-import com.yong.travel.record.domain.Category
-import com.yong.travel.record.domain.TripRecordCreateCommand
-import com.yong.travel.record.domain.TripRecordUpdateCommand
+import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.TripRecordCreateCommand
+import com.yong.travel.trip.record.domain.TripRecordUpdateCommand
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.DecimalMin

@@ -45,7 +45,8 @@ Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client /
 ```
 com.yong.travel
   ├─ auth     인증·사용자 (config, presentation, service, domain, persistence, security)
-  ├─ record   방문 기록
+  ├─ trip     여행 — 공개 범위와 공유의 단위
+  │   └─ record   여행 기록 (여행 없이 존재하지 않는다)
   ├─ group    공유 그룹·초대
   ├─ photo    사진 (storage 하위에 저장소 구현체)
   ├─ search   장소 검색 (client 하위에 외부 API 호출)
@@ -54,6 +55,9 @@ com.yong.travel
 ```
 
 - **도메인으로 먼저 나누고, 그 안에서 계층으로 나눈다.** 계층을 최상위에 두지 않는다.
+- **상위 도메인 없이 존재할 수 없는 하위 도메인은 상위 패키지 아래에 둔다** (`trip.record`).
+  하위 패키지 안도 같은 계층으로 나눈다. 사진·태그는 기록에 딸려 있어도 최상위에 둔다 — 사진은
+  바이너리 저장·파일 서빙·저장소 전환이라는 자기 관심사가 따로 있고, 태그는 여러 기록이 함께 쓴다.
 - **`presentation` 에 컨트롤러와 요청·응답 DTO 를 함께 둔다.** 하위 패키지로 나누지 않고 파일
   이름(`*Controller`, `*Requests`, `*Responses`)으로 구분한다.
 - **JPA 엔티티·리포지토리·Specifications 는 `persistence` 에 둔다.** 엔티티 클래스는 `*Entity`

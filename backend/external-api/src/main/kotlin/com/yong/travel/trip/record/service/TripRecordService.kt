@@ -1,4 +1,4 @@
-package com.yong.travel.record.service
+package com.yong.travel.trip.record.service
 
 import com.yong.travel.auth.domain.User
 import com.yong.travel.common.domain.PageResult
@@ -13,14 +13,14 @@ import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
-import com.yong.travel.record.domain.TripRecord
-import com.yong.travel.record.domain.RecordListQuery
-import com.yong.travel.record.domain.RecordSort
-import com.yong.travel.record.domain.TripRecordCreateCommand
-import com.yong.travel.record.domain.TripRecordUpdateCommand
-import com.yong.travel.record.persistence.TripRecordEntity
-import com.yong.travel.record.persistence.TripRecordRepository
-import com.yong.travel.record.persistence.TripRecordSpecifications
+import com.yong.travel.trip.record.domain.TripRecord
+import com.yong.travel.trip.record.domain.RecordListQuery
+import com.yong.travel.trip.record.domain.RecordSort
+import com.yong.travel.trip.record.domain.TripRecordCreateCommand
+import com.yong.travel.trip.record.domain.TripRecordUpdateCommand
+import com.yong.travel.trip.record.persistence.TripRecordEntity
+import com.yong.travel.trip.record.persistence.TripRecordRepository
+import com.yong.travel.trip.record.persistence.TripRecordSpecifications
 import com.yong.travel.tag.service.TagService
 import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.persistence.TripEntity

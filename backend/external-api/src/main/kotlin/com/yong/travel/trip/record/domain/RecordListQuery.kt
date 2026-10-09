@@ -1,4 +1,4 @@
-package com.yong.travel.record.domain
+package com.yong.travel.trip.record.domain
 
 /**
  * 목록 조회 범위. 세 범위는 성격이 달라 한 목록에 섞지 않는다.
