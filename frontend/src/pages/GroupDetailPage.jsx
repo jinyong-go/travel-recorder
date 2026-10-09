@@ -16,6 +16,7 @@ const formatDate = (iso) => new Date(iso).toLocaleDateString('ko-KR')
 const INVITE_ERROR = {
   USER_NOT_FOUND: '해당 이메일로 가입한 사용자가 없습니다. 주소를 다시 확인해주세요.',
   ALREADY_MEMBER: '이미 이 그룹의 멤버입니다.',
+  ALREADY_INVITED: '이미 초대한 상대입니다.',
 }
 
 /**
@@ -104,13 +105,9 @@ export default function GroupDetailPage() {
 
     setBusy(true)
     try {
-      const { status } = await api.sendInvite(group.id, trimmed)
+      await api.sendInvite(group.id, trimmed)
       setEmail('')
-      // 이미 초대한 상대를 다시 초대한 것은 오류가 아니다. 서버가 201 이 아닌 200 으로 답한다.
-      setInviteMessage({
-        type: 'info',
-        text: status === 200 ? '이미 초대한 상대입니다.' : '초대를 보냈습니다.',
-      })
+      setInviteMessage({ type: 'info', text: '초대를 보냈습니다.' })
       pending.reload()
     } catch (err) {
       const code = err instanceof ApiError ? err.code : null

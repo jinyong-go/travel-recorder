@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional
  */
 @Service
 @Transactional(readOnly = true)
-class InviteService(
+class GroupInviteService(
     private val groupRepository: GroupRepository,
     private val groupMemberRepository: GroupMemberRepository,
     private val inviteRepository: GroupInviteRepository,
@@ -49,13 +49,16 @@ class InviteService(
     }
 
     /**
-     * 이메일 완전 일치로 찾은 가입자에게 초대를 보낸다. 이미 대기 중인 초대가 있으면 새로 만들지 않는다.
+     * 이메일 완전 일치로 찾은 가입자에게 초대를 보낸다.
+     *
+     * 이미 멤버면 `ALREADY_MEMBER`, 대기 중인 초대가 있으면 `ALREADY_INVITED` 로 거부한다.
+     * 멤버 여부를 먼저 본다.
      *
      * 정원은 여기서 보지 않는다. 대기 중인 초대는 자리를 차지하지 않으므로 정원을 넘겨 보낼 수 있고,
      * 판정은 수락 시점에만 한다.
      */
     @Transactional
-    fun invite(groupId: Long, ownerId: Long, email: String): InviteResult {
+    fun invite(groupId: Long, ownerId: Long, email: String): GroupInvite {
         val group = findGroup(groupId)
         requireOwner(group, ownerId)
 
@@ -72,17 +75,17 @@ class InviteService(
             throw ApiException(ErrorCode.ALREADY_MEMBER)
         }
 
-        // 중복 클릭이 실패처럼 보이지 않도록 기존 초대를 그대로 돌려준다. unique(group_id, invitee_id) 가 이를 보장한다.
+        // 동시 요청이 이 검사를 함께 통과해도 unique(group_id, invitee_id) 가 두 번째 입력을 막는다.
         inviteRepository.findByGroupIdAndInviteeId(groupId, inviteeId)?.let {
-            log.debug("초대 재사용 groupId={} inviteId={} inviteeId={}", groupId, it.id, inviteeId)
-            return InviteResult(it.toDomain(), created = false)
+            log.debug("초대 거부 groupId={} inviteId={} inviteeId={} 사유=대기중인_초대", groupId, it.id, inviteeId)
+            throw ApiException(ErrorCode.ALREADY_INVITED)
         }
 
         val saved = inviteRepository.save(
             GroupInviteEntity(group = group, invitee = invitee, invitedBy = group.owner),
         )
         log.debug("초대 생성 groupId={} inviteId={} ownerId={} inviteeId={}", groupId, saved.id, ownerId, inviteeId)
-        return InviteResult(saved.toDomain(), created = true)
+        return saved.toDomain()
     }
 
     @Transactional

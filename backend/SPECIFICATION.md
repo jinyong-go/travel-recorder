@@ -291,7 +291,7 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - **그룹당 멤버는 소유자 포함 최대 5명**이다. 애플리케이션 레벨에서 검증하며, 초과 시
   `409 GROUP_MEMBER_LIMIT_EXCEEDED` 다. 그룹 생성 시 소유자를 `GroupMember` 로 함께 입력한다.
 - `GroupInvite` 는 `unique(group_id, invitee_id)` 다. 대기 중인 초대가 있는 상대를 다시
-  초대해도 행이 늘지 않고 기존 초대가 그대로 유지된다 (멱등, §4.8).
+  초대하면 `409 ALREADY_INVITED` 로 거부되며 기존 초대는 그대로 유지된다 (§4.8).
 - **초대 대상은 가입자만이다.** 요청의 이메일과 일치하는 `User` 가 없으면 `404 USER_NOT_FOUND`
   이며, 이메일 비교는 대소문자를 구분하지 않는다. 이미 `GroupMember` 인 사용자를 초대하면
   `409 ALREADY_MEMBER` 다.
@@ -827,10 +827,11 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
   사용자 목록 조회 엔드포인트는 만들지 않는다 (공통 명세 §3.7).
 - **응답에 이메일을 담지 않는다.** 소유자가 직접 입력한 값이라도 되돌려주지 않으며, 상대는
   이름·프로필 사진으로 식별한다 (공통 명세 §3.1, §3.7).
-- 대기 중인 초대가 이미 있는 상대를 다시 초대하면 **새 행을 만들지 않고 기존 초대를 `200` 으로
-  반환한다.** 중복 클릭이 실패처럼 보이지 않게 하기 위해서이며, `unique(group_id, invitee_id)`
-  가 이를 보장한다 (§3.1). 새로 만들어진 경우만 `201` 이다.
-- 실패 응답: 가입자가 없으면 `404 USER_NOT_FOUND`, 이미 멤버면 `409 ALREADY_MEMBER` 다.
+- 성공 응답은 항상 `201` 이다. 대기 중인 초대가 이미 있는 상대를 다시 초대하면 **새 행을 만들지
+  않고 `409 ALREADY_INVITED` 로 거부한다.** 동시 요청이 겹쳐도 `unique(group_id, invitee_id)` 가
+  중복 행을 막는다 (§3.1).
+- 실패 응답: 가입자가 없으면 `404 USER_NOT_FOUND`, 이미 멤버면 `409 ALREADY_MEMBER`, 대기 중인
+  초대가 있으면 `409 ALREADY_INVITED` 다. 멤버 여부를 먼저 판정한다.
   **가입 여부를 은닉하지 않는 것은 의도된 선택이다** — 소유자가 오타를 알아차릴 유일한 수단이며,
   그 대가는 공통 명세 §7.2에 한계로 적혀 있다.
 
@@ -955,6 +956,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 지원하지 않는 `Content-Type` | 415 | `UNSUPPORTED_MEDIA_TYPE` |
 | 그룹 정원(5명) 초과 | 409 | `GROUP_MEMBER_LIMIT_EXCEEDED` |
 | 이미 멤버인 사용자를 초대 | 409 | `ALREADY_MEMBER` |
+| 대기 중인 초대가 이미 있는 사용자를 초대 | 409 | `ALREADY_INVITED` |
 | 그 밖의 DB 제약 위반 (동시 요청 경합 등) | 409 | `CONFLICT` |
 | 네이버 지역 검색 오픈API 호출 실패/한도 초과 | 502 | `PLACE_SEARCH_UNAVAILABLE` |
 | 그 밖의 처리되지 않은 예외 | 500 | `INTERNAL_ERROR` |

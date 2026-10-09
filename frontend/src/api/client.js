@@ -68,12 +68,8 @@ export function setUnauthorizedHandler(handler) {
  *
  * 세션 쿠키 인증이라 자격 증명을 항상 포함하고, 쓰기 요청에는 세션 조회로 받은 CSRF 토큰을
  * 헤더로 돌려보낸다. 헤더가 없으면 서버가 거부한다 (공통 명세 §6.1).
- *
- * `withStatus` 를 주면 `{ data, status }` 로 감싸 돌려준다. 성공 응답끼리 상태 코드가 갈리는
- * 경우가 있어서다 — 초대 보내기는 새로 만들면 `201`, 이미 있던 초대를 그대로 돌려주면 `200`
- * 이고 본문은 같다 (backend §4.8). 기본값은 본문만 주는 쪽이다.
  */
-export async function apiFetch(path, { method = 'GET', body, withStatus = false } = {}) {
+export async function apiFetch(path, { method = 'GET', body } = {}) {
   const headers = {}
   // 사진 업로드는 멀티파트다. 경계(boundary)는 브라우저가 정하므로 Content-Type 을 비워 둔다.
   const isForm = body instanceof FormData
@@ -104,5 +100,5 @@ export async function apiFetch(path, { method = 'GET', body, withStatus = false 
   const payload = text ? JSON.parse(text) : null
 
   if (!response.ok) throw new ApiError({ ...(payload ?? {}), status: response.status })
-  return withStatus ? { data: payload, status: response.status } : payload
+  return payload
 }

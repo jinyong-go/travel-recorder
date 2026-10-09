@@ -6,7 +6,7 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.group.service.GroupService
-import com.yong.travel.group.service.InviteService
+import com.yong.travel.group.service.GroupInviteService
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.presentation.TripRecordCreateRequest
 import com.yong.travel.record.service.TripRecordService
@@ -50,7 +50,7 @@ class TripVisibilityTest {
     @Autowired private lateinit var tripService: TripService
     @Autowired private lateinit var recordService: TripRecordService
     @Autowired private lateinit var groupService: GroupService
-    @Autowired private lateinit var inviteService: InviteService
+    @Autowired private lateinit var groupInviteService: GroupInviteService
 
     @Test
     fun `공개 범위를 지정하지 않으면 비공개로 저장된다`() {
@@ -373,8 +373,8 @@ class TripVisibilityTest {
     private fun newGroupWith(ownerId: Long, memberId: Long): Long {
         val groupId = requireNotNull(groupService.create(ownerId, "가족", null).id)
         val memberEmail = requireNotNull(userRepository.findById(memberId).orElseThrow().email)
-        val invite = inviteService.invite(groupId, ownerId, memberEmail)
-        inviteService.accept(invite.invite.id, memberId)
+        val invite = groupInviteService.invite(groupId, ownerId, memberEmail)
+        groupInviteService.accept(invite.id, memberId)
         flush()
         return groupId
     }

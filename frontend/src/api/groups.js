@@ -35,15 +35,9 @@ export const leaveGroup = (groupId) =>
 export const fetchPendingInvites = (groupId, page) =>
   apiFetch(apiPath`/api/groups/${groupId}/invites?page=${page}`)
 
-/**
- * 이메일로 초대 보내기.
- *
- * 상태 코드를 함께 받는다. 새로 만들어졌으면 `201`, 대기 중인 초대가 이미 있어 그것을 그대로
- * 돌려준 것이면 `200` 이고 본문은 구분되지 않는다 (backend §4.8). 화면은 후자를 오류가 아니라
- * "이미 초대한 상대입니다" 로 알린다 (명세 §5.8.3).
- */
+/** 이메일로 초대 보내기. 대기 중인 초대가 이미 있으면 `409 ALREADY_INVITED` 다 (backend §4.8). */
 export const sendInvite = (groupId, email) =>
-  apiFetch(apiPath`/api/groups/${groupId}/invites`, { method: 'POST', body: { email }, withStatus: true })
+  apiFetch(apiPath`/api/groups/${groupId}/invites`, { method: 'POST', body: { email } })
 
 export const revokeInvite = (groupId, inviteId) =>
   apiFetch(apiPath`/api/groups/${groupId}/invites/${inviteId}`, { method: 'DELETE' })

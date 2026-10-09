@@ -8,7 +8,7 @@ import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.domain.InviteHistoryRole
 import com.yong.travel.group.service.GroupService
-import com.yong.travel.group.service.InviteService
+import com.yong.travel.group.service.GroupInviteService
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -35,7 +35,7 @@ class InviteHistoryTest {
     @Autowired private lateinit var entityManager: EntityManager
     @Autowired private lateinit var userRepository: UserRepository
     @Autowired private lateinit var groupService: GroupService
-    @Autowired private lateinit var inviteService: InviteService
+    @Autowired private lateinit var groupInviteService: GroupInviteService
 
     @Test
     fun `수락하면 멤버가 되고 이력에 ACCEPTED 로 남는다`() {
@@ -44,14 +44,14 @@ class InviteHistoryTest {
         val groupId = newGroup(owner)
         val inviteId = invite(groupId, owner, "invitee@example.com")
 
-        inviteService.accept(inviteId, invitee)
+        groupInviteService.accept(inviteId, invitee)
         flush()
 
         val history = historyOf(invitee, InviteHistoryRole.RECEIVED)
         assertEquals(1, history.size)
         assertEquals(InviteOutcome.ACCEPTED, history.single().outcome)
         // 대기 목록에서는 사라진다.
-        assertEquals(0, inviteService.listReceived(invitee, page()).totalElements.toInt())
+        assertEquals(0, groupInviteService.listReceived(invitee, page()).totalElements.toInt())
     }
 
     @Test
@@ -61,7 +61,7 @@ class InviteHistoryTest {
         val groupId = newGroup(owner)
         val inviteId = invite(groupId, owner, "invitee@example.com")
 
-        inviteService.reject(inviteId, invitee)
+        groupInviteService.reject(inviteId, invitee)
         flush()
 
         // 거절을 감추지 않는 것이 이번 개정의 결정이다.
@@ -77,7 +77,7 @@ class InviteHistoryTest {
         val groupId = newGroup(owner)
         val inviteId = invite(groupId, owner, "invitee@example.com")
 
-        inviteService.revoke(groupId, inviteId, owner)
+        groupInviteService.revoke(groupId, inviteId, owner)
         flush()
 
         assertEquals(InviteOutcome.REVOKED, historyOf(owner, InviteHistoryRole.SENT).single().outcome)
@@ -105,7 +105,7 @@ class InviteHistoryTest {
         val owner = newUser()
         val invitee = newUser("invitee@example.com")
         val groupId = newGroup(owner)
-        inviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
+        groupInviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
 
         assertFalse(historyOf(invitee, InviteHistoryRole.RECEIVED).single().groupDeleted)
@@ -118,7 +118,7 @@ class InviteHistoryTest {
         // 소유자 + 4명 = 정원 5명.
         repeat(4) { i ->
             val member = newUser("member$i@example.com")
-            inviteService.accept(invite(groupId, owner, "member$i@example.com"), member)
+            groupInviteService.accept(invite(groupId, owner, "member$i@example.com"), member)
         }
         val latecomer = newUser("late@example.com")
         val inviteId = invite(groupId, owner, "late@example.com")
@@ -126,13 +126,13 @@ class InviteHistoryTest {
 
         assertEquals(
             ErrorCode.GROUP_MEMBER_LIMIT_EXCEEDED,
-            assertThrows<ApiException> { inviteService.accept(inviteId, latecomer) }.errorCode,
+            assertThrows<ApiException> { groupInviteService.accept(inviteId, latecomer) }.errorCode,
         )
         flush()
 
         // 끝난 것이 아니므로 이력이 아니다. 자리가 나면 같은 초대로 다시 수락할 수 있어야 한다.
         assertTrue(historyOf(latecomer, InviteHistoryRole.RECEIVED).isEmpty())
-        assertEquals(1, inviteService.listReceived(latecomer, page()).totalElements.toInt())
+        assertEquals(1, groupInviteService.listReceived(latecomer, page()).totalElements.toInt())
     }
 
     @Test
@@ -141,7 +141,7 @@ class InviteHistoryTest {
         val invitee = newUser("invitee@example.com")
         val stranger = newUser("stranger@example.com")
         val groupId = newGroup(owner)
-        inviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
+        groupInviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
 
         // 내가 받은 건은 보낸 관점에 섞이지 않고, 그 반대도 마찬가지다.
@@ -158,10 +158,10 @@ class InviteHistoryTest {
         val invitee = newUser("invitee@example.com")
         val groupId = newGroup(owner)
 
-        inviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
+        groupInviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
         // unique(group_id, invitee_id) 가 비어 있어야 재초대가 가능하다.
-        inviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
+        groupInviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
 
         assertEquals(2, historyOf(owner, InviteHistoryRole.SENT).size)
@@ -177,15 +177,15 @@ class InviteHistoryTest {
         invite(newGroup(otherOwner), otherOwner, "invitee@example.com")
         flush()
 
-        assertEquals(2, inviteService.listSent(owner, page()).totalElements.toInt())
-        assertEquals(1, inviteService.listSent(otherOwner, page()).totalElements.toInt())
+        assertEquals(2, groupInviteService.listSent(owner, page()).totalElements.toInt())
+        assertEquals(1, groupInviteService.listSent(otherOwner, page()).totalElements.toInt())
     }
 
     private fun historyOf(userId: Long, role: InviteHistoryRole) =
-        inviteService.listHistory(userId, role, page()).content
+        groupInviteService.listHistory(userId, role, page()).content
 
     private fun invite(groupId: Long, ownerId: Long, email: String): Long =
-        inviteService.invite(groupId, ownerId, email).invite.id
+        groupInviteService.invite(groupId, ownerId, email).id
 
     private fun newGroup(ownerId: Long): Long =
         requireNotNull(groupService.create(ownerId, "가족", null).id)

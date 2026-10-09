@@ -4,8 +4,8 @@ import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
+import com.yong.travel.group.service.GroupInviteService
 import com.yong.travel.group.service.GroupService
-import com.yong.travel.group.service.InviteService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/groups")
 class GroupController(
     private val groupService: GroupService,
-    private val inviteService: InviteService,
+    private val groupInviteService: GroupInviteService,
 ) {
 
     /** 내가 소유하거나 멤버로 속한 그룹 목록. */
@@ -107,23 +107,18 @@ class GroupController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<PendingInviteResponse> =
-        PageResponse.of(inviteService.listPending(groupId, requireLogin(principal), listPageRequest(page)))
+        PageResponse.of(groupInviteService.listPending(groupId, requireLogin(principal), listPageRequest(page)))
             .map { PendingInviteResponse.from(it) }
 
-    /**
-     * 이메일로 초대 보내기.
-     *
-     * 대기 중인 초대가 이미 있으면 새로 만들지 않고 `200` 으로 기존 초대를 돌려준다.
-     */
+    /** 이메일로 초대 보내기. 대기 중인 초대가 이미 있으면 `ALREADY_INVITED` 로 거부된다. */
     @PostMapping("/{groupId}/invites")
     fun invite(
         @PathVariable groupId: Long,
         @RequestBody @Valid request: InviteRequest,
         @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<PendingInviteResponse> {
-        val result = inviteService.invite(groupId, requireLogin(principal), request.email)
-        val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
-        return ResponseEntity.status(status).body(PendingInviteResponse.from(result.invite))
+        val invite = groupInviteService.invite(groupId, requireLogin(principal), request.email)
+        return ResponseEntity.status(HttpStatus.CREATED).body(PendingInviteResponse.from(invite))
     }
 
     /** 대기 중인 초대 철회. 초대 행을 지운다. */
@@ -133,7 +128,7 @@ class GroupController(
         @PathVariable inviteId: Long,
         @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<Void> {
-        inviteService.revoke(groupId, inviteId, requireLogin(principal))
+        groupInviteService.revoke(groupId, inviteId, requireLogin(principal))
         return ResponseEntity.noContent().build()
     }
 }

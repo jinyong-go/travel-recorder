@@ -35,6 +35,7 @@ enum class ErrorCode(val status: HttpStatus, val defaultMessage: String) {
     CONFLICT(HttpStatus.CONFLICT, "이미 처리된 요청이거나 다른 요청과 충돌했습니다."),
     GROUP_MEMBER_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 가득 찼습니다."),
     ALREADY_MEMBER(HttpStatus.CONFLICT, "이미 그룹 멤버입니다."),
+    ALREADY_INVITED(HttpStatus.CONFLICT, "이미 초대한 상대입니다."),
     PLACE_SEARCH_UNAVAILABLE(HttpStatus.BAD_GATEWAY, "장소 검색을 사용할 수 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
 }

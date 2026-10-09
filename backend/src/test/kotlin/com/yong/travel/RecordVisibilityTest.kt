@@ -7,7 +7,7 @@ import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.service.GroupService
-import com.yong.travel.group.service.InviteService
+import com.yong.travel.group.service.GroupInviteService
 import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.domain.RecordListQuery
@@ -23,6 +23,7 @@ import com.yong.travel.trip.persistence.TripShareRepository
 import jakarta.persistence.EntityManager
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -47,7 +48,7 @@ class RecordVisibilityTest {
     @Autowired private lateinit var userRepository: UserRepository
     @Autowired private lateinit var recordService: TripRecordService
     @Autowired private lateinit var groupService: GroupService
-    @Autowired private lateinit var inviteService: InviteService
+    @Autowired private lateinit var groupInviteService: GroupInviteService
     @Autowired private lateinit var inviteRepository: GroupInviteRepository
     @Autowired private lateinit var groupRepository: GroupRepository
     @Autowired private lateinit var tripRepository: TripRepository
@@ -315,19 +316,19 @@ class RecordVisibilityTest {
         val invitee = newUser(email = "friend@example.com")
         val groupId = requireNotNull(groupService.create(owner, "가족", null).id)
 
-        inviteService.invite(groupId, owner, "friend@example.com")
+        groupInviteService.invite(groupId, owner, "friend@example.com")
         flush()
 
-        val received = inviteService.listReceived(invitee, firstPage()).content
+        val received = groupInviteService.listReceived(invitee, firstPage()).content
         assertEquals(1, received.size)
         assertEquals(groupId, received.single().group.id)
 
-        inviteService.accept(received.single().id, invitee)
+        groupInviteService.accept(received.single().id, invitee)
         flush()
 
         assertEquals(2, groupService.get(groupId, owner).members.size)
         // 수락한 초대는 남지 않는다. 상태 컬럼도 이력도 두지 않기 때문이다.
-        assertTrue(inviteService.listReceived(invitee, firstPage()).content.isEmpty())
+        assertTrue(groupInviteService.listReceived(invitee, firstPage()).content.isEmpty())
     }
 
     @Test
@@ -336,28 +337,27 @@ class RecordVisibilityTest {
         newUser(email = "Friend@Example.com")
         val groupId = requireNotNull(groupService.create(owner, "가족", null).id)
 
-        val result = inviteService.invite(groupId, owner, "friend@EXAMPLE.com")
+        val result = groupInviteService.invite(groupId, owner, "friend@EXAMPLE.com")
         flush()
 
         // 소유자가 직접 입력한 값이라도 되돌려주지 않는다. 상대는 이름·프로필 사진으로만 식별한다.
-        assertEquals("테스터", result.invite.invitee.name)
+        assertEquals("테스터", result.invitee.name)
     }
 
     @Test
-    fun `대기 중인 초대가 있는 상대를 다시 초대해도 초대가 늘지 않는다`() {
+    fun `대기 중인 초대가 있는 상대를 다시 초대하면 거부되고 기존 초대는 남는다`() {
         val owner = newUser()
         newUser(email = "friend@example.com")
         val groupId = requireNotNull(groupService.create(owner, "가족", null).id)
 
-        val first = inviteService.invite(groupId, owner, "friend@example.com")
-        flush()
-        val second = inviteService.invite(groupId, owner, "friend@example.com")
+        val first = groupInviteService.invite(groupId, owner, "friend@example.com")
         flush()
 
-        assertTrue(first.created)
-        assertFalse(second.created, "중복 클릭이 실패처럼 보여서는 안 된다")
-        assertEquals(first.invite.id, second.invite.id)
-        assertEquals(1, inviteService.listPending(groupId, owner, firstPage()).totalElements)
+        assertEquals(
+            ErrorCode.ALREADY_INVITED,
+            assertThrows<ApiException> { groupInviteService.invite(groupId, owner, "friend@example.com") }.errorCode,
+        )
+        assertEquals(first.id, groupInviteService.listPending(groupId, owner, firstPage()).content.single().id)
     }
 
     @Test
@@ -368,12 +368,12 @@ class RecordVisibilityTest {
 
         assertEquals(
             ErrorCode.USER_NOT_FOUND,
-            assertThrows<ApiException> { inviteService.invite(groupId, owner, "nobody@example.com") }.errorCode,
+            assertThrows<ApiException> { groupInviteService.invite(groupId, owner, "nobody@example.com") }.errorCode,
         )
         // 소유자도 멤버 행을 가지므로 자기 자신을 초대하면 여기에 걸린다.
         assertEquals(
             ErrorCode.ALREADY_MEMBER,
-            assertThrows<ApiException> { inviteService.invite(groupId, owner, "owner@example.com") }.errorCode,
+            assertThrows<ApiException> { groupInviteService.invite(groupId, owner, "owner@example.com") }.errorCode,
         )
     }
 
@@ -383,14 +383,14 @@ class RecordVisibilityTest {
         newUser(email = "friend@example.com")
         val stranger = newUser()
         val groupId = requireNotNull(groupService.create(owner, "가족", null).id)
-        val inviteId = inviteService.invite(groupId, owner, "friend@example.com").invite.id
+        val inviteId = groupInviteService.invite(groupId, owner, "friend@example.com").id
         flush()
 
         // 403 이면 "그런 초대가 있다" 는 뜻이 되므로 없는 id 와 같은 404 여야 한다.
-        assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { inviteService.accept(inviteId, stranger) }.errorCode)
-        assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { inviteService.reject(inviteId, stranger) }.errorCode)
-        assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { inviteService.revoke(groupId, inviteId, stranger) }.errorCode)
-        assertTrue(inviteService.listReceived(stranger, firstPage()).content.isEmpty())
+        assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.accept(inviteId, stranger) }.errorCode)
+        assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.reject(inviteId, stranger) }.errorCode)
+        assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.revoke(groupId, inviteId, stranger) }.errorCode)
+        assertTrue(groupInviteService.listReceived(stranger, firstPage()).content.isEmpty())
     }
 
     @Test
@@ -398,14 +398,14 @@ class RecordVisibilityTest {
         val owner = newUser()
         val invitee = newUser(email = "friend@example.com")
         val groupId = requireNotNull(groupService.create(owner, "가족", null).id)
-        val inviteId = inviteService.invite(groupId, owner, "friend@example.com").invite.id
+        val inviteId = groupInviteService.invite(groupId, owner, "friend@example.com").id
         flush()
 
-        inviteService.reject(inviteId, invitee)
+        groupInviteService.reject(inviteId, invitee)
         flush()
 
-        assertTrue(inviteService.listPending(groupId, owner, firstPage()).content.isEmpty())
-        assertTrue(inviteService.invite(groupId, owner, "friend@example.com").created)
+        assertTrue(groupInviteService.listPending(groupId, owner, firstPage()).content.isEmpty())
+        assertDoesNotThrow { groupInviteService.invite(groupId, owner, "friend@example.com") }
     }
 
     @Test
@@ -415,16 +415,16 @@ class RecordVisibilityTest {
         val groupId = requireNotNull(groupService.create(owner, "가족", null).id)
 
         // 대기 중인 초대는 정원을 차지하지 않으므로 정원을 넘겨 보낼 수 있다.
-        val inviteId = inviteService.invite(groupId, owner, "late@example.com").invite.id
+        val inviteId = groupInviteService.invite(groupId, owner, "late@example.com").id
         // 소유자를 포함해 5명이 정원이므로 4명까지만 더 들어올 수 있다.
         repeat(4) { i ->
             val email = "member$i@example.com"
             val member = newUser(email = email)
-            inviteService.accept(inviteService.invite(groupId, owner, email).invite.id, member)
+            groupInviteService.accept(groupInviteService.invite(groupId, owner, email).id, member)
         }
         flush()
 
-        val failure = assertThrows<ApiException> { inviteService.accept(inviteId, latecomer) }
+        val failure = assertThrows<ApiException> { groupInviteService.accept(inviteId, latecomer) }
         assertEquals(ErrorCode.GROUP_MEMBER_LIMIT_EXCEEDED, failure.errorCode)
         // 자리가 나면 같은 초대로 다시 수락할 수 있어야 하므로 행을 지우지 않는다.
         assertTrue(inviteRepository.findById(inviteId).isPresent)
@@ -470,8 +470,8 @@ class RecordVisibilityTest {
     private fun newGroupWith(ownerId: Long, memberId: Long): Long {
         val groupId = requireNotNull(groupService.create(ownerId, "가족", null).id)
         val memberEmail = requireNotNull(userRepository.findById(memberId).orElseThrow().email)
-        val invite = inviteService.invite(groupId, ownerId, memberEmail)
-        inviteService.accept(invite.invite.id, memberId)
+        val invite = groupInviteService.invite(groupId, ownerId, memberEmail)
+        groupInviteService.accept(invite.id, memberId)
         flush()
         return groupId
     }
