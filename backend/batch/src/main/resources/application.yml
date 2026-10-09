@@ -4,3 +4,8 @@ spring:
 
   profiles:
     default: local
+
+app:
+  login-history:
+    # 접속 IP·User-Agent 를 담는 개인정보라 이 기간이 지나면 지운다.
+    retention-days: 90

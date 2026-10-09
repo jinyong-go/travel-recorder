@@ -250,6 +250,8 @@ CREATE INDEX IF NOT EXISTS idx_group_invite_inviter ON group_invite (invited_by)
 CREATE INDEX IF NOT EXISTS idx_invite_history_invitee ON invite_history (invitee_id, resolved_at DESC);
 CREATE INDEX IF NOT EXISTS idx_invite_history_inviter ON invite_history (invited_by, resolved_at DESC);
 CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history (user_id, logged_in_at DESC);
+-- 보관 기간 정리 배치가 시각만으로 지울 행을 찾는다. 위 인덱스는 user_id 가 선두라 쓰이지 않는다.
+CREATE INDEX IF NOT EXISTS idx_login_history_logged_in_at ON login_history (logged_in_at);
 CREATE INDEX IF NOT EXISTS idx_share_group_owner ON share_group (owner_id);
 CREATE INDEX IF NOT EXISTS idx_photos_record ON photos (record_id);
 -- 여행 목록은 범위(내 여행/공유받은/둘러보기)로 먼저 좁히고 생성일 또는 시작일로 정렬한다.

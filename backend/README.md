@@ -38,11 +38,17 @@ backend/
 ├─ external-api/           # API 서버 — 아래 디렉터리 구조 참고
 ├─ batch/                  # 정기 정리 작업 (Spring Batch). 웹 서버 없이 잡 실행 후 종료
 │  ├─ build.gradle.kts
-│  └─ src/main/kotlin/com/yong/travel/batch/BatchApplication.kt
+│  └─ src/main/kotlin/com/yong/travel/batch/
+│     ├─ BatchApplication.kt
+│     └─ loginhistory/LoginHistoryCleanupJobConfig.kt  # 보관 기간이 지난 로그인 이력 삭제
 └─ gradlew / gradlew.bat
 ```
 
-- `batch`는 아직 잡이 없고 `local` 프로파일(H2) 설정만 존재. dev/prod 설정은 첫 잡과 함께 추가 예정
+- `batch`는 잡을 한 번 실행하고 종료. 하루 한 번 외부 스케줄러(cron 등)로 실행
+  (`java -jar batch/build/libs/batch-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod`)
+- 배치 메타데이터 테이블 없이 동작(`ResourcelessJobRepository`)하므로 DB에 추가할 테이블 없음
+- `dev`·`prod`는 API 서버와 같은 `DB_URL`·`DB_USERNAME`·`DB_PASSWORD` 사용. 스키마는 API 쪽 절차로 적용
+- `local`·`test`는 빌드 시 `external-api`의 `schema.sql`을 받아 인메모리 H2를 같은 구조로 생성
 
 ## 디렉터리 구조 (`external-api`)
 

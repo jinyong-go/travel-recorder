@@ -27,13 +27,18 @@
 | 모듈 | 하는 일 | 의존성 |
 |---|---|---|
 | `external-api` | 프론트엔드가 부르는 API 서버 | Web MVC, Data JPA, Security, Validation |
-| `batch` | 정기 정리 작업 (예: 로그인 이력 보관 기간 정리). 웹 서버 없이 잡을 돌리고 종료 | Spring Batch(JDBC 저장소) |
+| `batch` | 정기 정리 작업. 웹 서버 없이 잡을 돌리고 종료 | Spring Batch, JDBC |
 
 - 공통 빌드 설정(플러그인 버전·Kotlin 옵션·Java 17·JUnit)은 루트 `build.gradle.kts` 의
   `subprojects` 에 있다. 모듈 `build.gradle.kts` 에는 그 모듈의 의존성만 둔다.
 - **두 모듈은 서로 의존하지 않는다.** 배치가 API 모듈의 엔티티를 가져다 쓰지 않는다.
-- 배치는 아직 잡이 없고 `local` 프로파일(H2) 설정만 있다. dev/prod 설정은 첫 잡을 만들 때
-  PostgreSQL 의 배치 메타데이터 테이블을 누가 만들지와 함께 정한다.
+- **배치는 메타데이터 테이블(`BATCH_*`) 없이 돈다** (`ResourcelessJobRepository`). 잡은 몇 번을
+  돌려도 결과가 같게(멱등) 만든다 — 재시작 정보가 남지 않으므로 실패하면 처음부터 다시 돌린다.
+  재시작이 필요한 잡이 생기면 JDBC 저장소와 그 테이블의 관리 방식을 함께 정한다.
+- **배치는 엔티티 없이 SQL 로 다룬다.** 스키마의 기준은 `external-api` 의 `schema.sql` 하나이며,
+  배치는 빌드 시 이 파일을 리소스로 받아 local·test DB 를 만든다. 테이블을 바꾸면 배치의 SQL 도
+  함께 확인한다.
+- 잡 목록: `loginHistoryCleanupJob` — 보관 기간이 지난 로그인 이력 삭제 (명세 §3.2).
 - 아래 패키지 구조·계층 책임·인가·영속성 규칙은 `external-api` 기준이다.
 
 ## 스택

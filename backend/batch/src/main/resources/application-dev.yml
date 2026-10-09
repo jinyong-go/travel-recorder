@@ -1,0 +1,15 @@
+# 개발 서버. API 서버와 같은 PostgreSQL 을 쓴다. 스키마는 API 서버가 만들므로 여기서 실행하지 않는다.
+spring:
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  sql:
+    init:
+      mode: never
+
+logging:
+  level:
+    com.yong.travel: DEBUG

@@ -6,6 +6,12 @@ spring:
     username: sa
     password:
 
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
   batch:
-    jdbc:
-      initialize-schema: embedded
+    job:
+      # 기동만으로 잡이 돌면 테스트가 넣은 행보다 먼저 지워진다. 테스트가 직접 실행한다.
+      enabled: false
