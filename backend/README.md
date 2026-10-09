@@ -40,12 +40,22 @@ backend/
 │  ├─ build.gradle.kts
 │  └─ src/main/kotlin/com/yong/travel/batch/
 │     ├─ BatchApplication.kt
-│     └─ loginhistory/LoginHistoryCleanupJobConfig.kt  # 보관 기간이 지난 로그인 이력 삭제
+│     └─ loginhistory/
+│        ├─ LoginDailyStatsJobConfig.kt     # 로그인 이력의 하루 합계 집계
+│        └─ LoginHistoryCleanupJobConfig.kt # 보관 기간이 지난 로그인 이력 삭제
 └─ gradlew / gradlew.bat
 ```
 
-- `batch`는 잡을 한 번 실행하고 종료. 하루 한 번 외부 스케줄러(cron 등)로 실행
-  (`java -jar batch/build/libs/batch-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod`)
+- `batch`는 잡 하나를 실행하고 종료. 하루 한 번 외부 스케줄러(cron 등)가 아래 순서로 실행.
+  잡이 둘이라 **잡 이름 지정 필수**이며, 실패하면 종료 코드가 0이 아님
+
+  ```bash
+  JAR=batch/build/libs/batch-0.0.1-SNAPSHOT.jar
+  java -jar $JAR --spring.profiles.active=prod --spring.batch.job.name=loginDailyStatsJob      # 어제 로그인 합계
+  java -jar $JAR --spring.profiles.active=prod --spring.batch.job.name=loginHistoryCleanupJob  # 보관 기간 지난 이력 삭제
+  # 특정 날짜 재집계 (원본 보관 기간 안, 어제 이전 날짜만)
+  java -jar $JAR --spring.profiles.active=prod --spring.batch.job.name=loginDailyStatsJob targetDate=2026-10-01
+  ```
 - 배치 메타데이터 테이블 없이 동작(`ResourcelessJobRepository`)하므로 DB에 추가할 테이블 없음
 - `dev`·`prod`는 API 서버와 같은 `DB_URL`·`DB_USERNAME`·`DB_PASSWORD` 사용. 스키마는 API 쪽 절차로 적용
 - `local`·`test`는 빌드 시 `external-api`의 `schema.sql`을 받아 인메모리 H2를 같은 구조로 생성

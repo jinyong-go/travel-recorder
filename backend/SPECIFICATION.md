@@ -246,6 +246,13 @@ LoginHistory                    // 성공한 로그인의 기록 (공통 명세 
   // 로그인 수단 컬럼을 두지 않는다 — 계정당 수단이 하나라 user.provider 와 항상 같다
   // 결과 컬럼을 두지 않는다 — 성공만 기록한다
 
+LoginDailyStats                 // 하루 단위 로그인 합계 (공통 명세 §3.10). 배치만 쓴다
+  statDate: LocalDate (PK)      // 한국 시간 기준 날짜
+  loginCount: Long              // 그날의 로그인 횟수
+  uniqueUserCount: Long         // 그날 로그인한 사용자 수
+  aggregatedAt: Instant         // 마지막으로 집계한 시각
+  // 사용자 컬럼을 두지 않는다 — 누구의 로그인인지 남지 않아야 기한 없이 보관할 수 있다
+
 TripShare                       // trip.visibility=GROUP 일 때만 사용
   id: Long (PK)
   trip: Trip (FK)
@@ -342,7 +349,23 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - `userAgent` 는 선택이며 512자 이하다. 넘는 값은 저장 전에 자른다 (§2.1).
 - 조회는 항상 본인 것을 최신순으로 읽으므로 `login_history(user_id, logged_in_at DESC)` 인덱스를 둔다.
 - 보관 기간 정리(§3.2)는 시각만으로 지울 행을 찾으므로 `login_history(logged_in_at)` 인덱스를 따로 둔다.
-  위 인덱스는 `user_id` 가 선두라 이 조건에 쓰이지 않는다.
+  위 인덱스는 `user_id` 가 선두라 이 조건에 쓰이지 않는다. 일별 통계 집계도 같은 인덱스를 쓴다.
+
+**로그인 통계**
+
+- 테이블명은 `login_daily_stats` 이고 PK 는 `stat_date` 다. 날짜당 한 행이다.
+- 엔티티가 없다. `external-api` 는 이 테이블을 읽지도 쓰지도 않으며, `batch` 의
+  `loginDailyStatsJob` 만 SQL 로 쓴다. DDL 은 스키마의 단일 출처인 `external-api` 의 `schema.sql` 에 둔다.
+- **집계 대상 날짜는 잡 파라미터 `targetDate`(`yyyy-MM-dd`)** 이며, 없으면 한국 시간 기준 **어제**다.
+  범위는 그 날짜의 한국 시간 0시 이상, 다음 날 0시 미만이다.
+- **같은 날짜를 다시 집계하면 덮어쓴다.** 그 날짜의 행을 지우고 새로 넣으며, 한 트랜잭션이다.
+  `INSERT … ON CONFLICT DO UPDATE` 를 쓰지 않는 이유는 local·test 의 H2 가 PostgreSQL 모드에서도
+  이 문법의 갱신 형태를 지원하지 않아서다.
+- **다음 날짜는 거부하고 잡을 실패로 끝낸다.** 오늘 이후(아직 끝나지 않은 날)와, 원본 이력의 보관
+  기간이 이미 지났을 수 있는 날짜(오늘 − 보관 기간 이전)다. 후자를 집계하면 원본이 지워진 만큼
+  실제 값이 작게 덮인다.
+- 실행 순서: 매일 통계 잡을 먼저, 정리 잡(§3.2)을 다음에 돌린다. 어제 날짜는 보관 기간 안이라
+  순서가 바뀌어도 값이 틀리지는 않지만, 통계가 원본보다 늦게 만들어질 일이 없게 맞춘다.
 
 ### 3.2 삭제 정책 (soft delete)
 `Trip` 과 `TripRecord` 는 물리 삭제하지 않고 `deletedAt` 에 삭제 시각을 기록한다. 통계·이력
@@ -382,6 +405,8 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   - 같은 날 두 번 돌려도 결과가 같아 재시작 정보가 필요 없다. 그래서 배치 메타데이터 테이블
     (`BATCH_*`) 없이 도는 저장소(`ResourcelessJobRepository`)를 쓴다.
   - 보관 기간 값은 배치 설정(`app.login-history.retention-days`)에 있다.
+- **`LoginDailyStats` 는 지우지 않는다.** 누구의 로그인인지 남지 않는 합계라 보관 기간을 두지 않는다
+  (공통 명세 §3.10).
 - 그룹 삭제 시 그 그룹의 `GroupMember`, `GroupInvite`, `TripShare` 행을 함께 지운다.
   이때 **대기 중이던 초대는 `GROUP_DELETED` 로 이력에 남긴다** — 받은 사람 쪽에서 보면
   초대가 이유 없이 사라지는 일이라 그 이유를 남겨 둘 자리가 필요하다.

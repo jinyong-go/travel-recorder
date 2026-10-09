@@ -3,6 +3,7 @@ package com.yong.travel.batch.loginhistory
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.batch.core.BatchStatus
+import org.springframework.batch.core.job.Job
 import org.springframework.batch.test.JobOperatorTestUtils
 import org.springframework.batch.test.context.SpringBatchTest
 import org.springframework.beans.factory.annotation.Autowired
@@ -20,11 +21,14 @@ class LoginHistoryCleanupJobTest {
 
     @Autowired private lateinit var jobOperatorTestUtils: JobOperatorTestUtils
     @Autowired private lateinit var jdbcTemplate: JdbcTemplate
+    @Autowired private lateinit var loginHistoryCleanupJob: Job
 
     private var userId: Long = 0
 
     @BeforeEach
     fun setUp() {
+        // 잡이 둘이라 테스트 도구가 스스로 고르지 못한다. 실행할 잡을 지정한다.
+        jobOperatorTestUtils.setJob(loginHistoryCleanupJob)
         jdbcTemplate.update("DELETE FROM login_history")
         jdbcTemplate.update("DELETE FROM users")
         jdbcTemplate.update(

@@ -10,7 +10,7 @@
 
 ```bash
 ./gradlew :external-api:bootRun   # API 서버 실행 (기본 local 프로파일, H2 인메모리)
-./gradlew :batch:bootRun          # 배치 실행 (잡을 돌리고 종료)
+./gradlew :batch:bootRun --args='--spring.batch.job.name=<잡 이름>'   # 배치 실행 (잡 하나를 돌리고 종료)
 ./gradlew test                    # 모든 모듈 테스트
 ./gradlew build                   # 빌드 (테스트 포함)
 ```
@@ -38,7 +38,17 @@
 - **배치는 엔티티 없이 SQL 로 다룬다.** 스키마의 기준은 `external-api` 의 `schema.sql` 하나이며,
   배치는 빌드 시 이 파일을 리소스로 받아 local·test DB 를 만든다. 테이블을 바꾸면 배치의 SQL 도
   함께 확인한다.
-- 잡 목록: `loginHistoryCleanupJob` — 보관 기간이 지난 로그인 이력 삭제 (명세 §3.2).
+- **잡이 둘 이상이라 실행할 잡 이름(`--spring.batch.job.name`)을 반드시 넘긴다.** 빠뜨리면 기동이
+  실패한다. 잡이 실패하면 종료 코드가 0 이 아니다 — 스케줄러가 실패를 알아차리는 수단이다.
+- 잡 목록 (매일 이 순서로 실행)
+
+  | 잡 | 하는 일 | 파라미터 |
+  |---|---|---|
+  | `loginDailyStatsJob` | 로그인 이력의 하루 합계를 `login_daily_stats` 에 남긴다 (명세 §3.1) | `targetDate=yyyy-MM-dd` (생략 시 한국 시간 어제) |
+  | `loginHistoryCleanupJob` | 보관 기간이 지난 로그인 이력 삭제 (명세 §3.2) | 없음 |
+- **`@SpringBatchTest` 테스트 클래스에 `JobExecution`·`StepExecution` 을 돌려주는 메서드를 두지
+  않는다.** 스코프용 팩토리로 오인되어 매 테스트 전에 호출된다. 잡이 둘 이상이라 테스트마다
+  `JobOperatorTestUtils.setJob` 으로 실행할 잡을 지정한다.
 - 아래 패키지 구조·계층 책임·인가·영속성 규칙은 `external-api` 기준이다.
 
 ## 스택

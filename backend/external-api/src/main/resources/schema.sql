@@ -126,6 +126,17 @@ CREATE TABLE IF NOT EXISTS login_history
     CONSTRAINT fk_login_history_user FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
+-- 하루 단위 로그인 합계. 배치(loginDailyStatsJob)만 쓰며 external-api 에는 엔티티가 없다.
+-- 사용자 컬럼이 없어 보관 기간 없이 남긴다. 날짜는 한국 시간 기준이다.
+CREATE TABLE IF NOT EXISTS login_daily_stats
+(
+    stat_date         DATE                        NOT NULL,
+    login_count       BIGINT                      NOT NULL,
+    unique_user_count BIGINT                      NOT NULL,
+    aggregated_at     TIMESTAMP(6) WITH TIME ZONE NOT NULL,
+    PRIMARY KEY (stat_date)
+);
+
 -- 여행 (기록의 상위 그룹이자 공유의 단위)
 -- 공개 범위 컬럼은 이 테이블에만 존재한다. 기록은 범위를 갖지 않고 소속 여행의 값을 따른다.
 -- visibility 기본값은 PRIVATE 이다. 값을 빠뜨린 INSERT 가 공개로 저장되는 쪽이
