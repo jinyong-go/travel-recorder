@@ -6,6 +6,7 @@ import GroupDetailPage from './pages/GroupDetailPage.jsx'
 import InvitesPage from './pages/InvitesPage.jsx'
 import GroupsPage from './pages/GroupsPage.jsx'
 import LandingPage from './pages/LandingPage.jsx'
+import LoginHistoryPage from './pages/LoginHistoryPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import MyInfoPage from './pages/MyInfoPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
@@ -37,6 +38,7 @@ function App() {
           <Route path="/trips/new" element={<TripRegisterPage />} />
           <Route path="/trips/:tripId/edit" element={<TripEditPage />} />
           <Route path="/me" element={<MyInfoPage />} />
+          <Route path="/me/login-history" element={<LoginHistoryPage />} />
           {/* 받은/보낸은 담기는 항목과 동작이 다른 별개 목록이라 경로로 나눈다 (명세 §5.8.4). */}
           <Route path="/invites" element={<Navigate to="/invites/received" replace />} />
           <Route path="/invites/received" element={<InvitesPage tab="received" />} />

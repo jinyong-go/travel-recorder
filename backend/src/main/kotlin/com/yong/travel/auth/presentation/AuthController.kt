@@ -2,6 +2,8 @@ package com.yong.travel.auth.presentation
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.auth.service.AuthService
+import com.yong.travel.auth.service.LoginHistoryService
+import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.common.web.requireLogin
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -13,12 +15,14 @@ import org.springframework.security.web.csrf.CsrfTokenRepository
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/auth")
 class AuthController(
     private val authService: AuthService,
+    private val loginHistoryService: LoginHistoryService,
     private val csrfTokenRepository: CsrfTokenRepository,
 ) {
 
@@ -42,6 +46,20 @@ class AuthController(
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal principal: LoginUser?): MeResponse =
         MeResponse.from(authService.getCurrentUser(requireLogin(principal)))
+
+    /**
+     * 내 로그인 이력, 최신순.
+     *
+     * 경로에 사용자 id 를 받지 않는다. 대상은 언제나 세션의 사용자이므로 남의 이력을 지목할
+     * 방법 자체가 없다.
+     */
+    @GetMapping("/me/login-history")
+    fun loginHistory(
+        @RequestParam(defaultValue = "0") page: Int,
+        @AuthenticationPrincipal principal: LoginUser?,
+    ): PageResponse<LoginHistoryResponse> =
+        PageResponse.of(loginHistoryService.list(requireLogin(principal), page))
+            .map { LoginHistoryResponse.from(it) }
 
     /**
      * 로그아웃. 세션을 버리고 SecurityContext 를 비운다.

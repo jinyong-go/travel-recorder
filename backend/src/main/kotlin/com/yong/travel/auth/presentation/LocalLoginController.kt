@@ -2,6 +2,7 @@ package com.yong.travel.auth.presentation
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.auth.service.AuthService
+import com.yong.travel.auth.service.LoginHistoryService
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import jakarta.servlet.http.HttpServletRequest
@@ -9,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import org.springframework.context.annotation.Profile
+import org.springframework.http.HttpHeaders
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.AuthenticationException
@@ -35,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController
 class LocalLoginController(
     private val authenticationManager: AuthenticationManager,
     private val authService: AuthService,
+    private val loginHistoryService: LoginHistoryService,
     private val csrfTokenRepository: CsrfTokenRepository,
 ) {
 
@@ -68,6 +71,11 @@ class LocalLoginController(
         } catch (e: AuthenticationException) {
             throw ApiException(ErrorCode.UNAUTHENTICATED, "아이디 또는 비밀번호가 올바르지 않습니다.")
         }
+        val userId = (authentication.principal as LoginUser).userId
+
+        // 세션보다 먼저 남긴다. 기록이 실패하면 세션이 발급되지 않아 이력 없는 로그인이 생기지 않는다.
+        // remoteAddr 은 프록시 헤더 해석이 켜져 있어 프록시 뒤에서도 원 클라이언트 주소다.
+        loginHistoryService.record(userId, httpRequest.remoteAddr, httpRequest.getHeader(HttpHeaders.USER_AGENT))
 
         // 인증 전후로 같은 세션 id·CSRF 토큰이 이어지지 않게 바꾼다.
         // Spring Security 의 세션 고정 방지와 토큰 교체는 자체 로그인 필터에서만 돌고, 컨트롤러가
@@ -82,6 +90,6 @@ class LocalLoginController(
         SecurityContextHolder.setContext(context)
         securityContextRepository.saveContext(context, httpRequest, httpResponse)
 
-        return MeResponse.from(authService.getCurrentUser((authentication.principal as LoginUser).userId))
+        return MeResponse.from(authService.getCurrentUser(userId))
     }
 }

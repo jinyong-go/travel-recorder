@@ -72,3 +72,22 @@
   line-height: 1.6;
   color: var(--text-muted);
 }
+
+.my-info-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.my-info-section-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.my-info-more-link {
+  justify-self: start;
+  font-weight: 600;
+  color: var(--accent-strong);
+}

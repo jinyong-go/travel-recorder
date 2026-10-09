@@ -71,6 +71,18 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
 - 최초 로그인 계정은 `User` 로 자동 가입(upsert)하며, 이후 `provider("naver") + providerId` 로 매칭한다.
 - 로그아웃: `POST /api/auth/logout` — 세션을 무효화한다.
 
+**로그인 이력 기록** (공통 명세 §3.10)
+
+- **로그인에 성공한 지점에서만 기록한다.** 인증 실패 경로에는 기록 코드를 두지 않는다.
+  - 로컬 로그인(`POST /api/auth/login`): 인증 성공 뒤, 세션을 발급하기 전에 기록한다. 기록이
+    실패하면 세션을 발급하지 않으며, 오류 응답은 §6 의 공통 규칙을 따른다.
+  - 네이버 OAuth(복구 시): 로그인 성공 처리에서 기록한다. 기록이 실패하면 로그인도 실패로 처리한다.
+- 접속 IP 는 `HttpServletRequest.remoteAddr` 다. 프록시 헤더 해석(§7)이 켜져 있어 프록시 뒤에서도
+  원 클라이언트 주소가 된다. `X-Forwarded-For` 를 직접 읽지 않는다 — 신뢰할 프록시 판정이 이미
+  Tomcat 에 있다.
+- 브라우저 정보는 `User-Agent` 헤더 원문이다. 512자를 넘으면 앞에서부터 512자로 자르고, 헤더가
+  없으면 `null` 이다. 서버에서 해석(브라우저·OS 추출)하지 않는다.
+
 ### 2.2 인가 정책
 
 권한 규칙 자체는 [공통 명세 §2.6](../SPECIFICATION.md) 에 있다. 여기서는 **그 규칙을 코드에서
@@ -225,6 +237,15 @@ InviteHistory                   // 끝난 초대의 기록 (공통 명세 §3.7)
   resolvedAt: Instant           // 끝난 시각
   // unique 제약을 두지 않는다 — 같은 상대에게 다시 초대해 다시 끝나면 항목이 하나 더 쌓인다
 
+LoginHistory                    // 성공한 로그인의 기록 (공통 명세 §3.10). append-only
+  id: Long (PK)
+  user: User (FK)               // 로그인한 계정
+  ipAddress: String             // 접속 IP
+  userAgent: String?            // User-Agent 원문
+  loggedInAt: Instant           // 로그인 시각
+  // 로그인 수단 컬럼을 두지 않는다 — 계정당 수단이 하나라 user.provider 와 항상 같다
+  // 결과 컬럼을 두지 않는다 — 성공만 기록한다
+
 TripShare                       // trip.visibility=GROUP 일 때만 사용
   id: Long (PK)
   trip: Trip (FK)
@@ -314,6 +335,13 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   끝난 것이 아니다 (§4.8).
 - `Tag` 는 이름 중복 없이 재사용되며, 존재하지 않는 태그명이 등록 요청에 포함되면 서버가 생성한다.
 
+**로그인 이력**
+
+- 테이블명은 `login_history` 다.
+- `ipAddress` 는 필수이며 45자 이하다 (IPv6 표기 최대 길이).
+- `userAgent` 는 선택이며 512자 이하다. 넘는 값은 저장 전에 자른다 (§2.1).
+- 조회는 항상 본인 것을 최신순으로 읽으므로 `login_history(user_id, logged_in_at DESC)` 인덱스를 둔다.
+
 ### 3.2 삭제 정책 (soft delete)
 `Trip` 과 `TripRecord` 는 물리 삭제하지 않고 `deletedAt` 에 삭제 시각을 기록한다. 통계·이력
 보존과 오삭제 복구를 위해서다.
@@ -343,6 +371,10 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   문법이 갈리고 마이그레이션 도구가 없다 (§8.1).
 - **`InviteHistory` 는 지우지 않는다.** soft delete 대상도 아니다. 보관 기간을 두지 않으며,
   사용자 탈퇴 시의 처리는 탈퇴 자체와 함께 범위 밖이다 (공통 명세 §3.1).
+- **`LoginHistory` 는 `loggedInAt` 이 보관 기간(공통 명세 §3.10)을 넘긴 행을 물리 삭제한다.**
+  soft delete 대상이 아니다 — 보관 기간이 끝난 개인정보를 지운 것으로 표시만 해 두는 것은
+  지우지 않은 것과 같다. 삭제는 배치가 맡으며 아직 없다 (§8.1). 조회 API 는 보관 기간으로
+  거르지 않는다 — 기간 판정을 두 곳에 두지 않는다.
 - 그룹 삭제 시 그 그룹의 `GroupMember`, `GroupInvite`, `TripShare` 행을 함께 지운다.
   이때 **대기 중이던 초대는 `GROUP_DELETED` 로 이력에 남긴다** — 받은 사람 쪽에서 보면
   초대가 이유 없이 사라지는 일이라 그 이유를 남겨 둘 자리가 필요하다.
@@ -382,6 +414,7 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 | 기록 목록 (`/api/records`) | 10 |
 | 장소 검색 (`/api/places/search`) | 5 |
 | 초대 목록 (`/api/invites`, `/api/groups/{id}/invites`) | 10 |
+| 로그인 이력 (`/api/auth/me/login-history`) | 10 |
 
 - **요청에 `size` 를 담아도 무시한다.** 응답의 `size` 는 서버가 적용한 크기를 알려주는 값이다.
 - `page` 가 음수면 `0` 으로 보고, 범위를 넘는 `page` 는 오류가 아니라 **빈 `content`** 다.
@@ -397,7 +430,26 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 | GET | `/oauth2/authorization/naver` | 네이버 로그인 시작 (리다이렉트). **현재 비활성** (§2.1) | - |
 | GET | `/api/auth/session` | 클라이언트 부팅용 세션 상태 조회. `{ authenticated, csrfToken }` 을 반환하며 비로그인도 `200` (§7) | - |
 | GET | `/api/auth/me` | 현재 로그인 사용자 정보 조회. 비로그인 시 `401` | 선택 |
+| GET | `/api/auth/me/login-history?page=` | **내 로그인 이력** (§2.1) | 필요 |
 | POST | `/api/auth/logout` | 로그아웃, 세션 무효화 | 필요 |
+
+- **로그인 이력은 경로에 사용자 id 를 받지 않는다.** 대상은 언제나 세션의 사용자이므로 남의
+  이력을 지목할 방법 자체가 없다. 정렬은 `loggedInAt DESC` 다.
+
+**GET `/api/auth/me/login-history` 응답 예시**
+```json
+{
+  "content": [
+    {
+      "id": 120,
+      "loggedInAt": "2026-10-09T09:12:00Z",
+      "ipAddress": "203.0.113.7",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ..."
+    }
+  ],
+  "page": 0, "size": 10, "totalElements": 1, "totalPages": 1
+}
+```
 
 ### 4.3 여행
 
@@ -1050,6 +1102,8 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
     - 구조가 바뀔 때마다 DB 재생성이 필요하다.
 
   **운영 데이터가 생기기 전에** 도입해야 한다.
+- **로그인 이력의 보관 기간 정리 배치를 만든다** (§3.2). 보관 기간이 지난 행을 지우는 배치가 없어서
+  지금은 행이 계속 쌓인다. 스케줄러를 처음 들이는 작업이다.
 - **태그 API(`/api/tags`)는 구현되어 있으나 호출하는 화면이 없다.** 현재 등록 요청은 항상 빈
   태그 목록으로 들어온다 (frontend §10).
 
