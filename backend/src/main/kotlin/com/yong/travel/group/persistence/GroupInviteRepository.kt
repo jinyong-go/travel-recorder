@@ -13,7 +13,7 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
     /**
      * 소유자가 보는 대기 초대 목록.
      *
-     * 정원 판정이 수락 시점이라 정원을 넘겨 초대할 수 있어 건수 상한이 없다. 그래서 페이지로 끊는다 (명세 §4.8).
+     * 정원 판정이 수락 시점이라 정원을 넘겨 초대할 수 있어 건수 상한이 없다. 그래서 페이지로 끊는다.
      *
      * 받는 사람·보낸 사람을 fetch join 한다. 받는 사람은 행마다 달라, 빠뜨리면 행마다 사용자 조회가
      * 따로 나간다. 그룹은 호출부가 권한 확인 때 이미 읽어 두므로 조인하지 않는다.
@@ -32,7 +32,7 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
     fun findByGroupIdOrderByCreatedAtAsc(@Param("groupId") groupId: Long, pageable: Pageable): Page<GroupInviteEntity>
 
     /**
-     * 받은 초대 목록. 나를 초대할 수 있는 그룹 수에 제한이 없어 역시 페이지로 끊는다 (명세 §4.8).
+     * 받은 초대 목록. 나를 초대할 수 있는 그룹 수에 제한이 없어 역시 페이지로 끊는다.
      *
      * 그룹·보낸 사람은 행마다 다르고 받는 사람(나)도 응답 변환에서 읽으므로 셋 다 fetch join 한다.
      */
@@ -56,7 +56,7 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
      * 내가 보낸 대기 초대를 그룹을 가로질러 모은다.
      *
      * 그룹을 조인해 소유자로 거르는 것과 결과가 같지만(소유자는 바뀌지 않는다) 조인 없이 인덱스
-     * 하나로 끝나고, 남이 보낸 초대가 섞일 수 없어 인가가 조건 자체로 보장된다 (명세 §4.8).
+     * 하나로 끝나고, 남이 보낸 초대가 섞일 수 없어 인가가 조건 자체로 보장된다.
      * 아래 fetch join 은 결과를 거르지 않고 응답에 쓸 그룹·사람을 함께 읽기 위한 것이라 이 판단과 무관하다.
      *
      * 그룹·받는 사람은 행마다 다르고 보낸 사람(나)도 응답 변환에서 읽으므로 셋 다 fetch join 한다.

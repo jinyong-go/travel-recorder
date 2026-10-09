@@ -30,7 +30,7 @@ class GroupEntity(
     @Column(nullable = false, length = 30)
     var name: String,
 
-    /** 어떤 사람들을 모아 둔 목록인지 적어 두는 설명. 소유자와 멤버 모두에게 보인다 (공통 명세 §3.6). */
+    /** 어떤 사람들을 모아 둔 목록인지 적어 두는 설명. 소유자와 멤버 모두에게 보인다. */
     @Column(length = 200)
     var memo: String? = null,
 ) {

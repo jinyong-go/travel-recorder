@@ -20,18 +20,18 @@ import java.time.Instant
  *
  * 대기 중인 초대에 상태 컬럼을 달지 않고 별도 테이블로 옮기는 이유는
  * `unique(group_id, invitee_id)` 때문이다 — 끝난 초대가 그 자리에 남아 있으면 같은 상대를
- * 다시 초대할 수 없다 (명세 §3.2).
+ * 다시 초대할 수 없다.
  *
  * 다른 엔티티와 달리 필드를 `val` 로 둔다. 수정 진입점을 만들지 않는 것이 이 테이블의 요점이다.
  */
 @Entity
 @Table(name = "invite_history")
 class InviteHistoryEntity(
-    /** 그룹이 지워져도 이력은 남아야 하므로 외래키를 걸지 않는다 (명세 §3.1). */
+    /** 그룹이 지워져도 이력은 남아야 하므로 외래키를 걸지 않는다. */
     @Column(nullable = false)
     val groupId: Long,
 
-    /** 삭제된 그룹도 이름을 답할 수 있게 끝난 시점의 값을 복사해 둔다 (공통 명세 §3.7, §3.8). */
+    /** 삭제된 그룹도 이름을 답할 수 있게 끝난 시점의 값을 복사해 둔다. */
     @Column(nullable = false, length = 30)
     val groupName: String,
 
@@ -63,7 +63,7 @@ class InviteHistoryEntity(
         /**
          * 끝난 초대를 이력으로 옮긴다.
          *
-         * 기록 지점이 넷이라(수락·거절·취소·그룹 삭제, 명세 §3.1) 만드는 방법을 한 곳에 모은다.
+         * 기록 지점이 넷이라(수락·거절·취소·그룹 삭제) 만드는 방법을 한 곳에 모은다.
          * 한 곳만 빠뜨려도 이력이 조용히 비고, 그런 누락은 조회 시점에 드러나지 않는다.
          */
         fun from(invite: GroupInviteEntity, outcome: InviteOutcome) = InviteHistoryEntity(

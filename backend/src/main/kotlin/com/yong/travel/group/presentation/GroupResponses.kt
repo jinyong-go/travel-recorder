@@ -76,7 +76,7 @@ data class GroupResponse(
     }
 }
 
-/** 받은 초대에 담기는 그룹 정보. 수락 전에는 멤버 목록도 공유된 기록도 보이지 않는다 (공통 명세 §3.7). */
+/** 받은 초대에 담기는 그룹 정보. 수락 전에는 멤버 목록도 공유된 기록도 보이지 않는다. */
 data class GroupBriefResponse(
     val id: Long,
     val name: String,
@@ -90,7 +90,7 @@ data class GroupBriefResponse(
  * 소유자가 보는 대기 중인 초대.
  *
  * 소유자가 직접 입력한 이메일이라도 응답으로 되돌려주지 않는다. 누구에게 보냈는지는 이름과
- * 프로필 사진으로 구분되며, 이메일은 본인 조회 외의 어떤 응답에도 담지 않는다 (공통 명세 §3.1, §3.7).
+ * 프로필 사진으로 구분되며, 이메일은 본인 조회 외의 어떤 응답에도 담지 않는다.
  */
 data class PendingInviteResponse(
     val id: Long,
@@ -106,7 +106,7 @@ data class PendingInviteResponse(
     }
 }
 
-/** 받은 초대. 그룹명·초대자·보낸 시각까지가 수락 전에 보여 줄 수 있는 전부다 (공통 명세 §3.7). */
+/** 받은 초대. 그룹명·초대자·보낸 시각까지가 수락 전에 보여 줄 수 있는 전부다. */
 data class ReceivedInviteResponse(
     val id: Long,
     val group: GroupBriefResponse,
@@ -145,7 +145,7 @@ data class SentInviteResponse(
     }
 }
 
-/** 끝난 시점의 그룹. 삭제되었으면 화면이 링크를 걸지 않도록 `deleted` 로 알린다 (공통 명세 §3.7). */
+/** 끝난 시점의 그룹. 삭제되었으면 화면이 링크를 걸지 않도록 `deleted` 로 알린다. */
 data class HistoryGroupResponse(
     val id: Long,
     val name: String,
@@ -158,7 +158,7 @@ data class InviteHistoryResponse(
     val group: HistoryGroupResponse,
     /**
      * 상대. `role` 에 따라 초대받았던 사람이 되기도, 보냈던 사람이 되기도 한다.
-     * 관점마다 필드 이름을 달리하면 화면이 같은 목록을 두 가지 모양으로 다뤄야 한다 (명세 §4.8).
+     * 관점마다 필드 이름을 달리하면 화면이 같은 목록을 두 가지 모양으로 다뤄야 한다.
      */
     val counterpart: UserResponse,
     val outcome: InviteOutcome,

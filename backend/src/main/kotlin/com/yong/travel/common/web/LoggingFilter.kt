@@ -16,7 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter
  * 시작과 끝을 두 줄로 나누지 않는다. 두 줄이 되면 동시 요청에서 짝을 잇기 위해 요청 id 와
  * MDC 가 필요해지는데, 끝난 뒤 한 줄이면 같은 정보를 id 없이 담는다.
  *
- * **본문·헤더는 남기지 않는다.** 초대 요청 본문에 이메일이(공통 명세 §3.1), 응답 헤더에
+ * **본문·헤더는 남기지 않는다.** 초대 요청 본문에 이메일이, 응답 헤더에
  * 세션 쿠키가 실린다. 명세가 응답에서 가리기로 한 값이 로그로 새는 경로를 만들지 않는다.
  * 본문 버퍼링(`ContentCaching*Wrapper`)이 사진 업로드에서 요청당 수십 MB를 힙에 올리는
  * 문제도 함께 피한다.
@@ -65,9 +65,9 @@ class LoggingFilter : OncePerRequestFilter() {
      * 쿼리 문자열. 두 가지를 걸러 낸다.
      *
      * OAuth 경로의 쿼리는 통째로 생략한다 — 인가 코드와 state 뿐이라 개발 중에도 볼 값어치가
-     * 없고, 남으면 그 자체가 자격 증명이다 (명세 §2.1).
+     * 없고, 남으면 그 자체가 자격 증명이다.
      *
-     * 기준 좌표는 값만 가린다. 계산에만 쓰고 사용자와 묶어 저장하지 않기로 한 값이라(명세 §7)
+     * 기준 좌표는 값만 가린다. 계산에만 쓰고 사용자와 묶어 저장하지 않기로 한 값이라
      * 로그가 대신 보관하게 두지 않는다. 좌표가 함께 왔는지는 디버깅에 필요하므로 이름은 남긴다.
      */
     private fun queryOf(request: HttpServletRequest): String {
@@ -82,7 +82,7 @@ class LoggingFilter : OncePerRequestFilter() {
     }
 
     private companion object {
-        /** 값을 가릴 쿼리 파라미터 — 요청자의 기준 위치다 (명세 §7). */
+        /** 값을 가릴 쿼리 파라미터 — 요청자의 기준 위치다. */
         val MASKED_PARAMS = setOf("lat", "lng")
     }
 }

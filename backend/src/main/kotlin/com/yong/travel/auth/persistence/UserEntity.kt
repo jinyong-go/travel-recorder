@@ -13,7 +13,7 @@ import java.time.Instant
 
 /**
  * 동일인 판정은 `provider + providerId` 로 한다. 이메일은 초대 대상을 지정하는 유일한 열쇠라
- * (공통 명세 §3.7) 계정마다 하나여야 하므로 유니크 제약을 함께 건다.
+ * 계정마다 하나여야 하므로 유니크 제약을 함께 건다.
  */
 @Entity
 @Table(
@@ -52,5 +52,5 @@ class UserEntity(
         protected set
 }
 
-/** 엔티티 → 본인 정보 도메인 값. 이메일이 함께 담기는 유일한 변환이다 (공통 명세 §3.1). */
+/** 엔티티 → 본인 정보 도메인 값. 이메일이 함께 담기는 유일한 변환이다. */
 fun UserEntity.toProfile(): MyProfile = MyProfile(requireNotNull(id), name, email, profileImageUrl)

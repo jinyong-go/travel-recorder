@@ -26,9 +26,9 @@ import org.springframework.transaction.annotation.Transactional
 
 /**
  * 멤버 추가의 유일한 경로. 초대는 받은 사람의 계정에 쌓이고, 수락·거절·철회 어느 쪽으로 끝나든
- * 행을 지우면서 이력을 남긴다 (공통 명세 §3.7).
+ * 행을 지우면서 이력을 남긴다.
  *
- * 초대는 당사자만 본다. 보낸 소유자와 받은 사람이 아니면 없는 초대와 같은 응답이어야 한다 (명세 §2.2.2).
+ * 초대는 당사자만 본다. 보낸 소유자와 받은 사람이 아니면 없는 초대와 같은 응답이어야 한다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -51,18 +51,18 @@ class InviteService(
     /**
      * 이메일 완전 일치로 찾은 가입자에게 초대를 보낸다. 이미 대기 중인 초대가 있으면 새로 만들지 않는다.
      *
-     * 정원(§3.6)은 여기서 보지 않는다. 대기 중인 초대는 자리를 차지하지 않으므로 정원을 넘겨 보낼 수 있고,
-     * 판정은 수락 시점에만 한다 (공통 명세 §3.7).
+     * 정원은 여기서 보지 않는다. 대기 중인 초대는 자리를 차지하지 않으므로 정원을 넘겨 보낼 수 있고,
+     * 판정은 수락 시점에만 한다.
      */
     @Transactional
     fun invite(groupId: Long, ownerId: Long, email: String): InviteResult {
         val group = findGroup(groupId)
         requireOwner(group, ownerId)
 
-        // 가입 여부를 숨기지 않는다. 소유자가 오타를 알아차릴 유일한 수단이며, 그 대가는 공통 명세 §7.2에 한계로 적혀 있다.
+        // 가입 여부를 숨기지 않는다. 소유자가 오타를 알아차릴 유일한 수단이며, 이메일로 가입 여부를 떠볼 수 있다는 한계를 감수한다.
         val invitee = userRepository.findByEmailIgnoreCase(email.trim())
             ?: run {
-                // 이메일 자체는 남기지 않는다. 응답에서 가리는 값을 로그가 대신 보관하지 않는다 (공통 명세 §3.1).
+                // 이메일 자체는 남기지 않는다. 응답에서 가리는 값을 로그가 대신 보관하지 않는다.
                 log.debug("초대 실패 groupId={} ownerId={} 사유=가입되지_않은_이메일", groupId, ownerId)
                 throw ApiException(ErrorCode.USER_NOT_FOUND)
             }
@@ -90,7 +90,7 @@ class InviteService(
         val invite = findInvite(inviteId)
         // 보낸 소유자가 아니면 그 초대의 존재도 드러내지 않는다. 경로의 그룹과 어긋나는 id 도 같은 응답이다.
         if (invite.group.id != groupId || invite.group.owner.id != ownerId) {
-            // 당사자가 아니면 없는 초대와 같은 응답이라(명세 §2.2.2), 막힌 이유는 이 로그에만 남는다.
+            // 당사자가 아니면 없는 초대와 같은 응답이라, 막힌 이유는 이 로그에만 남는다.
             log.debug("초대 철회 차단 inviteId={} 요청groupId={} ownerId={}", inviteId, groupId, ownerId)
             throw ApiException(ErrorCode.INVITE_NOT_FOUND)
         }
@@ -101,7 +101,7 @@ class InviteService(
     fun listReceived(userId: Long, pageable: Pageable): Page<GroupInvite> =
         inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, pageable).map { it.toDomain() }
 
-    /** 내가 보낸 대기 초대. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다 (명세 §4.8). */
+    /** 내가 보낸 대기 초대. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다. */
     fun listSent(userId: Long, pageable: Pageable): Page<GroupInvite> =
         inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, pageable).map { it.toDomain() }
 
@@ -131,17 +131,17 @@ class InviteService(
      * 초대를 수락해 그룹 멤버가 된다.
      *
      * 정원이 차 있으면 거부하되 **초대 행은 지우지 않는다.** 자리가 난 뒤 같은 초대로 다시 수락할 수
-     * 있어야 하기 때문이다 (공통 명세 §3.7).
+     * 있어야 하기 때문이다.
      */
     @Transactional
     fun accept(inviteId: Long, userId: Long) {
         val invite = requireReceivedInvite(inviteId, userId)
         val groupId = requireNotNull(invite.group.id)
 
-        // 정원 검사와 멤버 입력 사이에 다른 수락이 끼어들지 못하도록 그룹 행을 잠그고 읽는다 (명세 §4.8).
+        // 정원 검사와 멤버 입력 사이에 다른 수락이 끼어들지 못하도록 그룹 행을 잠그고 읽는다.
         val group = groupRepository.findByIdForUpdate(groupId) ?: throw ApiException(ErrorCode.INVITE_NOT_FOUND)
         if (groupMemberRepository.countByGroupId(groupId) >= GroupEntity.MEMBER_LIMIT) {
-            // 초대 행은 남는다. 자리가 나면 같은 초대로 다시 수락한다 (공통 명세 §3.7).
+            // 초대 행은 남는다. 자리가 나면 같은 초대로 다시 수락한다.
             log.debug("초대 수락 거부 inviteId={} groupId={} userId={} 사유=정원초과", inviteId, groupId, userId)
             throw ApiException(ErrorCode.GROUP_MEMBER_LIMIT_EXCEEDED)
         }
@@ -153,7 +153,7 @@ class InviteService(
     /**
      * 초대 거절.
      *
-     * 거절은 이력에 남고 **보낸 사람도 본다** (공통 명세 §3.7). 감춰도 보낸 목록에서 항목이
+     * 거절은 이력에 남고 **보낸 사람도 본다**. 감춰도 보낸 목록에서 항목이
      * 사라진 것으로 추론되므로, 절반만 가린 이력을 만들지 않는다. 거절한 상대를 다시 초대하는
      * 것은 그대로 허용된다 — 대기 초대 행이 사라져 유니크 제약이 비기 때문이다.
      */
@@ -166,7 +166,7 @@ class InviteService(
      * 초대를 끝낸다 — 이력을 남기고 대기 행을 지운다.
      *
      * 초대 행을 지우는 경로를 이 하나로 모은다. 지우기만 하고 이력을 빠뜨린 경로가 생기면
-     * 이력이 조용히 비고, 그 누락은 조회 시점에 드러나지 않는다 (명세 §3.1).
+     * 이력이 조용히 비고, 그 누락은 조회 시점에 드러나지 않는다.
      */
     private fun resolve(invite: GroupInviteEntity, outcome: InviteOutcome) {
         historyRepository.save(InviteHistoryEntity.from(invite, outcome))
@@ -193,7 +193,7 @@ class InviteService(
         inviteRepository.findById(inviteId)
             .orElseThrow { ApiException(ErrorCode.INVITE_NOT_FOUND) }
 
-    /** 받은 본인이 아니면 없는 초대와 구분되지 않아야 한다 (명세 §2.2.2). */
+    /** 받은 본인이 아니면 없는 초대와 구분되지 않아야 한다. */
     private fun requireReceivedInvite(inviteId: Long, userId: Long): GroupInviteEntity {
         val invite = findInvite(inviteId)
         if (invite.invitee.id != userId) {
@@ -215,7 +215,7 @@ class InviteService(
     /** 상대는 관점에 따라 갈린다 — 받은 이력이면 보냈던 사람, 보낸 이력이면 초대받았던 사람이다. */
     private fun InviteHistoryEntity.toDomain(role: InviteHistoryRole, groupAlive: Boolean) = InviteHistoryEntry(
         id = requireNotNull(id),
-        // 그룹명은 이력에 저장된 스냅샷이다. 그룹이 지워져도 이름이 남아야 하기 때문이다 (명세 §3.1).
+        // 그룹명은 이력에 저장된 스냅샷이다. 그룹이 지워져도 이름이 남아야 하기 때문이다.
         group = GroupRef(id = groupId, name = groupName),
         groupDeleted = !groupAlive,
         counterpart = when (role) {

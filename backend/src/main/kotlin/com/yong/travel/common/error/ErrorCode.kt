@@ -16,7 +16,7 @@ enum class ErrorCode(val status: HttpStatus, val defaultMessage: String) {
 
     /**
      * 그룹은 존재를 숨기지 않는다. 멤버가 아니라서 막힌 경우는 `FORBIDDEN` 이고 이 코드는
-     * 그룹이 실제로 없을 때만 쓴다 (명세 §2.2.2). 단 여행 공유 요청에 담긴 접근 불가 그룹 id 는
+     * 그룹이 실제로 없을 때만 쓴다. 단 여행 공유 요청에 담긴 접근 불가 그룹 id 는
      * 예외로 이 코드다 — 그 경로는 남의 그룹 id 를 훑을 수 있다.
      */
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 그룹입니다."),
@@ -24,7 +24,7 @@ enum class ErrorCode(val status: HttpStatus, val defaultMessage: String) {
     /** 없는 초대와 "당사자가 아닌 초대" 가 같은 코드·같은 문구를 쓴다. 보낸 소유자와 받은 사람 외에는 존재도 드러나지 않아야 한다. */
     INVITE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 초대입니다."),
 
-    /** 초대 대상 이메일의 가입자가 없는 경우. 가입 여부를 숨기지 않는 것은 의도된 선택이다 (공통 명세 §3.7, §7.2). */
+    /** 초대 대상 이메일의 가입자가 없는 경우. 가입 여부를 숨기지 않는 것은 의도된 선택이다. */
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "가입되지 않은 이메일입니다."),
 
     NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 주소를 찾을 수 없습니다."),

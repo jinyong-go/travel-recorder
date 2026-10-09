@@ -13,7 +13,7 @@ interface GroupRepository : JpaRepository<GroupEntity, Long> {
      * 정원 검사와 멤버 입력을 한 트랜잭션에 묶기 위해 그룹 행을 잠그고 읽는다.
      *
      * 정원을 강제하는 DB 제약이 없어 애플리케이션 검사가 유일한 관문인데, 검사와 입력 사이에
-     * 다른 수락이 끼어들면 6명짜리 그룹이 만들어진다 (명세 §4.8).
+     * 다른 수락이 끼어들면 6명짜리 그룹이 만들어진다.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select g from GroupEntity g where g.id = :id")

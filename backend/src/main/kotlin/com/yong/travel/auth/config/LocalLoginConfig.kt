@@ -15,12 +15,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 
 /**
- * 네이버 OAuth 가 준비되기 전까지 쓰는 임시 인메모리 로그인 구성 (명세 §2.1).
+ * 네이버 OAuth 가 준비되기 전까지 쓰는 임시 인메모리 로그인 구성.
  *
  * **`local`·`dev` 프로파일에서만 등록한다.** 비밀번호가 코드에 박힌 고정 계정이라
  * 운영 환경에 열려서는 안 된다. prod 에는 이 구성이 없으므로 로그인 수단 자체가 없다.
  *
- * OAuth 복구 시에는 이 파일과 `LocalLoginController` 를 들어내면 된다 (명세 §8.1).
+ * OAuth 복구 시에는 이 파일과 `LocalLoginController` 를 들어내면 된다.
  */
 @Configuration
 @Profile("local", "dev")
@@ -28,7 +28,7 @@ class LocalLoginConfig {
 
     /**
      * 고정 계정 목록. 그룹 공유와 초대를 실제로 주고받아 보려면 계정이 여럿이어야 해서 셋을 둔다.
-     * 이메일은 초대 대상을 지정하는 열쇠다 (명세 §4.8).
+     * 이메일은 초대 대상을 지정하는 열쇠다.
      */
     private data class LocalAccount(
         val username: String,
@@ -53,7 +53,7 @@ class LocalLoginConfig {
     /**
      * 기동 시 고정 계정을 `users` 에 upsert 한다.
      *
-     * 로그인 시점에 만들지 않는 이유는 초대 때문이다 — 초대는 이메일로 상대를 찾으므로(명세 §4.8),
+     * 로그인 시점에 만들지 않는 이유는 초대 때문이다 — 초대는 이메일로 상대를 찾으므로,
      * 상대가 한 번도 로그인하지 않았어도 행이 있어야 초대를 보낼 수 있다.
      */
     @Bean

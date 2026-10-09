@@ -12,7 +12,7 @@ class WebConfig(
     @Value("\${app.cors.allowed-origins}") private val allowedOrigins: List<String>,
 ) : WebMvcConfigurer {
 
-    /** `scope=mine` 처럼 명세가 규정한 소문자 열거형 값을 받기 위한 변환기 (§4.1). */
+    /** `scope=mine` 처럼 명세가 규정한 소문자 열거형 값을 받기 위한 변환기. */
     override fun addFormatters(registry: FormatterRegistry) {
         registry.addConverterFactory(EnumParamConverterFactory)
     }

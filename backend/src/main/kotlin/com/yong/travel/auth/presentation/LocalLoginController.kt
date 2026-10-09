@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 /**
- * 네이버 OAuth 가 준비되기 전까지 쓰는 임시 로그인 API (명세 §2.1).
+ * 네이버 OAuth 가 준비되기 전까지 쓰는 임시 로그인 API.
  *
  * OAuth 복구 시 이 파일과 `LocalLoginConfig` 를 들어내면 된다. 요청 DTO 를 `*Requests.kt` 가
  * 아니라 여기에 둔 것도 같은 이유다 — 임시 코드를 한 파일에 모아 둔다.
@@ -38,7 +38,7 @@ class LocalLoginController(
     private val csrfTokenRepository: CsrfTokenRepository,
 ) {
 
-    /** 세션 쿠키 인증이므로(공통 명세 §6.1) 인증 결과를 세션에 직접 넣는다. */
+    /** 세션 쿠키 인증이므로 인증 결과를 세션에 직접 넣는다. */
     private val securityContextRepository = HttpSessionSecurityContextRepository()
 
     data class LocalLoginRequest(
@@ -69,7 +69,7 @@ class LocalLoginController(
             throw ApiException(ErrorCode.UNAUTHENTICATED, "아이디 또는 비밀번호가 올바르지 않습니다.")
         }
 
-        // 인증 전후로 같은 세션 id·CSRF 토큰이 이어지지 않게 바꾼다 (공통 명세 §6.1).
+        // 인증 전후로 같은 세션 id·CSRF 토큰이 이어지지 않게 바꾼다.
         // Spring Security 의 세션 고정 방지와 토큰 교체는 자체 로그인 필터에서만 돌고, 컨트롤러가
         // 직접 인증하는 이 경로는 건너뛴다. 새 토큰은 다음 세션 조회에서 발급된다.
         httpRequest.getSession(false)?.let { httpRequest.changeSessionId() }

@@ -26,7 +26,7 @@ data class GroupUpdateRequest(
     @field:Size(max = 30)
     val name: String,
 
-    /** **이름과 함께 덮어쓴다.** 빼고 보내면 기존 메모가 지워진다 (명세 §4.7). */
+    /** **이름과 함께 덮어쓴다.** 빼고 보내면 기존 메모가 지워진다. */
     @field:Size(max = 200)
     val memo: String? = null,
 )

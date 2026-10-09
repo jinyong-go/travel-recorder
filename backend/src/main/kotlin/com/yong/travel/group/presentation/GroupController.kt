@@ -44,7 +44,7 @@ class GroupController(
         return GroupResponse.from(groupService.create(userId, request.name, request.memo), userId)
     }
 
-    /** 그룹 상세 (멤버 목록 포함). 멤버가 아니면 403, 없는 그룹이면 404 다 (명세 §2.2.2). */
+    /** 그룹 상세 (멤버 목록 포함). 멤버가 아니면 403, 없는 그룹이면 404 다. */
     @GetMapping("/{groupId}")
     fun get(
         @PathVariable groupId: Long,
@@ -113,7 +113,7 @@ class GroupController(
     /**
      * 이메일로 초대 보내기.
      *
-     * 대기 중인 초대가 이미 있으면 새로 만들지 않고 `200` 으로 기존 초대를 돌려준다 (명세 §4.8).
+     * 대기 중인 초대가 이미 있으면 새로 만들지 않고 `200` 으로 기존 초대를 돌려준다.
      */
     @PostMapping("/{groupId}/invites")
     fun invite(

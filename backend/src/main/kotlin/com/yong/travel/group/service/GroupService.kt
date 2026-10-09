@@ -51,7 +51,7 @@ class GroupService(
      * @param userId 조회를 요청한 사용자 id
      * @return 멤버 명단까지 담긴 그룹 상세
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
-     * @throws ApiException `FORBIDDEN` — 그룹은 있으나 요청자가 멤버가 아닐 때 (명세 §2.2.2)
+     * @throws ApiException `FORBIDDEN` — 그룹은 있으나 요청자가 멤버가 아닐 때
      */
     fun get(groupId: Long, userId: Long): Group {
         val group = findGroup(groupId)
@@ -93,7 +93,7 @@ class GroupService(
      * @param groupId 수정할 그룹 id
      * @param userId 수정을 요청한 사용자 id
      * @param name 새 이름
-     * @param memo 새 메모. **이름과 함께 덮어쓰므로 `null` 이면 기존 메모가 지워진다** (명세 §4.7)
+     * @param memo 새 메모. **이름과 함께 덮어쓰므로 `null` 이면 기존 메모가 지워진다**
      * @return 수정된 그룹 상세
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
@@ -112,7 +112,7 @@ class GroupService(
      * 그룹과 그에 딸린 멤버·대기 초대·공유 관계를 모두 지운다.
      *
      * 이 그룹으로만 공유되던 여행은 결과적으로 비공개가 되며, 여행과 하위 기록 자체는 삭제되지 않는다.
-     * 대기 중이던 초대는 받는 쪽에서 이유 없이 사라지는 일이라 `GROUP_DELETED` 이력으로 남긴다 (명세 §3.2).
+     * 대기 중이던 초대는 받는 쪽에서 이유 없이 사라지는 일이라 `GROUP_DELETED` 이력으로 남긴다.
      *
      * @param groupId 삭제할 그룹 id
      * @param userId 삭제를 요청한 사용자 id
@@ -169,7 +169,7 @@ class GroupService(
      * @param userId 나가려는 사용자 id
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자이거나(나가면 주인 없는 그룹이 남아 삭제만 가능),
-     *         그룹은 있으나 멤버가 아닐 때 (명세 §2.2.2)
+     *         그룹은 있으나 멤버가 아닐 때
      */
     @Transactional
     fun leave(groupId: Long, userId: Long) {
@@ -267,7 +267,7 @@ class GroupService(
         )
     }
 
-    // 멤버 행 → 도메인. 이름과 프로필 사진까지만 담는다 (공통 명세 §3.1).
+    // 멤버 행 → 도메인. 이름과 프로필 사진까지만 담는다.
     private fun GroupMemberEntity.toDomain() = Group.Member(
         user = User(requireNotNull(user.id), user.name, user.profileImageUrl),
         joinedAt = joinedAt,
