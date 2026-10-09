@@ -3,8 +3,11 @@ package com.yong.travel.group.service
 import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
+import com.yong.travel.common.domain.PageResult
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
+import com.yong.travel.common.persistence.listPageRequest
+import com.yong.travel.common.persistence.toPageResult
 import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.group.persistence.GroupInviteEntity
 import com.yong.travel.group.persistence.GroupMemberEntity
@@ -19,8 +22,6 @@ import com.yong.travel.group.persistence.GroupMemberRepository
 import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.group.persistence.InviteHistoryRepository
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -43,9 +44,10 @@ class GroupInviteService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /** 그 그룹의 대기 중인 초대 목록. 소유자만 볼 수 있다. */
-    fun listPending(groupId: Long, ownerId: Long, pageable: Pageable): Page<GroupInvite> {
+    fun listPending(groupId: Long, ownerId: Long, page: Int): PageResult<GroupInvite> {
         requireOwner(findGroup(groupId), ownerId)
-        return inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, pageable).map { it.toDomain() }
+        return inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, listPageRequest(page))
+            .toPageResult().map { it.toDomain() }
     }
 
     /**
@@ -101,12 +103,14 @@ class GroupInviteService(
     }
 
     /** 내 앞으로 온 대기 초대. */
-    fun listReceived(userId: Long, pageable: Pageable): Page<GroupInvite> =
-        inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, pageable).map { it.toDomain() }
+    fun listReceived(userId: Long, page: Int): PageResult<GroupInvite> =
+        inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, listPageRequest(page))
+            .toPageResult().map { it.toDomain() }
 
     /** 내가 보낸 대기 초대. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다. */
-    fun listSent(userId: Long, pageable: Pageable): Page<GroupInvite> =
-        inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, pageable).map { it.toDomain() }
+    fun listSent(userId: Long, page: Int): PageResult<GroupInvite> =
+        inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, listPageRequest(page))
+            .toPageResult().map { it.toDomain() }
 
     /**
      * 끝난 초대 이력. `role` 이 관점을 고르며, 어느 쪽이든 본인이 당사자인 것만 조회된다.
@@ -117,17 +121,18 @@ class GroupInviteService(
     fun listHistory(
         userId: Long,
         role: InviteHistoryRole,
-        pageable: Pageable,
-    ): Page<InviteHistoryEntry> {
-        val page = when (role) {
-            InviteHistoryRole.RECEIVED -> historyRepository.findByInviteeIdOrderByResolvedAtDesc(userId, pageable)
-            InviteHistoryRole.SENT -> historyRepository.findByInvitedByIdOrderByResolvedAtDesc(userId, pageable)
+        page: Int,
+    ): PageResult<InviteHistoryEntry> {
+        val pageRequest = listPageRequest(page)
+        val entries = when (role) {
+            InviteHistoryRole.RECEIVED -> historyRepository.findByInviteeIdOrderByResolvedAtDesc(userId, pageRequest)
+            InviteHistoryRole.SENT -> historyRepository.findByInvitedByIdOrderByResolvedAtDesc(userId, pageRequest)
         }
-        val aliveGroupIds = groupRepository.findAllById(page.content.map { it.groupId })
+        val aliveGroupIds = groupRepository.findAllById(entries.content.map { it.groupId })
             .mapNotNull { it.id }
             .toSet()
-        log.debug("초대 이력 role={} userId={} 건수={}", role, userId, page.totalElements)
-        return page.map { it.toDomain(role, it.groupId in aliveGroupIds) }
+        log.debug("초대 이력 role={} userId={} 건수={}", role, userId, entries.totalElements)
+        return entries.toPageResult().map { it.toDomain(role, it.groupId in aliveGroupIds) }
     }
 
     /**

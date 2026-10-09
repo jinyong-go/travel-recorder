@@ -1,8 +1,11 @@
 package com.yong.travel.record.service
 
 import com.yong.travel.auth.domain.User
+import com.yong.travel.common.domain.PageResult
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
+import com.yong.travel.common.persistence.listPageRequest
+import com.yong.travel.common.persistence.toPageResult
 import com.yong.travel.common.util.haversineKm
 import com.yong.travel.common.util.roundTo2Decimals
 import com.yong.travel.group.service.GroupService
@@ -24,10 +27,6 @@ import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.service.TripService
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
@@ -50,8 +49,8 @@ class TripRecordService(
     fun list(
         query: RecordListQuery,
         userId: Long?,
-        pageable: Pageable,
-    ): Page<TripRecord> {
+        page: Int,
+    ): PageResult<TripRecord> {
         // tripId 로 좁히면 그 여행을 볼 수 있는지 먼저 판정한다. scope 유무와 무관하게 못 보면
         // 없는 여행과 같은 404 다.
         query.tripId?.let { tripService.requireViewable(it, userId) }
@@ -79,28 +78,24 @@ class TripRecordService(
             RecordSort.OLDEST -> Sort.by(Sort.Direction.ASC, "createdAt")
             RecordSort.RATING -> Sort.by(Sort.Direction.DESC, "rating").and(Sort.by(Sort.Direction.DESC, "createdAt"))
         }
-        val page = recordRepository.findAll(spec, PageRequest.of(pageable.pageNumber, pageable.pageSize, sort))
+        val found = recordRepository.findAll(spec, listPageRequest(page, sort))
 
         // 사진은 항목마다 묻지 않고 페이지 전체를 한 번에 읽는다.
-        val recordIds = page.content.mapNotNull { it.id }
+        val recordIds = found.content.mapNotNull { it.id }
         val photos = photosOf(recordIds)
         val tags = tagsOf(recordIds)
-        val records = page.content.map {
+        val records = found.toPageResult().map {
             val recordId = requireNotNull(it.id)
             it.toDomain(photos[recordId].orEmpty(), tags[recordId].orEmpty(), distanceOf(it, query.lat, query.lng))
-        }
-        val sorted = if (query.sort == RecordSort.DISTANCE) {
-            records.sortedBy { it.distanceKm ?: Double.MAX_VALUE }
-        } else {
-            records
         }
 
         // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 기준 좌표는 남기지 않는다.
         log.debug(
             "기록 목록 scope={} tripId={} userId={} 건수={}",
-            query.scope, query.tripId, userId, page.totalElements,
+            query.scope, query.tripId, userId, found.totalElements,
         )
-        return PageImpl(sorted, page.pageable, page.totalElements)
+        if (query.sort != RecordSort.DISTANCE) return records
+        return records.copy(content = records.content.sortedBy { it.distanceKm ?: Double.MAX_VALUE })
     }
 
     /** 볼 권한이 없으면 없는 기록과 똑같이 RECORD_NOT_FOUND 로 응답한다 (존재 은닉). */

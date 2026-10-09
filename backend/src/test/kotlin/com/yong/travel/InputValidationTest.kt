@@ -20,7 +20,6 @@ import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.data.domain.PageRequest
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.web.servlet.MockMvc
@@ -101,7 +100,7 @@ class InputValidationTest {
         newRecord(owner, tripId, emptyList(), name = "axb 카페")
 
         fun names(keyword: String) = recordService
-            .list(RecordListQuery(scope = null, tripId = tripId, keyword = keyword), owner, PageRequest.of(0, 10))
+            .list(RecordListQuery(scope = null, tripId = tripId, keyword = keyword), owner, 0)
             .content.map { it.name }
 
         assertEquals(listOf("할인 50% 매장"), names("%"))

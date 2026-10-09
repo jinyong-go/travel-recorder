@@ -4,7 +4,6 @@ import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.presentation.PageResponse
-import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.record.domain.Category
 import com.yong.travel.record.domain.RecordListQuery
@@ -62,7 +61,7 @@ class TripRecordController(
         val records = recordService.list(
             RecordListQuery(scope, tripId, category, tag, keyword, sort, lat, lng),
             userId,
-            listPageRequest(page),
+            page,
         )
         return PageResponse.of(records).map { TripRecordSummaryResponse.from(it, userId) }
     }

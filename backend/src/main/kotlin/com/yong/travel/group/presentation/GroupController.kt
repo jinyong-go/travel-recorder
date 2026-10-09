@@ -2,7 +2,6 @@ package com.yong.travel.group.presentation
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.presentation.PageResponse
-import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.group.service.GroupInviteService
 import com.yong.travel.group.service.GroupService
@@ -107,7 +106,7 @@ class GroupController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<PendingInviteResponse> =
-        PageResponse.of(groupInviteService.listPending(groupId, requireLogin(principal), listPageRequest(page)))
+        PageResponse.of(groupInviteService.listPending(groupId, requireLogin(principal), page))
             .map { PendingInviteResponse.from(it) }
 
     /** 이메일로 초대 보내기. 대기 중인 초대가 이미 있으면 `ALREADY_INVITED` 로 거부된다. */

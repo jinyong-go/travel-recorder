@@ -3,7 +3,6 @@ package com.yong.travel
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
-import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.service.GroupService
@@ -27,7 +26,6 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.domain.PageRequest
 import org.springframework.transaction.annotation.Transactional
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -444,7 +442,7 @@ class RecordVisibilityTest {
     }
 
     /** 목록 검증은 첫 페이지만 본다. 페이지 크기는 서버가 정하므로 테스트도 그 값을 그대로 쓴다. */
-    private fun firstPage() = PageRequest.of(0, DEFAULT_PAGE_SIZE)
+    private fun firstPage() = 0
 
     private fun list(
         scope: RecordScope?,
@@ -452,7 +450,7 @@ class RecordVisibilityTest {
         tripId: Long? = null,
         sort: RecordSort = RecordSort.RECENT,
     ): List<Long> =
-        recordService.list(RecordListQuery(scope, tripId, sort = sort), userId, PageRequest.of(0, 10)).content.map { it.id }
+        recordService.list(RecordListQuery(scope, tripId, sort = sort), userId, 0).content.map { it.id }
 
     /** 이메일은 계정마다 고유해야 한다 (users.email 유니크). 초대 대상 조회에 쓰이는 값이라 필요하면 직접 지정한다. */
     private fun newUser(email: String = "tester-${System.nanoTime()}@example.com"): Long = requireNotNull(

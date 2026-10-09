@@ -197,7 +197,7 @@ class TripCoverTest {
         val fromList = tripService.list(
             com.yong.travel.trip.domain.TripListQuery(com.yong.travel.trip.domain.TripScope.PUBLIC),
             null,
-            org.springframework.data.domain.PageRequest.of(0, 10),
+            0,
         ).content.single { it.id == tripId }
         assertEquals(url, fromList.coverPhotoUrl)
         assertTrue(!url.isNullOrBlank())

@@ -94,8 +94,9 @@ backend/
 │     ├─ error/                    # ErrorCode, ApiException, GlobalExceptionHandler
 │     ├─ web/AuthSupport.kt        # 인증 주체 → User 변환 헬퍼 (컨트롤러가 아니라 web 유지)
 │     ├─ web/EnumParams.kt         # scope=mine 같은 소문자 enum 파라미터 변환
-│     ├─ web/PageSupport.kt        # 목록 페이지 크기(서버 고정) 처리
 │     ├─ util/GeoUtils.kt          # 하버사인 거리 계산
+│     ├─ domain/PageResult.kt      # 서비스가 돌려주는 목록 한 페이지 (Spring Data 비의존)
+│     ├─ persistence/PageSupport.kt  # 목록 페이지 크기(서버 고정), Page → PageResult 변환
 │     └─ presentation/PageResponse.kt  # 공통 페이지 응답
 ├─ src/main/resources/
 │  ├─ application.yml             # 공통 설정

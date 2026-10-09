@@ -4,7 +4,6 @@ import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.domain.InviteHistoryRole
 import com.yong.travel.group.service.GroupService
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.domain.PageRequest
 import org.springframework.transaction.annotation.Transactional
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -201,7 +199,7 @@ class InviteHistoryTest {
         ).id,
     )
 
-    private fun page() = PageRequest.of(0, DEFAULT_PAGE_SIZE)
+    private fun page() = 0
 
     private fun flush() {
         entityManager.flush()

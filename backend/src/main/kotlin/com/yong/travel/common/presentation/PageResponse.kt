@@ -1,6 +1,6 @@
 package com.yong.travel.common.presentation
 
-import org.springframework.data.domain.Page
+import com.yong.travel.common.domain.PageResult
 
 data class PageResponse<T>(
     val content: List<T>,
@@ -19,7 +19,7 @@ data class PageResponse<T>(
         PageResponse(content.map(transform), page, size, totalElements, totalPages)
 
     companion object {
-        fun <T : Any> of(page: Page<T>): PageResponse<T> =
-            PageResponse(page.content, page.number, page.size, page.totalElements, page.totalPages)
+        fun <T> of(result: PageResult<T>): PageResponse<T> =
+            PageResponse(result.content, result.page, result.size, result.totalElements, result.totalPages)
     }
 }

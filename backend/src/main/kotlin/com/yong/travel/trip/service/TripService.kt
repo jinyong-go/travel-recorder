@@ -2,8 +2,11 @@ package com.yong.travel.trip.service
 
 import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.persistence.UserRepository
+import com.yong.travel.common.domain.PageResult
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
+import com.yong.travel.common.persistence.listPageRequest
+import com.yong.travel.common.persistence.toPageResult
 import com.yong.travel.group.domain.GroupRef
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.photo.persistence.PhotoRepository
@@ -21,9 +24,6 @@ import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.persistence.TripShareRepository
 import com.yong.travel.trip.persistence.TripSpecifications
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -47,8 +47,8 @@ class TripService(
     fun list(
         query: TripListQuery,
         userId: Long?,
-        pageable: Pageable,
-    ): Page<Trip> {
+        page: Int,
+    ): PageResult<Trip> {
         val groupIds = groupService.groupIdsOf(userId)
         val spec = TripSpecifications.withScope(query.scope, userId, groupIds)
             .and(TripSpecifications.withKeyword(query.keyword))
@@ -59,14 +59,14 @@ class TripService(
             TripSort.START_DATE ->
                 Sort.by(Sort.Direction.DESC, "startDate").and(Sort.by(Sort.Direction.DESC, "createdAt"))
         }
-        val page = tripRepository.findAll(spec, PageRequest.of(pageable.pageNumber, pageable.pageSize, sort))
+        val trips = tripRepository.findAll(spec, listPageRequest(page, sort))
 
-        val counts = recordCounts(*page.content.mapNotNull { it.id }.toLongArray())
+        val counts = recordCounts(*trips.content.mapNotNull { it.id }.toLongArray())
         // 공유 그룹은 소유자 본인의 항목에만 필요하다. 그 여행들만 골라 한 번에 읽는다.
-        val shares = sharesOf(page.content.filter { userId != null && it.owner.id == userId })
+        val shares = sharesOf(trips.content.filter { userId != null && it.owner.id == userId })
         // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
-        log.debug("여행 목록 scope={} userId={} 건수={}", query.scope, userId, page.totalElements)
-        return page.map { it.toDomain(userId, counts[requireNotNull(it.id)] ?: 0L, shares) }
+        log.debug("여행 목록 scope={} userId={} 건수={}", query.scope, userId, trips.totalElements)
+        return trips.toPageResult().map { it.toDomain(userId, counts[requireNotNull(it.id)] ?: 0L, shares) }
     }
 
     /** 볼 권한이 없으면 없는 여행과 똑같이 TRIP_NOT_FOUND 로 응답한다 (존재 은닉). */

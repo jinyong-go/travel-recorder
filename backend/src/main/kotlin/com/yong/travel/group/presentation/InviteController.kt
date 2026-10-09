@@ -2,7 +2,6 @@ package com.yong.travel.group.presentation
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.presentation.PageResponse
-import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.group.domain.InviteHistoryRole
 import com.yong.travel.group.service.GroupInviteService
@@ -31,7 +30,7 @@ class InviteController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<ReceivedInviteResponse> =
-        PageResponse.of(groupInviteService.listReceived(requireLogin(principal), listPageRequest(page)))
+        PageResponse.of(groupInviteService.listReceived(requireLogin(principal), page))
             .map { ReceivedInviteResponse.from(it) }
 
     /** 내가 보낸 대기 초대 목록. 그룹을 가로질러 모은다. */
@@ -40,7 +39,7 @@ class InviteController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<SentInviteResponse> =
-        PageResponse.of(groupInviteService.listSent(requireLogin(principal), listPageRequest(page)))
+        PageResponse.of(groupInviteService.listSent(requireLogin(principal), page))
             .map { SentInviteResponse.from(it) }
 
     /**
@@ -54,7 +53,7 @@ class InviteController(
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<InviteHistoryResponse> =
-        PageResponse.of(groupInviteService.listHistory(requireLogin(principal), role, listPageRequest(page)))
+        PageResponse.of(groupInviteService.listHistory(requireLogin(principal), role, page))
             .map { InviteHistoryResponse.from(it) }
 
     /** 초대 수락 → 그룹 멤버가 된다. 정원이 차 있으면 409 이고 초대는 남는다. */

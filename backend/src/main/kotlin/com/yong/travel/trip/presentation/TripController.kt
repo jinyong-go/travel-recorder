@@ -2,7 +2,6 @@ package com.yong.travel.trip.presentation
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.presentation.PageResponse
-import com.yong.travel.common.web.listPageRequest
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.trip.domain.TripListQuery
 import com.yong.travel.trip.domain.TripScope
@@ -47,7 +46,7 @@ class TripController(
             TripScope.MINE, TripScope.SHARED -> requireLogin(principal)
             TripScope.PUBLIC -> principal?.userId
         }
-        val trips = tripService.list(TripListQuery(scope, keyword, sort), userId, listPageRequest(page))
+        val trips = tripService.list(TripListQuery(scope, keyword, sort), userId, page)
         return PageResponse.of(trips).map { TripSummaryResponse.from(it, userId) }
     }
 

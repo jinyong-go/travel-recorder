@@ -4,7 +4,6 @@ import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.common.web.DEFAULT_PAGE_SIZE
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.GroupInviteService
 import com.yong.travel.record.domain.Category
@@ -23,7 +22,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.domain.PageRequest
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -348,7 +346,7 @@ class TripVisibilityTest {
         assertEquals(tripId, tripService.get(tripId, member).id, "공유받은 사람은 그대로 볼 수 있다")
     }
 
-    private fun firstPage() = PageRequest.of(0, DEFAULT_PAGE_SIZE)
+    private fun firstPage() = 0
 
     private fun list(
         scope: TripScope,

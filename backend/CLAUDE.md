@@ -32,7 +32,7 @@ com.yong.travel
   ├─ photo    사진 (storage 하위에 저장소 구현체)
   ├─ search   장소 검색 (client 하위에 외부 API 호출)
   ├─ tag      태그
-  └─ common   config · presentation(PageResponse) · error · util(GeoUtils) · web(AuthSupport)
+  └─ common   config · domain(PageResult) · persistence(PageSupport) · presentation(PageResponse) · error · util(GeoUtils) · web(AuthSupport)
 ```
 
 - **도메인으로 먼저 나누고, 그 안에서 계층으로 나눈다.** 계층을 최상위에 두지 않는다.
@@ -100,9 +100,11 @@ com.yong.travel
 - 서비스끼리 주고받는 값은 예외다. `GroupService.requireAccessibleGroups` 와
   `TagService.findOrCreateAll` 은 엔티티를 반환한다 — 컨트롤러로 나가는 경계가 아니라
   다른 서비스가 연관을 걸 때 쓰기 때문이다.
-- 서비스는 목록을 Spring Data `Page<도메인 객체>` 로 돌려준다. 페이지 안에서 재정렬하거나 직접
-  자른 목록은 `PageImpl` 로 감싼다. 응답은 컨트롤러가 `PageResponse.of(page).map { XxxResponse.from(it) }`
-  로 만든다.
+- **목록 서비스는 페이지 번호(`page: Int`)를 받아 `PageResult<도메인 객체>` 를 돌려준다.**
+  Spring Data 의 `Page`·`Pageable` 은 서비스와 리포지토리 사이에서만 쓴다 — 컨트롤러는 이를
+  만들지도 받지도 않는다. 서비스는 `listPageRequest(page, sort)` 로 요청을 만들고, 조회 결과를
+  `toPageResult()` 로 바꾼다. 페이지 안에서 재정렬한 목록은 `copy(content = …)` 로 바꿔 담는다.
+  응답은 컨트롤러가 `PageResponse.of(result).map { XxxResponse.from(it) }` 로 만든다.
 
 ## 인가 — 가장 조심할 자리
 

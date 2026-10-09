@@ -149,7 +149,7 @@ SOLID는 **변경이 실제로 일어나는 곳**에 적용한다. 원칙을 지
  * 공개 범위 판정은 반드시 조회 쿼리 단계에서 수행한다. 전부 읽어 온 뒤 애플리케이션에서
  * 걸러내면 페이지 건수가 어긋나고, 누락되는 순간 곧바로 정보 유출이 된다.
  */
-fun findVisibleTrips(requester: User?, scope: Scope, pageable: Pageable): Page<Trip>
+fun findVisibleTrips(requester: User?, scope: Scope, page: Int): PageResult<Trip>
 ```
 
 ### 4.2 복잡하거나 중요한 로직에는 설명을 단다
