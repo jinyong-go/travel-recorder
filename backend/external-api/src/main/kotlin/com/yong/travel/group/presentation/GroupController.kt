@@ -53,15 +53,15 @@ class GroupController(
         return GroupResponse.from(groupService.get(groupId, userId), userId)
     }
 
-    /** 그룹 이름 변경. 소유자만 할 수 있다. */
+    /** 그룹 이름·메모 수정. 메모는 이름과 함께 덮어쓴다. 소유자만 할 수 있다. */
     @PutMapping("/{groupId}")
-    fun rename(
+    fun update(
         @PathVariable groupId: Long,
         @RequestBody @Valid request: GroupUpdateRequest,
         @AuthenticationPrincipal principal: LoginUser?,
     ): GroupResponse {
         val userId = requireLogin(principal)
-        return GroupResponse.from(groupService.rename(groupId, userId, request.name, request.memo), userId)
+        return GroupResponse.from(groupService.update(groupId, userId, request.name, request.memo), userId)
     }
 
     /** 그룹 삭제. 멤버·대기 초대·공유 관계가 함께 사라진다. */

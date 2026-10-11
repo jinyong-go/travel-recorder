@@ -99,7 +99,7 @@ class GroupService(
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
      */
     @Transactional
-    fun rename(groupId: Long, userId: Long, name: String, memo: String?): Group {
+    fun update(groupId: Long, userId: Long, name: String, memo: String?): Group {
         val group = findGroup(groupId)
         requireOwner(group, userId)
         group.name = name.trim()
@@ -222,7 +222,7 @@ class GroupService(
         groupRepository.findById(groupId)
             .orElseThrow { ApiException(ErrorCode.GROUP_NOT_FOUND) }
 
-    // 소유자만 통과시킨다. rename·delete·removeMember 가 같은 관문을 쓴다.
+    // 소유자만 통과시킨다. update·delete·removeMember 가 같은 관문을 쓴다.
     private fun requireOwner(group: GroupEntity, userId: Long) {
         if (group.owner.id != userId) {
             log.debug("그룹 소유자 아님 groupId={} userId={} ownerId={}", group.id, userId, group.owner.id)
