@@ -92,7 +92,7 @@ presentation → service → persistence
 ```
 external-api/
 ├─ src/main/kotlin/com/yong/travel/
-│  ├─ BackendApplication.kt        # 엔트리 포인트
+│  ├─ TravelRecordApplication.kt   # 엔트리 포인트
 │  ├─ auth/                        # 인증·사용자
 │  │  ├─ config/SecurityConfig.kt  # 시큐리티 필터체인, CSRF (oauth2Login 은 주석 처리)
 │  │  ├─ config/LocalLoginConfig.kt  # 임시 고정 계정 (local·dev 전용)
