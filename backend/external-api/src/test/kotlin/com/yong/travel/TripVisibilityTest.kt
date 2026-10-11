@@ -372,7 +372,7 @@ class TripVisibilityTest {
         val groupId = requireNotNull(groupService.create(ownerId, "가족", null).id)
         val memberEmail = requireNotNull(userRepository.findById(memberId).orElseThrow().email)
         val invite = groupInviteService.invite(groupId, ownerId, memberEmail)
-        groupInviteService.accept(invite.id, memberId)
+        groupInviteService.accept(invite.invite.id, memberId)
         flush()
         return groupId
     }

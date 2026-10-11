@@ -183,7 +183,7 @@ class InviteHistoryTest {
         groupInviteService.listHistory(userId, role, page()).content
 
     private fun invite(groupId: Long, ownerId: Long, email: String): Long =
-        groupInviteService.invite(groupId, ownerId, email).id
+        groupInviteService.invite(groupId, ownerId, email).invite.id
 
     private fun newGroup(ownerId: Long): Long =
         requireNotNull(groupService.create(ownerId, "가족", null).id)

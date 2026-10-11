@@ -109,15 +109,20 @@ class GroupController(
         PageResponse.of(groupInviteService.listPending(groupId, requireLogin(principal), page))
             .map { PendingInviteResponse.from(it) }
 
-    /** 이메일로 초대 보내기. 대기 중인 초대가 이미 있으면 `ALREADY_INVITED` 로 거부된다. */
+    /**
+     * 이메일로 초대 보내기.
+     *
+     * 대기 중인 초대가 이미 있으면 새로 만들지 않고 `200` 으로 기존 초대를 돌려준다.
+     */
     @PostMapping("/{groupId}/invites")
     fun invite(
         @PathVariable groupId: Long,
         @RequestBody @Valid request: InviteRequest,
         @AuthenticationPrincipal principal: LoginUser?,
     ): ResponseEntity<PendingInviteResponse> {
-        val invite = groupInviteService.invite(groupId, requireLogin(principal), request.email)
-        return ResponseEntity.status(HttpStatus.CREATED).body(PendingInviteResponse.from(invite))
+        val result = groupInviteService.invite(groupId, requireLogin(principal), request.email)
+        val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
+        return ResponseEntity.status(status).body(PendingInviteResponse.from(result.invite))
     }
 
     /** 대기 중인 초대 철회. 초대 행을 지운다. */
