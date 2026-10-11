@@ -1,7 +1,7 @@
 package com.yong.travel.group.service
 
-import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.persistence.UserRepository
+import com.yong.travel.auth.persistence.toUser
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.group.persistence.GroupEntity
@@ -269,7 +269,7 @@ class GroupService(
 
     // 멤버 행 → 도메인. 이름과 프로필 사진까지만 담는다.
     private fun GroupMemberEntity.toDomain() = Group.Member(
-        user = User(requireNotNull(user.id), user.name, user.profileImageUrl),
+        user = user.toUser(),
         joinedAt = joinedAt,
     )
 }

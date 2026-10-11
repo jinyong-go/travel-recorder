@@ -1,6 +1,6 @@
 package com.yong.travel.trip.record.service
 
-import com.yong.travel.auth.domain.User
+import com.yong.travel.auth.persistence.toUser
 import com.yong.travel.common.domain.PageResult
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
@@ -267,8 +267,6 @@ class TripRecordService(
 
     private fun TripEntity.toDomain() = TripRef(id = requireNotNull(id), name = name)
 
-    private fun TripEntity.toOwner() = User(requireNotNull(owner.id), owner.name, owner.profileImageUrl)
-
     /**
      * 기록 엔티티에 사진·거리를 붙여 [TripRecord] 로 만든다. 목록과 상세가 함께 쓴다.
      *
@@ -294,7 +292,7 @@ class TripRecordService(
             rating = rating,
             memo = memo,
             photos = photos.map { it.toDomain() },
-            author = trip.toOwner(),
+            author = trip.owner.toUser(),
             distanceKm = distanceKm,
             createdAt = createdAt,
             updatedAt = updatedAt,

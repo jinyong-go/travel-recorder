@@ -1,6 +1,7 @@
 package com.yong.travel.auth.persistence
 
 import com.yong.travel.auth.domain.MyProfile
+import com.yong.travel.auth.domain.User
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -54,3 +55,6 @@ class UserEntity(
 
 /** 엔티티 → 본인 정보 도메인 값. 이메일이 함께 담기는 유일한 변환이다. */
 fun UserEntity.toProfile(): MyProfile = MyProfile(requireNotNull(id), name, email, profileImageUrl)
+
+/** 엔티티 → 타인에게 보이는 사용자 값. 이메일을 담지 않으며, 본인 정보가 아닌 곳은 모두 이 변환을 쓴다. */
+fun UserEntity.toUser(): User = User(requireNotNull(id), name, profileImageUrl)

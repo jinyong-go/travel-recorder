@@ -1,7 +1,7 @@
 package com.yong.travel.trip.service
 
-import com.yong.travel.auth.domain.User
 import com.yong.travel.auth.persistence.UserRepository
+import com.yong.travel.auth.persistence.toUser
 import com.yong.travel.common.domain.PageResult
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
@@ -274,8 +274,6 @@ class TripService(
 
     private fun TripEntity.coverUrl(): String? = coverPhoto?.let { photoDatabaseService.urlOf(requireNotNull(it.id)) }
 
-    private fun TripEntity.toOwner() = User(requireNotNull(owner.id), owner.name, owner.profileImageUrl)
-
     /** 단건 응답. 기록 수와 (소유자라면) 공유 그룹을 이 여행 하나에 대해 읽어 [toDomain] 에 넘긴다. */
     private fun detailOf(trip: TripEntity, requesterId: Long?): Trip {
         val tripId = requireNotNull(trip.id)
@@ -307,7 +305,7 @@ class TripService(
             memo = memo,
             coverPhotoUrl = coverUrl(),
             recordCount = recordCount,
-            owner = toOwner(),
+            owner = owner.toUser(),
             visibility = if (mine) visibility else null,
             sharedGroups = if (mine && visibility == TripVisibility.GROUP) shares[tripId].orEmpty() else null,
             createdAt = createdAt,

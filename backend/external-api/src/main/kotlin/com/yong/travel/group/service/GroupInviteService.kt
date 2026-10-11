@@ -1,8 +1,7 @@
 package com.yong.travel.group.service
 
-import com.yong.travel.auth.domain.User
-import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
+import com.yong.travel.auth.persistence.toUser
 import com.yong.travel.common.domain.PageResult
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
@@ -212,8 +211,8 @@ class GroupInviteService(
     private fun GroupInviteEntity.toDomain() = GroupInvite(
         id = requireNotNull(id),
         group = group.toDomain(),
-        invitee = invitee.toDomain(),
-        invitedBy = invitedBy.toDomain(),
+        invitee = invitee.toUser(),
+        invitedBy = invitedBy.toUser(),
         createdAt = createdAt,
     )
 
@@ -224,15 +223,13 @@ class GroupInviteService(
         group = GroupRef(id = groupId, name = groupName),
         groupDeleted = !groupAlive,
         counterpart = when (role) {
-            InviteHistoryRole.RECEIVED -> invitedBy.toDomain()
-            InviteHistoryRole.SENT -> invitee.toDomain()
+            InviteHistoryRole.RECEIVED -> invitedBy.toUser()
+            InviteHistoryRole.SENT -> invitee.toUser()
         },
         outcome = outcome,
         invitedAt = invitedAt,
         resolvedAt = resolvedAt,
     )
-
-    private fun UserEntity.toDomain() = User(requireNotNull(id), name, profileImageUrl)
 
     private fun GroupEntity.toDomain() = GroupRef(requireNotNull(id), name)
 }
