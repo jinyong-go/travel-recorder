@@ -35,7 +35,11 @@ export default function InvitesPage({ tab }) {
   const navigate = useNavigate()
   const [inviteError, setInviteError] = useState('')
   const [rejecting, setRejecting] = useState(null)
-  const [busy, setBusy] = useState(false)
+  // 나가 있는 요청. 다른 버튼까지 막되 문구는 누른 버튼에서만 바꾼다.
+  // action: 'accept' | 'reject' | 'revoke', id: 처리 중인 초대의 id
+  const [processing, setProcessing] = useState(null)
+  const busy = processing !== null
+  const isProcessing = (action, id) => processing?.action === action && processing.id === id
 
   // 탭마다 담기는 항목과 동작이 달라 목록을 따로 부른다 (명세 §5.8.4).
   const loadPending = useCallback(
@@ -63,7 +67,7 @@ export default function InvitesPage({ tab }) {
   }
 
   const handleAccept = async (invite) => {
-    setBusy(true)
+    setProcessing({ action: 'accept', id: invite.id })
     setInviteError('')
     try {
       await api.acceptInvite(invite.id)
@@ -76,35 +80,35 @@ export default function InvitesPage({ tab }) {
         setInviteError('이미 처리되었거나 취소된 초대입니다.')
         pending.reload()
       }
-      setBusy(false)
+      setProcessing(null)
       return
     }
     await refreshAll()
-    setBusy(false)
+    setProcessing(null)
     navigate(`/groups/${invite.group.id}`)
   }
 
   const handleReject = async (invite) => {
-    setBusy(true)
+    setProcessing({ action: 'reject', id: invite.id })
     try {
       await api.rejectInvite(invite.id)
     } catch {
       setInviteError('이미 처리되었거나 취소된 초대입니다.')
     } finally {
       await refreshAll()
-      setBusy(false)
+      setProcessing(null)
     }
   }
 
   const handleRevoke = async (invite) => {
-    setBusy(true)
+    setProcessing({ action: 'revoke', id: invite.id })
     try {
       await api.revokeInvite(invite.group.id, invite.id)
     } catch {
       setInviteError('이미 처리되었거나 취소된 초대입니다.')
     } finally {
       await refreshAll()
-      setBusy(false)
+      setProcessing(null)
     }
   }
 
@@ -188,7 +192,7 @@ export default function InvitesPage({ tab }) {
                           disabled={busy}
                           onClick={() => handleAccept(invite)}
                         >
-                          수락
+                          {isProcessing('accept', invite.id) ? '수락하는 중…' : '수락'}
                         </button>
                         <button
                           type="button"
@@ -196,7 +200,8 @@ export default function InvitesPage({ tab }) {
                           disabled={busy}
                           onClick={() => setRejecting(invite)}
                         >
-                          거절
+                          {/* 확인 모달은 확정과 함께 닫히므로 진행 문구는 이 버튼에 보인다. */}
+                          {isProcessing('reject', invite.id) ? '거절하는 중…' : '거절'}
                         </button>
                       </div>
                     ) : (
@@ -206,7 +211,7 @@ export default function InvitesPage({ tab }) {
                         disabled={busy}
                         onClick={() => handleRevoke(invite)}
                       >
-                        초대 취소
+                        {isProcessing('revoke', invite.id) ? '취소하는 중…' : '초대 취소'}
                       </button>
                     )}
                   </li>

@@ -36,7 +36,11 @@ export default function GroupDetailPage() {
   const [email, setEmail] = useState('')
   const [inviteMessage, setInviteMessage] = useState(null)
   const [confirming, setConfirming] = useState(null)
-  const [busy, setBusy] = useState(false)
+  // 나가 있는 요청. 다른 버튼까지 막되 문구는 누른 버튼에서만 바꾼다.
+  // action: 'send' | 'revoke' | 'confirm', id: 취소하는 초대의 id
+  const [processing, setProcessing] = useState(null)
+  const busy = processing !== null
+  const isProcessing = (action, id) => processing?.action === action && processing.id === id
 
   const beginRequest = useLatestRequest()
 
@@ -102,7 +106,7 @@ export default function GroupDetailPage() {
       return
     }
 
-    setBusy(true)
+    setProcessing({ action: 'send' })
     try {
       const { status } = await api.sendInvite(group.id, trimmed)
       setEmail('')
@@ -116,12 +120,12 @@ export default function GroupDetailPage() {
       const code = err instanceof ApiError ? err.code : null
       setInviteMessage({ type: 'error', text: INVITE_ERROR[code] ?? '초대를 보내지 못했습니다.' })
     } finally {
-      setBusy(false)
+      setProcessing(null)
     }
   }
 
   const handleRevoke = async (inviteId) => {
-    setBusy(true)
+    setProcessing({ action: 'revoke', id: inviteId })
     try {
       await api.revokeInvite(group.id, inviteId)
     } catch {
@@ -129,12 +133,12 @@ export default function GroupDetailPage() {
       setInviteMessage({ type: 'error', text: '이미 처리되었거나 취소된 초대입니다.' })
     } finally {
       pending.reload()
-      setBusy(false)
+      setProcessing(null)
     }
   }
 
   const confirmAction = async () => {
-    setBusy(true)
+    setProcessing({ action: 'confirm' })
     try {
       if (confirming === 'delete') {
         await api.deleteGroup(group.id)
@@ -145,13 +149,13 @@ export default function GroupDetailPage() {
       }
     } catch {
       setInviteMessage({ type: 'error', text: '요청을 처리하지 못했습니다. 다시 시도해주세요.' })
-      setBusy(false)
+      setProcessing(null)
       setConfirming(null)
       return
     }
 
     setConfirming(null)
-    setBusy(false)
+    setProcessing(null)
     if (confirming === 'delete' || confirming === 'leave') {
       navigate('/groups')
       return
@@ -164,16 +168,19 @@ export default function GroupDetailPage() {
       title: '그룹을 삭제할까요?',
       desc: '이 그룹으로만 공유한 여행은 나만 보기 상태가 됩니다. 여행과 기록 자체는 삭제되지 않습니다.',
       ok: '삭제',
+      okBusy: '삭제하는 중…',
     },
     leave: {
       title: '그룹에서 나갈까요?',
       desc: '이 그룹으로 공유된 여행은 더 이상 보이지 않습니다.',
       ok: '나가기',
+      okBusy: '나가는 중…',
     },
     member: {
       title: '멤버를 제외할까요?',
       desc: '제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없습니다.',
       ok: '제외',
+      okBusy: '제외하는 중…',
     },
   }[typeof confirming === 'number' ? 'member' : confirming] ?? {}
 
@@ -264,7 +271,7 @@ export default function GroupDetailPage() {
                 />
                 <button type="submit" className="btn-primary" disabled={busy}>
                   <PlusIcon />
-                  {busy ? '보내는 중…' : '초대 보내기'}
+                  {isProcessing('send') ? '보내는 중…' : '초대 보내기'}
                 </button>
               </form>
               <p className="invite-note">
@@ -291,7 +298,7 @@ export default function GroupDetailPage() {
                         disabled={busy}
                         onClick={() => handleRevoke(item.id)}
                       >
-                        초대 취소
+                        {isProcessing('revoke', item.id) ? '취소하는 중…' : '초대 취소'}
                       </button>
                     </li>
                   ))}
@@ -335,7 +342,7 @@ export default function GroupDetailPage() {
                 취소
               </button>
               <button type="button" className="confirm-ok" disabled={busy} onClick={confirmAction}>
-                {confirmText.ok}
+                {isProcessing('confirm') ? confirmText.okBusy : confirmText.ok}
               </button>
             </div>
           </div>

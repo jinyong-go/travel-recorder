@@ -239,7 +239,8 @@ function TripDetailView({ trip, onTripChange }) {
                     disabled={!visibilityChanged || busy}
                     onClick={handleVisibilitySave}
                   >
-                    저장
+                    {/* 삭제 모달 뒤에 비치는 동안에는 바꾸지 않는다. 그때 나가 있는 요청은 삭제다. */}
+                    {busy && !confirmingDelete ? '저장하는 중…' : '저장'}
                   </button>
                   {savedMessage && <span className="detail-saved-msg">{savedMessage}</span>}
                 </div>
@@ -357,7 +358,7 @@ function TripDetailView({ trip, onTripChange }) {
                 취소
               </button>
               <button type="button" className="confirm-ok" disabled={busy} onClick={handleDelete}>
-                삭제
+                {busy ? '삭제하는 중…' : '삭제'}
               </button>
             </div>
           </div>

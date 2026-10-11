@@ -269,7 +269,7 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
                 취소
               </button>
               <button type="submit" className="btn-primary" disabled={submitting}>
-                {submitting ? '등록 중...' : '등록하기'}
+                {submitting ? '등록 중…' : '등록하기'}
               </button>
             </div>
           </form>

@@ -36,6 +36,7 @@ export default function TripRegisterPage() {
         <div className="trip-form-card">
           <TripForm
             submitLabel="여행 만들기"
+            submittingLabel="만드는 중…"
             showVisibility
             submitting={submitting}
             onSubmit={handleSubmit}

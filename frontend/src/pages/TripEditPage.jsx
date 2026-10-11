@@ -121,7 +121,7 @@ function TripEditView({ trip }) {
                 disabled={busy}
                 onClick={confirmEdit}
               >
-                수정
+                {busy ? '수정하는 중…' : '수정'}
               </button>
             </div>
           </div>

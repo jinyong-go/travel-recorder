@@ -437,7 +437,7 @@ export default function RecordDetailPage() {
                     취소
                   </button>
                   <button type="button" className="btn-primary" onClick={handleSave} disabled={busy}>
-                    저장
+                    {busy ? '저장하는 중…' : '저장'}
                   </button>
                 </div>
               </div>
@@ -588,7 +588,7 @@ export default function RecordDetailPage() {
                 취소
               </button>
               <button type="button" className="confirm-ok" onClick={handleDelete} disabled={busy}>
-                삭제
+                {busy ? '삭제하는 중…' : '삭제'}
               </button>
             </div>
           </div>
