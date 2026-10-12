@@ -46,6 +46,9 @@ src/
 ## 컴포넌트
 
 - **컴포넌트는 default export, 파일명은 PascalCase**다. 파일 하나에 컴포넌트 하나.
+  예외는 둘이다. 아이콘은 `components/icons.jsx` 한 파일에 named export 로 모은다. 화면이 조회
+  상태를 가리는 바깥 컴포넌트와 불러온 데이터를 그리는 안쪽 `XxxView` 로 나뉘면(`TripDetailPage`)
+  안쪽은 같은 파일에 둔다 — `key` 로 초안 상태를 새로 만드는 용도라 밖에서 쓰지 않는다.
 
   ```jsx
   export default function VisibilityBadge({ visibility, size = 'md' }) { ... }
@@ -69,15 +72,16 @@ src/
 - 컴포넌트 `Foo.jsx` 의 스타일은 **같은 위치의 `Foo.css`** 에 두고 컴포넌트가 직접 import 한다.
 - **범용 UI 요소**(헤더·모달 틀·버튼·링크·오류 문구·빈 상태·페이지네이션)는 `App.css` 에 둔다.
 - **두 화면 이상이 함께 쓰는 화면 틀만 `src/styles/`** 에 둔다 (입력 폼·상세 화면 틀·확인 모달·그룹 화면 틀).
+  공용 컴포넌트가 그 틀을 쓰면 컴포넌트가 import 한다 (`ConfirmDialog` → `confirmPanel.css`).
   쓰는 쪽이 각자 import 하며, **공유 CSS 를 먼저, 자기 CSS 를 나중에** 불러온다 — 전용 규칙이 공유
   규칙을 덮어야 하기 때문이다. 다른 화면의 CSS 파일을 가져다 쓰지 않는다 (예외: 별점 표시가 입력의
   `StarRatingInput.css` 를 함께 쓴다 — 쓰는 곳이 둘뿐이라 공통화 기준에 못 미친다).
 
   ```js
-  // TripDetailPage.jsx
+  // RecordDetailPage.jsx
+  import '../styles/form.css'
   import '../styles/detailPage.css'
-  import '../styles/confirmPanel.css'
-  import './TripDetailPage.css'   // 자기 CSS 는 마지막
+  import './RecordDetailPage.css'   // 자기 CSS 는 마지막
   ```
 - 클래스명은 kebab-case 이며 컴포넌트 이름을 접두사로 쓴다 (`visibility-badge-icon`).
 - **색상은 CSS 변수로만 쓴다.** 라이트/다크 두 모드가 같은 변수를 공유해야 하므로 값을
@@ -124,11 +128,11 @@ src/
 - 모든 요청은 `credentials: 'include'`, 쓰기 요청에는 `X-XSRF-TOKEN` 헤더를 붙인다.
 - **오류 분기는 HTTP 상태가 아니라 응답의 `code` 로** 한다. 백엔드가 모든 실패를 같은 스키마로
   내려준다. 문구는 `code` 별 표에서 고르고, 표에 없으면 기본 문구로 떨어진다.
+  **서버의 `message` 를 화면에 그대로 띄우지 않는다.** 표에서 고르는 일은 `errorMessage` 가 한다.
 
   ```js
   } catch (err) {
-    const code = err instanceof ApiError ? err.code : null
-    setInviteMessage({ type: 'error', text: INVITE_ERROR[code] ?? '초대를 보내지 못했습니다.' })
+    setInviteMessage({ type: 'error', text: errorMessage(err, INVITE_ERROR, '초대를 보내지 못했습니다.') })
   }
   ```
 - 네이버 지역 검색·OAuth 키를 브라우저에 두지 않는다. 장소 검색은 **반드시 백엔드를 경유**한다.

@@ -1,7 +1,12 @@
 import { useCallback, useState } from 'react'
 import { getStoredMapMode, hasNaverMapClientId, storeMapMode } from '../config/mapSettings.js'
 
-// 지도 표시 방식(새 창 / 페이지 내 임베드) 상태. 지도 버튼이 있는 화면에서 공용으로 쓴다.
+/**
+ * 지도 표시 방식(새 창 / 페이지 내 임베드). 선택은 로컬 저장소에 남는다.
+ *
+ * @returns `mapMode` `'link' | 'embed'`, `changeMapMode(key)`, `isEmbed` — Client ID 가 없으면
+ *   저장된 값과 무관하게 false 다
+ */
 export default function useMapMode() {
   const [mapMode, setMapMode] = useState(() => {
     const stored = getStoredMapMode()

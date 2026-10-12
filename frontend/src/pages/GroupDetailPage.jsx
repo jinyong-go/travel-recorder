@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError } from '../api/client.js'
+import { ApiError, errorMessage } from '../api/client.js'
 import * as api from '../api/groups.js'
 import useLatestRequest from '../hooks/useLatestRequest.js'
 import usePagedList from '../hooks/usePagedList.js'
-import ThemeSelector from '../components/ThemeSelector.jsx'
-import HeaderAuth from '../components/HeaderAuth.jsx'
-import { ArrowLeftIcon, MapPinIcon, PlusIcon } from '../components/icons.jsx'
+import { formatDate } from '../utils/date.js'
+import AppHeader from '../components/AppHeader.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import DetailStatus from '../components/DetailStatus.jsx'
+import { ArrowLeftIcon, PlusIcon } from '../components/icons.jsx'
 import '../styles/detailPage.css'
-import '../styles/confirmPanel.css'
 import '../styles/groupPages.css'
 import './GroupDetailPage.css'
-const formatDate = (iso) => new Date(iso).toLocaleDateString('ko-KR')
 
 const INVITE_ERROR = {
   USER_NOT_FOUND: '해당 이메일로 가입한 사용자가 없습니다. 주소를 다시 확인해주세요.',
@@ -20,11 +20,36 @@ const INVITE_ERROR = {
 
 /**
  * 조회 실패 안내. **부재와 권한 부족을 구분해 보여 준다** — 여행·기록과 달리 그룹은 존재를
- * 숨기지 않기 때문이다 (명세 §5.8.2, backend §2.2.2).
+ * 숨기지 않기 때문이다.
  */
 const LOAD_ERROR = {
   FORBIDDEN: { title: '이 그룹의 멤버만 볼 수 있습니다', desc: '초대를 받아 참여하면 볼 수 있어요.' },
   GROUP_NOT_FOUND: { title: '존재하지 않는 그룹입니다', desc: '주소를 다시 확인해주세요.' },
+}
+
+/**
+ * 그룹 하나의 멤버와 초대. 소유자는 초대·초대 취소·멤버 제외·그룹 삭제를, 멤버는 나가기만 할 수 있다.
+ */
+/** 확인 모달 문구. `confirming.type` 으로 고른다. */
+const CONFIRM_TEXT = {
+  delete: {
+    title: '그룹을 삭제할까요?',
+    desc: '이 그룹으로만 공유한 여행은 나만 보기 상태가 됩니다. 여행과 기록 자체는 삭제되지 않습니다.',
+    ok: '삭제',
+    okBusy: '삭제하는 중…',
+  },
+  leave: {
+    title: '그룹에서 나갈까요?',
+    desc: '이 그룹으로 공유된 여행은 더 이상 보이지 않습니다.',
+    ok: '나가기',
+    okBusy: '나가는 중…',
+  },
+  member: {
+    title: '멤버를 제외할까요?',
+    desc: '제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없습니다.',
+    ok: '제외',
+    okBusy: '제외하는 중…',
+  },
 }
 
 export default function GroupDetailPage() {
@@ -35,6 +60,7 @@ export default function GroupDetailPage() {
   const [loadError, setLoadError] = useState(null)
   const [email, setEmail] = useState('')
   const [inviteMessage, setInviteMessage] = useState(null)
+  // 확인 모달에 올라 있는 동작. { type: 'delete' | 'leave' } 또는 { type: 'member', memberId }
   const [confirming, setConfirming] = useState(null)
   // 나가 있는 요청. 다른 버튼까지 막되 문구는 누른 버튼에서만 바꾼다.
   // action: 'send' | 'revoke' | 'confirm', id: 취소하는 초대의 id
@@ -62,7 +88,7 @@ export default function GroupDetailPage() {
     loadGroup()
   }, [loadGroup])
 
-  // 대기 초대는 소유자만 본다. 비소유자에게는 호출 자체를 하지 않는다 (명세 §5.8.3).
+  // 대기 초대는 소유자만 본다. 비소유자에게는 호출 자체를 하지 않는다.
   const loadPending = useCallback((page) => api.fetchPendingInvites(groupId, page), [groupId])
   const pending = usePagedList(loadPending, Boolean(group?.isOwner))
 
@@ -71,28 +97,10 @@ export default function GroupDetailPage() {
       title: '그룹을 불러오지 못했습니다',
       desc: '잠시 후 다시 시도해주세요.',
     }
-    return (
-      <main className="detail-page">
-        <div className="detail-missing">
-          <h1>{title}</h1>
-          <p className="detail-missing-desc">{desc}</p>
-          <Link to="/groups" className="detail-missing-link">
-            <ArrowLeftIcon /> 그룹 목록으로
-          </Link>
-        </div>
-      </main>
-    )
+    return <DetailStatus title={title} desc={desc} backTo="/groups" backLabel="그룹 목록으로" />
   }
 
-  if (!group) {
-    return (
-      <main className="detail-page">
-        <div className="detail-missing">
-          <p className="detail-missing-desc">그룹을 불러오는 중이에요…</p>
-        </div>
-      </main>
-    )
-  }
+  if (!group) return <DetailStatus title="그룹을 불러오는 중이에요…" />
 
   const isOwner = group.isOwner
   const isFull = group.memberCount >= group.memberLimit
@@ -117,8 +125,7 @@ export default function GroupDetailPage() {
       })
       pending.reload()
     } catch (err) {
-      const code = err instanceof ApiError ? err.code : null
-      setInviteMessage({ type: 'error', text: INVITE_ERROR[code] ?? '초대를 보내지 못했습니다.' })
+      setInviteMessage({ type: 'error', text: errorMessage(err, INVITE_ERROR, '초대를 보내지 못했습니다.') })
     } finally {
       setProcessing(null)
     }
@@ -140,13 +147,9 @@ export default function GroupDetailPage() {
   const confirmAction = async () => {
     setProcessing({ action: 'confirm' })
     try {
-      if (confirming === 'delete') {
-        await api.deleteGroup(group.id)
-      } else if (confirming === 'leave') {
-        await api.leaveGroup(group.id)
-      } else if (typeof confirming === 'number') {
-        await api.removeMember(group.id, confirming)
-      }
+      if (confirming.type === 'delete') await api.deleteGroup(group.id)
+      else if (confirming.type === 'leave') await api.leaveGroup(group.id)
+      else await api.removeMember(group.id, confirming.memberId)
     } catch {
       setInviteMessage({ type: 'error', text: '요청을 처리하지 못했습니다. 다시 시도해주세요.' })
       setProcessing(null)
@@ -156,46 +159,19 @@ export default function GroupDetailPage() {
 
     setConfirming(null)
     setProcessing(null)
-    if (confirming === 'delete' || confirming === 'leave') {
+    // 그룹을 지웠거나 나갔으면 이 화면에 남을 수 없다.
+    if (confirming.type !== 'member') {
       navigate('/groups')
       return
     }
     loadGroup()
   }
 
-  const confirmText = {
-    delete: {
-      title: '그룹을 삭제할까요?',
-      desc: '이 그룹으로만 공유한 여행은 나만 보기 상태가 됩니다. 여행과 기록 자체는 삭제되지 않습니다.',
-      ok: '삭제',
-      okBusy: '삭제하는 중…',
-    },
-    leave: {
-      title: '그룹에서 나갈까요?',
-      desc: '이 그룹으로 공유된 여행은 더 이상 보이지 않습니다.',
-      ok: '나가기',
-      okBusy: '나가는 중…',
-    },
-    member: {
-      title: '멤버를 제외할까요?',
-      desc: '제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없습니다.',
-      ok: '제외',
-      okBusy: '제외하는 중…',
-    },
-  }[typeof confirming === 'number' ? 'member' : confirming] ?? {}
+  const confirmText = confirming && CONFIRM_TEXT[confirming.type]
 
   return (
     <>
-      <header className="app-header">
-        <Link to="/" className="app-title app-title-link">
-          <MapPinIcon className="app-title-icon" />
-          여행 지도 <span className="by-yong">by YONG</span>
-        </Link>
-        <div className="header-actions">
-          <ThemeSelector />
-          <HeaderAuth />
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="groups-page">
         <div className="groups-inner">
@@ -229,7 +205,7 @@ export default function GroupDetailPage() {
                       type="button"
                       className="member-remove"
                       disabled={busy}
-                      onClick={() => setConfirming(member.id)}
+                      onClick={() => setConfirming({ type: 'member', memberId: member.id })}
                     >
                       제외
                     </button>
@@ -243,8 +219,8 @@ export default function GroupDetailPage() {
             <section className="group-section">
               <h2 className="group-section-title">초대</h2>
               {/*
-                정원 판정은 수락 시점에 하므로 정원이 차도 초대를 막지 않는다 (공통 명세 §3.7).
-                막지 않는 대신, 보내기 전에 남은 자리와 그 결과를 먼저 알린다 (§5.8.3).
+                정원 판정은 수락 시점에 하므로 정원이 차도 초대를 막지 않는다.
+                막지 않는 대신, 보내기 전에 남은 자리와 그 결과를 먼저 알린다.
               */}
               <p className="invite-capacity">
                 소유자를 포함해 최대 {group.memberLimit}명까지 참여할 수 있어요. 지금{' '}
@@ -253,7 +229,7 @@ export default function GroupDetailPage() {
                 {isFull &&
                   ' — 정원이 차서 지금은 수락되지 않아요. 자리가 나면 같은 초대로 수락할 수 있어요.'}
               </p>
-              {/* 자동완성이나 검색 결과를 붙이지 않는다. 가입자를 훑을 수 있는 화면이 된다 (§3.7). */}
+              {/* 자동완성이나 검색 결과를 붙이지 않는다. 가입자를 훑을 수 있는 화면이 된다. */}
               <form className="invite-form" onSubmit={handleSend}>
                 <label className="sr-only" htmlFor="invite-email">
                   초대할 상대의 이메일
@@ -304,7 +280,7 @@ export default function GroupDetailPage() {
                   ))}
                 </ul>
               )}
-              {/* 정원과 무관하게 초대를 보낼 수 있어 건수가 쌓인다 (명세 §5.8.3). */}
+              {/* 정원과 무관하게 초대를 보낼 수 있어 건수가 쌓인다. */}
               {pending.hasNext && (
                 <button type="button" className="link-button" onClick={pending.loadMore}>
                   더 보기
@@ -318,7 +294,7 @@ export default function GroupDetailPage() {
               type="button"
               className="detail-delete-btn"
               disabled={busy}
-              onClick={() => setConfirming(isOwner ? 'delete' : 'leave')}
+              onClick={() => setConfirming({ type: isOwner ? 'delete' : 'leave' })}
             >
               {isOwner ? '그룹 삭제' : '그룹 나가기'}
             </button>
@@ -326,27 +302,17 @@ export default function GroupDetailPage() {
         </div>
       </main>
 
-      {confirming != null && (
-        <div className="modal-overlay" onClick={() => setConfirming(null)}>
-          <div
-            className="modal-panel confirm-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label={confirmText.title}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>{confirmText.title}</h2>
-            <p className="confirm-desc">{confirmText.desc}</p>
-            <div className="confirm-actions">
-              <button type="button" className="confirm-cancel" onClick={() => setConfirming(null)}>
-                취소
-              </button>
-              <button type="button" className="confirm-ok" disabled={busy} onClick={confirmAction}>
-                {isProcessing('confirm') ? confirmText.okBusy : confirmText.ok}
-              </button>
-            </div>
-          </div>
-        </div>
+      {confirmText && (
+        <ConfirmDialog
+          title={confirmText.title}
+          confirmLabel={confirmText.ok}
+          busyLabel={confirmText.okBusy}
+          busy={isProcessing('confirm')}
+          onConfirm={confirmAction}
+          onCancel={() => setConfirming(null)}
+        >
+          {confirmText.desc}
+        </ConfirmDialog>
       )}
     </>
   )

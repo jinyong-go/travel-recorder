@@ -2,7 +2,7 @@ import { API_BASE_URL } from '../config/api.js'
 
 /**
  * 백엔드 오류 응답(`{ code, message, status }`)을 그대로 실어 나르는 예외.
- * 화면은 문구가 아니라 `code` 로 분기한다 (공통 명세 §6.1).
+ * 화면은 문구가 아니라 `code` 로 분기한다.
  */
 export class ApiError extends Error {
   constructor({ code, message, status }) {
@@ -16,7 +16,7 @@ export class ApiError extends Error {
 const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 
 // 토큰 쿠키가 HttpOnly 라 읽을 수 없으므로 세션 조회로 받아 둔다. 메모리에만 둔다 —
-// localStorage 에 두면 탭·재방문을 넘어 남는다 (명세 §2.1).
+// localStorage 에 두면 탭·재방문을 넘어 남는다.
 let csrfToken = null
 
 /**
@@ -30,8 +30,8 @@ export async function fetchSession() {
 }
 
 /**
- * 들고 있는 CSRF 토큰을 버린다. 로그인·로그아웃 뒤 서버가 토큰을 비우므로 부른다
- * (공통 명세 §6.1). 다음 쓰기 요청 전에 세션 조회로 새 토큰을 받는다.
+ * 들고 있는 CSRF 토큰을 버린다. 로그인·로그아웃 뒤 서버가 토큰을 비우므로 부른다.
+ * 다음 쓰기 요청 전에 세션 조회로 새 토큰을 받는다.
  */
 export function clearCsrfToken() {
   csrfToken = null
@@ -53,10 +53,18 @@ export const fileUrl = (path) => (path ? `${API_BASE_URL}${path}` : null)
 export const apiPath = (strings, ...values) =>
   strings.reduce((path, part, i) => path + encodeURIComponent(values[i - 1]) + part)
 
+/**
+ * 실패한 요청을 화면 문구로 바꾼다. 서버 문구(`message`)는 쓰지 않고 `code` 로 `messages` 표에서
+ * 고른다 — 서버 문구는 화면의 맥락을 모르고, 400 은 필드 이름까지 담아 보낸다. 표에 없는 코드와
+ * `ApiError` 가 아닌 실패(네트워크·응답 파싱)는 `fallback` 이다.
+ */
+export const errorMessage = (err, messages, fallback) =>
+  (err instanceof ApiError ? messages[err.code] : undefined) ?? fallback
+
 let unauthorizedHandler = null
 
 /**
- * `401` 응답을 받았을 때 부를 함수를 등록한다. `AuthContext` 만 쓴다 (명세 §2.1).
+ * `401` 응답을 받았을 때 부를 함수를 등록한다. `AuthContext` 만 쓴다.
  * client 가 컨텍스트를 import 하면 순환 의존이 생기므로, 거꾸로 등록받는다.
  */
 export function setUnauthorizedHandler(handler) {
@@ -67,11 +75,11 @@ export function setUnauthorizedHandler(handler) {
  * 백엔드 호출 공통 래퍼. 응답 본문이 있으면 JSON 으로 돌려주고, 실패하면 `ApiError` 를 던진다.
  *
  * 세션 쿠키 인증이라 자격 증명을 항상 포함하고, 쓰기 요청에는 세션 조회로 받은 CSRF 토큰을
- * 헤더로 돌려보낸다. 헤더가 없으면 서버가 거부한다 (공통 명세 §6.1).
+ * 헤더로 돌려보낸다. 헤더가 없으면 서버가 거부한다.
  *
  * `withStatus` 를 주면 `{ data, status }` 로 감싸 돌려준다. 성공 응답끼리 상태 코드가 갈리는
  * 경우가 있어서다 — 초대 보내기는 새로 만들면 `201`, 이미 있던 초대를 그대로 돌려주면 `200`
- * 이고 본문은 같다 (backend §4.8). 기본값은 본문만 주는 쪽이다.
+ * 이고 본문은 같다. 기본값은 본문만 주는 쪽이다.
  */
 export async function apiFetch(path, { method = 'GET', body, withStatus = false } = {}) {
   const headers = {}

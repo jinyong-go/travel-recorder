@@ -1,19 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { SCOPES, categoryIcon } from '../data/records.js'
-import { TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
+import { PLACE_ICON } from '../data/records.js'
+import { SCOPES, TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
 import { fileUrl } from '../api/client.js'
 import { fetchTrips } from '../api/trips.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import useMapMode from '../hooks/useMapMode.js'
-import ThemeSelector from '../components/ThemeSelector.jsx'
-import HeaderAuth from '../components/HeaderAuth.jsx'
+import AppHeader from '../components/AppHeader.jsx'
 import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
-import { MapPinIcon, PlusIcon } from '../components/icons.jsx'
+import { PlusIcon } from '../components/icons.jsx'
 import './TripListPage.css'
 
+/**
+ * 여행 목록. 내 여행·공유받은 여행·둘러보기 세 범위를 탭으로 나누고, 범위·정렬·페이지는 주소 쿼리에
+ * 둔다. 비로그인은 둘러보기만 본다.
+ */
 export default function TripListPage() {
   const { isLoggedIn, status: authStatus } = useAuth()
   const { mapMode, changeMapMode } = useMapMode()
@@ -56,7 +59,7 @@ export default function TripListPage() {
     // 탭·정렬·페이지를 빠르게 바꿀 때 늦게 도착한 이전 응답이 화면을 덮지 않게 한다.
     let cancelled = false
     setListStatus(REQUEST_STATUS.LOADING)
-    // 화면의 페이지는 1부터, API 는 0부터 센다. 페이지 크기는 서버가 정한다 (backend §4.1).
+    // 화면의 페이지는 1부터, API 는 0부터 센다. 페이지 크기는 서버가 정한다.
     fetchTrips(scope, sortKey, page - 1)
       .then((next) => {
         if (cancelled) return
@@ -75,23 +78,71 @@ export default function TripListPage() {
   const pageItems = result?.content ?? []
   const totalCount = result?.totalElements ?? 0
   const totalPages = Math.max(1, result?.totalPages ?? 1)
-  const currentPage = page
 
   const emptyMessage = SCOPES.find((s) => s.key === scope)?.empty ?? '표시할 여행이 없습니다.'
 
+  /** 목록 자리. 읽는 중·실패·빈 목록이면 안내 한 줄이고, 아니면 여행 카드다. */
+  const renderTrips = () => {
+    if (listStatus === REQUEST_STATUS.LOADING) {
+      return <div className="empty-state">여행을 불러오는 중이에요…</div>
+    }
+    if (listStatus === REQUEST_STATUS.ERROR) {
+      return (
+        <div className="empty-state">
+          여행을 불러오지 못했습니다.{' '}
+          <button type="button" className="link-button" onClick={() => setReloadKey((k) => k + 1)}>
+            다시 시도
+          </button>
+        </div>
+      )
+    }
+    if (pageItems.length === 0) return <div className="empty-state">{emptyMessage}</div>
+    return (
+      <ul className="trip-grid">
+        {pageItems.map((trip) => {
+          const isOwner = trip.isOwner
+          return (
+            <li key={trip.id} className="trip-card">
+              <div className="trip-cover">
+                {trip.coverPhotoUrl ? (
+                  <img src={fileUrl(trip.coverPhotoUrl)} alt="" className="trip-cover-img" />
+                ) : (
+                  // 대표 사진이 없으면 플레이스홀더를 둔다. 무엇을 보여줄지는 화면이
+                  // 정한다 — 서버는 대체 이미지를 고르지 않는다.
+                  <span className="trip-cover-icon">{PLACE_ICON}</span>
+                )}
+              </div>
+              <div className="trip-body">
+                <h3 className="trip-name">
+                  {/* 카드 전체가 눌리도록 링크를 카드 위에 덮는다 (.trip-card-link::after) */}
+                  <Link to={`/trips/${trip.id}`} className="trip-card-link">
+                    {trip.name}
+                  </Link>
+                </h3>
+                <p className="trip-period">
+                  {tripPeriodLabel(trip)} ({tripDurationLabel(trip)}) · 인원{' '}
+                  {trip.headcount}명 · 여행지 {trip.recordCount}곳
+                </p>
+                <div className="trip-meta">
+                  <span className="trip-owner">by {isOwner ? '나' : trip.owner?.name}</span>
+                  {/* 누구에게 공유했는지는 소유자만 아는 정보다. */}
+                  {isOwner && <VisibilityBadge visibility={trip.visibility} size="sm" />}
+                </div>
+                {/* 긴 설명은 CSS 로 2줄에서 자른다. 자르는 위치는 글자 폭에 따라 달라져야 한다. */}
+                {trip.memo && <p className="trip-memo">{trip.memo}</p>}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    )
+  }
+
   return (
     <>
-      <header className="app-header">
-        <Link to="/" className="app-title app-title-link">
-          <MapPinIcon className="app-title-icon" />
-          여행 지도 <span className="by-yong">by YONG</span>
-        </Link>
-        <div className="header-actions">
-          <SettingsMenu mapMode={mapMode} onChangeMapMode={changeMapMode} />
-          <ThemeSelector />
-          <HeaderAuth />
-        </div>
-      </header>
+      <AppHeader>
+        <SettingsMenu mapMode={mapMode} onChangeMapMode={changeMapMode} />
+      </AppHeader>
 
       <main className="app-main">
         {/* 목록을 나누는 탭은 이 한 줄뿐이다. 세 범위는 성격이 달라 한 목록에 섞지 않는다. */}
@@ -130,64 +181,15 @@ export default function TripListPage() {
             </div>
           </div>
 
-          {listStatus === REQUEST_STATUS.LOADING ? (
-            <div className="empty-state">여행을 불러오는 중이에요…</div>
-          ) : listStatus === REQUEST_STATUS.ERROR ? (
-            <div className="empty-state">
-              여행을 불러오지 못했습니다.{' '}
-              <button type="button" className="link-button" onClick={() => setReloadKey((k) => k + 1)}>
-                다시 시도
-              </button>
-            </div>
-          ) : pageItems.length === 0 ? (
-            <div className="empty-state">{emptyMessage}</div>
-          ) : (
-            <ul className="trip-grid">
-              {pageItems.map((trip) => {
-                const isOwner = trip.isOwner
-                return (
-                  <li key={trip.id} className="trip-card">
-                    <div className="trip-cover">
-                      {trip.coverPhotoUrl ? (
-                        <img src={fileUrl(trip.coverPhotoUrl)} alt="" className="trip-cover-img" />
-                      ) : (
-                        // 대표 사진이 없으면 플레이스홀더를 둔다. 무엇을 보여줄지는 화면이
-                        // 정한다 — 서버는 대체 이미지를 고르지 않는다 (§4.4).
-                        <span className="trip-cover-icon">{categoryIcon()}</span>
-                      )}
-                    </div>
-                    <div className="trip-body">
-                      <h3 className="trip-name">
-                        {/* 카드 전체가 눌리도록 링크를 카드 위에 덮는다 (.trip-card-link::after) */}
-                        <Link to={`/trips/${trip.id}`} className="trip-card-link">
-                          {trip.name}
-                        </Link>
-                      </h3>
-                      <p className="trip-period">
-                        {tripPeriodLabel(trip)} ({tripDurationLabel(trip)}) · 인원{' '}
-                        {trip.headcount}명 · 여행지 {trip.recordCount}곳
-                      </p>
-                      <div className="trip-meta">
-                        <span className="trip-owner">by {isOwner ? '나' : trip.owner?.name}</span>
-                        {/* 누구에게 공유했는지는 소유자만 아는 정보다 (공통 명세 §3.5). */}
-                        {isOwner && <VisibilityBadge visibility={trip.visibility} size="sm" />}
-                      </div>
-                      {/* 긴 설명은 CSS 로 2줄에서 자른다. 자르는 위치는 글자 폭에 따라 달라져야 한다. */}
-                      {trip.memo && <p className="trip-memo">{trip.memo}</p>}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+          {renderTrips()}
 
           {totalPages > 1 && (
             <div className="pagination" role="navigation" aria-label="페이지 네비게이션">
               <button
                 type="button"
                 className="page-btn"
-                disabled={currentPage === 1}
-                onClick={() => updateParams({ page: Math.max(1, currentPage - 1) })}
+                disabled={page === 1}
+                onClick={() => updateParams({ page: Math.max(1, page - 1) })}
               >
                 이전
               </button>
@@ -195,7 +197,7 @@ export default function TripListPage() {
                 <button
                   key={n}
                   type="button"
-                  className={`page-btn${n === currentPage ? ' active' : ''}`}
+                  className={`page-btn${n === page ? ' active' : ''}`}
                   onClick={() => updateParams({ page: n })}
                 >
                   {n}
@@ -204,15 +206,15 @@ export default function TripListPage() {
               <button
                 type="button"
                 className="page-btn"
-                disabled={currentPage === totalPages}
-                onClick={() => updateParams({ page: Math.min(totalPages, currentPage + 1) })}
+                disabled={page === totalPages}
+                onClick={() => updateParams({ page: Math.min(totalPages, page + 1) })}
               >
                 다음
               </button>
             </div>
           )}
 
-          {/* 비로그인에게는 할 수 없는 일을 보여 주지 않는다 (명세 §2.2). */}
+          {/* 비로그인에게는 할 수 없는 일을 보여 주지 않는다. */}
           {isLoggedIn && (
             <Link to="/trips/new" className="register-fab">
               <PlusIcon />

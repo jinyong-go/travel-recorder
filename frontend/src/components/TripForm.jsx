@@ -1,10 +1,15 @@
 import { useState } from 'react'
-import { DEFAULT_VISIBILITY } from '../data/records.js'
+import { DEFAULT_VISIBILITY } from '../data/visibility.js'
 import { tripDurationLabel } from '../data/trips.js'
 import VisibilitySelect from './VisibilitySelect.jsx'
 import RequiredNote from './RequiredNote.jsx'
 import '../styles/form.css'
 import './TripForm.css'
+
+// 백엔드 요청 검증과 같은 값이다.
+const NAME_MAX_LENGTH = 50
+const MEMO_MAX_LENGTH = 1000
+
 const EMPTY = {
   name: '',
   startDate: '',
@@ -26,7 +31,7 @@ const EMPTY = {
  * 둘 생기는 것을 막고, 눌렸다는 것을 보이기 위해서다.
  *
  * `onSubmit` 에는 검증을 통과한 값만 넘어온다. 예산은 비어 있으면 `null` 이며 이는 "예산 정보
- * 없음"으로 `0` 과 구분된다 (공통 명세 §3.2).
+ * 없음"으로 `0` 과 구분된다.
  */
 export default function TripForm({
   initialTrip,
@@ -56,13 +61,13 @@ export default function TripForm({
   const validate = () => {
     const next = {}
     if (!name.trim()) next.name = '여행 이름을 입력해주세요.'
-    else if (name.trim().length > 50) next.name = '여행 이름은 50자 이하로 입력해주세요.'
+    else if (name.trim().length > NAME_MAX_LENGTH) next.name = `여행 이름은 ${NAME_MAX_LENGTH}자 이하로 입력해주세요.`
     if (!startDate) next.startDate = '시작일을 선택해주세요.'
     if (!endDate) next.endDate = '종료일을 선택해주세요.'
     else if (startDate && endDate < startDate) next.endDate = '종료일은 시작일 이후여야 합니다.'
     if (!headcount || Number(headcount) < 1) next.headcount = '인원은 1명 이상이어야 합니다.'
     if (budget !== '' && Number(budget) < 0) next.budget = '예산은 0 이상이어야 합니다.'
-    if (memo.length > 1000) next.memo = '여행 설명은 1000자 이하로 입력해주세요.'
+    if (memo.length > MEMO_MAX_LENGTH) next.memo = `여행 설명은 ${MEMO_MAX_LENGTH}자 이하로 입력해주세요.`
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -93,7 +98,7 @@ export default function TripForm({
           aria-required="true"
           type="text"
           value={name}
-          maxLength={50}
+          maxLength={NAME_MAX_LENGTH}
           placeholder="예: 제주 3박 4일"
           onChange={(e) => setName(e.target.value)}
         />
@@ -162,14 +167,14 @@ export default function TripForm({
           id="trip-memo"
           rows={4}
           value={memo}
-          maxLength={1000}
+          maxLength={MEMO_MAX_LENGTH}
           placeholder="어떤 여행이었는지 적어보세요"
           onChange={(e) => setMemo(e.target.value)}
         />
         {errors.memo && <p className="field-error">{errors.memo}</p>}
       </div>
 
-      {/* 공유하면 여행지와 예산이 함께 보인다는 경고는 선택지 설명이 맡는다 (명세 §5.7). */}
+      {/* 공유하면 여행지와 예산이 함께 보인다는 경고는 선택지 설명이 맡는다. */}
       {showVisibility && (
         <VisibilitySelect
           value={visibility}
@@ -180,7 +185,7 @@ export default function TripForm({
         />
       )}
 
-      {/* 대표 사진은 이 폼에 없다. 하위 기록의 사진 중에서 고르는 값이다 (공통 명세 §3.2). */}
+      {/* 대표 사진은 이 폼에 없다. 하위 기록의 사진 중에서 고르는 값이다. */}
 
       <div className="form-actions">
         <button type="button" className="btn-secondary" onClick={onCancel}>

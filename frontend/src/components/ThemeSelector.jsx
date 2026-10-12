@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { THEMES, applyTheme, getInitialTheme, storeTheme } from '../theme/themes.js'
+import { THEMES, applyTheme, getInitialTheme, storeTheme } from '../config/theme.js'
 import { MoonIcon, SunIcon } from './icons.jsx'
 import './ThemeSelector.css'
 

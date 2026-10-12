@@ -47,11 +47,16 @@ frontend/
 │  │  ├─ GroupDetailPage.jsx   # 그룹 상세 — 멤버·이메일 초대·삭제 (/groups/:groupId)
 │  │  ├─ InvitesPage.jsx       # 초대함 받은/보낸 탭 (/invites/received, /invites/sent)
 │  │  ├─ MyInfoPage.jsx        # 내 정보 (/me)
+│  │  ├─ LoginHistoryPage.jsx  # 내 로그인 이력 전체 (/me/login-history)
 │  │  └─ NotFoundPage.jsx      # 404 (그 외 모든 경로)
 │  │                           # /records, /records/register 로 들어온 요청은 /trips 로 보낸다
 │  ├─ components/
+│  │  ├─ AppHeader.jsx         # 공통 헤더 (로고·테마 토글·인증 영역, 랜딩·로그인 제외)
 │  │  ├─ HeaderAuth.jsx        # 헤더 인증 영역·계정 메뉴·받은 초대 배지
+│  │  ├─ ConfirmDialog.jsx     # 확인 모달 (삭제·나가기·수정 확인 등)
+│  │  ├─ DetailStatus.jsx      # 상세 화면의 불러오는 중·없음·실패 안내
 │  │  ├─ RequireAuth.jsx       # 로그인이 필요한 라우트 보호
+│  │  ├─ RecordForm.jsx        # 기록 입력 폼 (등록 모달·기록 수정 공용)
 │  │  ├─ RecordRegisterModal.jsx # 기록 등록 모달 (여행 상세에서 열림)
 │  │  ├─ PlaceSearchModal.jsx  # 장소 검색 모달 (목업 결과, 거리순 정렬)
 │  │  ├─ PlaceMapModal.jsx     # 지도 모달 (목록·상세 공용)
@@ -66,7 +71,8 @@ frontend/
 │  │  └─ icons.jsx             # 아이콘 컴포넌트
 │  ├─ api/
 │  │  ├─ client.js                     # 공통 fetch 래퍼·CSRF 토큰·파일 URL
-│  │  └─ trips.js · records.js · groups.js # 엔드포인트별 호출
+│  │  ├─ requestStatus.js              # 조회 진행 상태 값
+│  │  └─ auth.js · trips.js · records.js · groups.js # 엔드포인트별 호출
 │  ├─ context/AuthContext.jsx          # 로그인 상태 (유일한 전역 상태)
 │  ├─ hooks/
 │  │  ├─ useTrip.js                    # 여행 하나 조회 (여행 상세·기록 상세)
@@ -79,15 +85,19 @@ frontend/
 │  │  ├─ api.js                        # 백엔드 오리진·네이버 로그인 진입 URL(OAuth 복구 전까지 미사용)
 │  │  ├─ mapSettings.js                # 지도 표시 방식·지도 URL 생성
 │  │  ├─ uploadLimits.js               # 사진 용량·형식 제한 및 검증
-│  │  └─ referenceLocation.js          # 기준 위치 저장/조회, 기본값(서울역)
-│  ├─ data/                            # 화면 표기용 값·함수(records·trips)와 장소 검색 목업(placeSearchResults.js)
+│  │  ├─ referenceLocation.js          # 기준 위치 저장/조회, 기본값(서울역)
+│  │  └─ theme.js                      # 라이트/다크 테마 정의·적용·로컬 저장
+│  ├─ data/                            # 화면 표기용 값·함수(records·trips·visibility·loginHistory)와 장소 검색 목업(placeSearchResults.js)
 │  ├─ styles/                          # 두 화면 이상이 함께 쓰는 CSS
 │  │  ├─ form.css                      # 입력 폼
 │  │  ├─ detailPage.css                # 상세 화면 틀
 │  │  ├─ confirmPanel.css              # 확인 모달
 │  │  └─ groupPages.css                # 그룹 화면 틀
-│  ├─ theme/themes.js                  # 라이트/다크 테마 정의 및 로컬 저장
-│  └─ utils/geo.js                     # 하버사인 거리 계산
+│  └─ utils/
+│     ├─ date.js                       # 날짜·시각 표기 (브라우저 시간대)
+│     ├─ storage.js                    # 로컬 저장소 읽기·쓰기 (쓸 수 없는 환경은 무시)
+│     ├─ geo.js                        # 하버사인 거리 계산
+│     └─ userAgent.js                  # User-Agent 를 "Chrome · macOS" 로 줄여 쓰기
 ├─ index.html
 ├─ vite.config.js
 ├─ .oxlintrc.json
@@ -176,12 +186,12 @@ SPA 라우팅(`/trips/:tripId` 등)을 사용하므로, 서버에서 **알 수 �
 - 공유 그룹 (`/groups`, `/groups/:groupId`) — 그룹 생성, 받은 초대 수락·거절, 멤버 목록·제외·탈퇴, 이메일 초대 발송과 대기 초대 철회, 그룹 삭제
 - 초대함 (`/invites/received`, `/invites/sent`) — 받은/보낸 초대와 끝난 초대 이력
 - 로그인 상태 — `AuthContext`로 세션 유지, 헤더 계정 메뉴(로그아웃)·받은 초대 배지, 로그인 필요 라우트 보호(`RequireAuth`), 내 정보(`/me`)
-- 로그인 페이지 (`/login`) — 임시 아이디/비밀번호 폼(`POST /api/auth/login`). 네이버 로그인 버튼은 주석으로 보존
+- 로그인 페이지 (`/login`) — 임시 아이디/비밀번호 폼(`POST /api/auth/login`). 네이버 로그인 버튼은 지금 화면에 없음(주소·아이콘·스타일만 남김)
 - 지도 연동 — 네이버 지도. 설정 메뉴에서 "새 창으로 열기"(지도 검색)와 "페이지 내 지도 보기"(SDK v3 + 마커, Client ID 필요) 중 선택
 - 라이트/다크 테마 토글(시스템 설정 기본값, 선택 시 로컬 저장), 기준 위치(Geolocation → 수동 지정 → 서울역) 처리
 
 미구현 / 예정 (상세는 SPECIFICATION.md 10장)
-- 네이버 로그인 복구 — 백엔드 OAuth 복구 후 로그인 화면의 주석을 풀고 임시 폼 제거
+- 네이버 로그인 복구 — 백엔드 OAuth 복구 후 로그인 화면에 네이버 버튼을 다시 두고 임시 폼 제거
 - 장소 검색 API 연동 — 네이버 지역 검색 키 준비 후 목업을 `GET /api/places/search`로 교체
 - 여행 대표 사진 지정, 기록의 소속 여행 변경(다른 여행으로 옮기기)
 - 태그 입력·필터 UI (백엔드는 지원하지만 화면이 없어 등록 요청이 항상 빈 태그 목록으로 전송)

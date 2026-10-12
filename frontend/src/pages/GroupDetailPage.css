@@ -69,7 +69,7 @@
   color: var(--accent-strong);
 }
 
-/* 초대 폼 위의 정원 안내. 정원이 차도 초대를 막지 않는 대신 결과를 먼저 알린다 (명세 §5.8.3). */
+/* 초대 폼 위의 정원 안내. 정원이 차도 초대를 막지 않는 대신 결과를 먼저 알린다. */
 .invite-capacity {
   margin: -4px 0 4px;
   font-size: 0.85rem;

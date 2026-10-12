@@ -1,23 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  ApiError,
-  apiFetch,
-  clearCsrfToken,
-  fetchSession,
-  setUnauthorizedHandler,
-} from '../api/client.js'
+import { apiFetch, clearCsrfToken, fetchSession, setUnauthorizedHandler } from '../api/client.js'
 
 const AuthContext = createContext(null)
 
 /**
- * 로그인 상태. 프론트엔드에서 실제 백엔드를 호출하는 유일한 영역이다 (명세 §10.2).
+ * 로그인 상태와 본인 정보를 전역으로 제공한다. 서버 데이터 가운데 컨텍스트에 두는 것은 이것뿐이다.
  *
  * 부팅 시 `GET /api/auth/session` 으로 로그인 여부와 CSRF 토큰을 받고, 로그인 상태면
  * `GET /api/auth/me` 로 본인 정보를 받는다. 새로고침해도 로그인이 유지되는 것은 이 조회
- * 덕분이다 (명세 §2.1).
+ * 덕분이다.
  *
- * 로그인 상태에서 받은 `401` 은 세션 만료로 보고 로그인 화면으로 보낸다 (명세 §2.1).
+ * 로그인 상태에서 받은 `401` 은 세션 만료로 보고 로그인 화면으로 보낸다.
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -35,7 +29,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       // 부팅 시 본인 정보 조회와 로그인 요청의 401 은 만료가 아니다.
-      // 로그인 상태였을 때만 만료로 본다 (명세 §2.1).
+      // 로그인 상태였을 때만 만료로 본다.
       if (statusRef.current !== 'authenticated') return
       // 동시에 나간 요청 여럿이 401 을 받아도 한 번만 처리한다.
       statusRef.current = 'anonymous'
@@ -54,7 +48,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false
 
-    // 비로그인 방문자가 매번 /me 의 401 을 받지 않게 순서대로 부른다 (명세 §2.1).
+    // 비로그인 방문자가 매번 /me 의 401 을 받지 않게 순서대로 부른다.
     fetchSession()
       .then((authenticated) => (authenticated ? apiFetch('/api/auth/me') : null))
       .then((me) => {
@@ -74,7 +68,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  /** 로그인에 성공하면 사용자 정보를 반환하고, 실패하면 안내 문구를 담아 되던진다. */
+  /** 로그인에 성공하면 사용자 정보를 반환하고, 실패하면 받은 오류를 그대로 던진다. 문구는 화면이 고른다. */
   const login = useCallback(async (username, password) => {
     try {
       const me = await apiFetch('/api/auth/login', {
@@ -88,7 +82,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       setUser(null)
       setStatus('anonymous')
-      throw error instanceof ApiError ? error : new ApiError({})
+      throw error
     }
   }, [])
 

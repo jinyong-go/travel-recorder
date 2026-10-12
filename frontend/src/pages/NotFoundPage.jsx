@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
 import './NotFoundPage.css'
 
+/** 어느 경로에도 맞지 않는 주소에 보여 주는 404 화면. */
 export default function NotFoundPage() {
   return (
     <main className="notfound-page">

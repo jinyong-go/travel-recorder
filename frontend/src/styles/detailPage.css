@@ -76,8 +76,7 @@
   color: var(--text-muted);
 }
 
-.detail-visibility-actions,
-.detail-edit-actions {
+.detail-visibility-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;

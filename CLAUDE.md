@@ -165,7 +165,7 @@ fun findVisibleTrips(requester: User?, scope: Scope, page: Int): PageResult<Trip
 - 코드를 한국어로 옮긴 것 (`// i를 1 증가시킨다`)
 - 주석 처리된 죽은 코드 — 지운다. 히스토리는 git이 갖고 있다
 - 갱신되지 않을 중복 정보 — 명세에 있는 규칙을 그대로 베껴 적지 않는다
-- **명세 절 번호(`§`)** — 코드 주석(Kotlin·SQL·설정 파일)에 쓰지 않는다. 메서드·API 가 무엇을
+- **명세 절 번호(`§`)** — 코드 주석(Kotlin·JavaScript·JSX·CSS·SQL·설정 파일)에 쓰지 않는다. 메서드·API 가 무엇을
   하는지, 왜 그렇게 하는지로 설명한다. 절 번호는 명세가 고쳐질 때 코드에서 조용히 어긋난다
 
 ## 5. 프로젝트 구조

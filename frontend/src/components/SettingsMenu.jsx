@@ -3,6 +3,10 @@ import { MAP_MODES, hasNaverMapClientId } from '../config/mapSettings.js'
 import { ChevronDownIcon, GearIcon } from './icons.jsx'
 import './SettingsMenu.css'
 
+/**
+ * 헤더의 설정 드롭다운. 지금은 지도 표시 방식(새 창 / 페이지 내 지도) 하나를 고른다.
+ * 네이버 지도 Client ID 가 없으면 페이지 내 지도는 고를 수 없게 막고 이유를 적는다.
+ */
 export default function SettingsMenu({ mapMode, onChangeMapMode }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)

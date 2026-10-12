@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchGroups } from '../api/groups.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
-import { VISIBILITIES } from '../data/records.js'
+import { VISIBILITIES } from '../data/visibility.js'
 import { GlobeIcon, LockIcon, UsersIcon } from './icons.jsx'
 import './VisibilitySelect.css'
 
@@ -56,6 +56,60 @@ export default function VisibilitySelect({
     onChangeGroups(next)
   }
 
+  /**
+   * "그룹 공유" 아래의 그룹 자리. 불러오는 중·실패를 "그룹 없음" 과 구분해 보여 준다 — 공개 범위를
+   * 정하는 자리에서 사실과 다른 안내를 하지 않기 위해서다.
+   */
+  const renderGroups = () => {
+    if (groupsStatus === REQUEST_STATUS.LOADING || groupsStatus === REQUEST_STATUS.IDLE) {
+      return <p className="visibility-groups-empty">그룹을 불러오는 중이에요…</p>
+    }
+    if (groupsStatus === REQUEST_STATUS.ERROR) {
+      return (
+        <p className="visibility-groups-empty">
+          그룹을 불러오지 못했습니다.{' '}
+          <button type="button" className="link-button" onClick={() => setRetryCount((n) => n + 1)}>
+            다시 시도
+          </button>
+        </p>
+      )
+    }
+    if (groups.length === 0) {
+      return (
+        <p className="visibility-groups-empty">
+          아직 공유 그룹이 없습니다.{' '}
+          <button type="button" className="link-button" onClick={onCreateGroupClick}>
+            그룹 만들기
+          </button>
+        </p>
+      )
+    }
+    return (
+      <>
+        <ul className="visibility-group-list">
+          {groups.map((group) => (
+            <li key={group.id}>
+              <label className="visibility-group-item">
+                <input
+                  type="checkbox"
+                  checked={selectedGroupIds.includes(group.id)}
+                  onChange={() => toggleGroup(group.id)}
+                />
+                <span className="visibility-group-name">{group.name}</span>
+                <span className="visibility-group-count">{group.memberCount}명</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+        {selectedGroupIds.length === 0 && (
+          <p className="visibility-groups-warning" role="status">
+            선택한 그룹이 없어 나만 볼 수 있습니다.
+          </p>
+        )}
+      </>
+    )
+  }
+
   return (
     <fieldset className="visibility-select">
       <legend className="visibility-select-legend">공개 범위</legend>
@@ -88,46 +142,7 @@ export default function VisibilitySelect({
 
       {wantsGroups && (
         <div className="visibility-groups">
-          {groupsStatus === REQUEST_STATUS.LOADING || groupsStatus === REQUEST_STATUS.IDLE ? (
-            <p className="visibility-groups-empty">그룹을 불러오는 중이에요…</p>
-          ) : groupsStatus === REQUEST_STATUS.ERROR ? (
-            <p className="visibility-groups-empty">
-              그룹을 불러오지 못했습니다.{' '}
-              <button type="button" className="link-btn" onClick={() => setRetryCount((n) => n + 1)}>
-                다시 시도
-              </button>
-            </p>
-          ) : groups.length === 0 ? (
-            <p className="visibility-groups-empty">
-              아직 공유 그룹이 없습니다.{' '}
-              <button type="button" className="link-btn" onClick={onCreateGroupClick}>
-                그룹 만들기
-              </button>
-            </p>
-          ) : (
-            <>
-              <ul className="visibility-group-list">
-                {groups.map((group) => (
-                  <li key={group.id}>
-                    <label className="visibility-group-item">
-                      <input
-                        type="checkbox"
-                        checked={selectedGroupIds.includes(group.id)}
-                        onChange={() => toggleGroup(group.id)}
-                      />
-                      <span className="visibility-group-name">{group.name}</span>
-                      <span className="visibility-group-count">{group.memberCount}명</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-              {selectedGroupIds.length === 0 && (
-                <p className="visibility-groups-warning" role="status">
-                  선택한 그룹이 없어 나만 볼 수 있습니다.
-                </p>
-              )}
-            </>
-          )}
+          {renderGroups()}
         </div>
       )}
     </fieldset>

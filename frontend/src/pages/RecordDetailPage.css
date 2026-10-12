@@ -88,12 +88,6 @@
   gap: 12px;
 }
 
-.detail-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 /* 한 카드 안에서 사진·평점 영역을 가른다. 카드를 쪼개지 않고 경계만 남긴다. */
 .detail-subsection {
   display: flex;
@@ -101,18 +95,6 @@
   gap: 14px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
-}
-
-.detail-memo-input {
-  width: 100%;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  font: inherit;
-  line-height: 1.6;
-  resize: vertical;
 }
 
 .detail-empty {
@@ -145,32 +127,9 @@
   display: block;
 }
 
-/* 갤러리 위에 겹치는 삭제 버튼. 등록 폼 미리보기(.photo-preview-item button)와 같은 모양이다. */
-.detail-photo-remove {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(20, 30, 18, 0.6);
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
 /* 평점·메모 (기록당 하나뿐이라 평균이나 분포가 없다) */
 .detail-rating-row {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.detail-rating-value {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--accent-strong);
 }

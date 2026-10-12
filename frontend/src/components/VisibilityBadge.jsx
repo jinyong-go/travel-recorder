@@ -1,4 +1,4 @@
-import { visibilityMeta } from '../data/records.js'
+import { visibilityMeta } from '../data/visibility.js'
 import { GlobeIcon, LockIcon, UsersIcon } from './icons.jsx'
 import './VisibilityBadge.css'
 

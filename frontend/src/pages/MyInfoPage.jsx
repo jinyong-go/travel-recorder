@@ -4,14 +4,13 @@ import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import usePagedList from '../hooks/usePagedList.js'
 import { LOGIN_HISTORY_NOTICE } from '../data/loginHistory.js'
-import ThemeSelector from '../components/ThemeSelector.jsx'
-import HeaderAuth from '../components/HeaderAuth.jsx'
+import AppHeader from '../components/AppHeader.jsx'
 import LoginHistoryList from '../components/LoginHistoryList.jsx'
-import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
+import { ArrowLeftIcon } from '../components/icons.jsx'
 import './MyInfoPage.css'
 
 /**
- * 로그인 사용자 본인 정보 (명세 §5.10). 읽기 전용이다.
+ * 로그인 사용자 본인 정보. 읽기 전용이다.
  *
  * 부팅 시 받아 둔 본인 정보를 그대로 쓰고 따로 조회하지 않는다. `RequireAuth` 안에서만
  * 그려지므로 `user` 는 항상 있다.
@@ -24,16 +23,7 @@ export default function MyInfoPage() {
 
   return (
     <>
-      <header className="app-header">
-        <Link to="/" className="app-title app-title-link">
-          <MapPinIcon className="app-title-icon" />
-          여행 지도 <span className="by-yong">by YONG</span>
-        </Link>
-        <div className="header-actions">
-          <ThemeSelector />
-          <HeaderAuth />
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="my-info-page">
         <div className="my-info-inner">
@@ -60,7 +50,7 @@ export default function MyInfoPage() {
             </dl>
           </section>
 
-          {/* 초대는 이메일 정확 일치로 상대를 찾으므로, 이메일이 없으면 초대를 받을 수 없다 (공통 명세 §3.7). */}
+          {/* 초대는 이메일 정확 일치로 상대를 찾으므로, 이메일이 없으면 초대를 받을 수 없다. */}
           {!user.email && <p className="my-info-note">이메일 정보가 없어 초대를 받을 수 없어요.</p>}
 
           <section className="my-info-section" aria-labelledby="my-info-login-history">

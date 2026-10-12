@@ -1,26 +1,10 @@
-/* 기록 등록 모달 (명세 §5.3). 입력 필드 공통 스타일은 styles/form.css 에 있다. */
+/* 기록 등록 모달. 폼 스타일은 RecordForm.css 에 있다. */
 .record-register-panel {
   max-width: 600px;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
   text-align: left;
   gap: 14px;
-}
-
-/* 페이지에서는 카드였지만 모달 안에서는 패널이 이미 카드다. 테두리를 한 겹만 남긴다. */
-.record-register-panel .register-form {
-  border: none;
-  padding: 0;
-}
-
-.register-form {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: clamp(20px, 4vw, 32px);
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
 }
 
 .preset-trip {
@@ -31,55 +15,4 @@
   background: var(--surface-soft);
   color: var(--text-muted);
   font-size: 14.5px;
-}
-
-.photo-preview-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.photo-preview-item {
-  position: relative;
-  width: 84px;
-  height: 84px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.photo-preview-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.photo-preview-item button {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(20, 30, 18, 0.6);
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.register-form textarea {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  font: inherit;
-  resize: vertical;
 }

@@ -1,16 +1,6 @@
+import { formatDateTime } from '../utils/date.js'
 import { describeDevice } from '../utils/userAgent.js'
 import './LoginHistoryList.css'
-
-const pad = (n) => String(n).padStart(2, '0')
-
-/**
- * "2026-10-09 18:12" 처럼 사용자 시간대의 날짜와 시:분. 모르는 로그인을 확인하는 목록이라
- * "3시간 전" 같은 상대 표기를 쓰지 않는다.
- */
-const formatDateTime = (iso) => {
-  const d = new Date(iso)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 /**
  * 로그인 이력 항목 목록. 조회·상태 처리는 쓰는 화면이 하고 여기서는 그리기만 한다.
@@ -22,6 +12,7 @@ export default function LoginHistoryList({ items }) {
     <ul className="login-history-list">
       {items.map((item) => (
         <li key={item.id} className="login-history-item">
+          {/* 모르는 로그인을 확인하는 목록이라 "3시간 전" 같은 상대 표기를 쓰지 않는다. */}
           <time className="login-history-time" dateTime={item.loggedInAt}>
             {formatDateTime(item.loggedInAt)}
           </time>

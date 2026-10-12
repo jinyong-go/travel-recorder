@@ -6,7 +6,7 @@ import './PlaceSearchModal.css'
 
 const PAGE_SIZE = 10
 
-/** 검색 결과 거리의 기준이 무엇인지 (명세 §5.5). 확인 중이면 출처보다 그 사실을 먼저 알린다. */
+/** 검색 결과 거리의 기준이 무엇인지. 확인 중이면 출처보다 그 사실을 먼저 알린다. */
 const REFERENCE_LOCATION_LABEL = {
   locating: '현재 위치 확인 중…',
   geo: '현재 위치',
@@ -14,12 +14,12 @@ const REFERENCE_LOCATION_LABEL = {
   default: '기본 위치(서울역)',
 }
 
-// 우편번호 검색 방식의 장소 검색 모달. SPECIFICATION.md 5.2 참고.
+// 우편번호 검색 방식의 장소 검색 모달.
 // 실제 구현에서는 PLACE_SEARCH_RESULTS 목업 대신 백엔드의 네이버 지역 검색
 // 프록시 API(거리 계산·페이지네이션까지 처리된 응답)를 호출해야 한다.
 export default function PlaceSearchModal({ reference, onSelect, onClose }) {
   const { location: referenceLocation, source, status, setManualLocation } = reference
-  // true 면 고른 장소를 기록에 넣지 않고 기준 위치로 저장한다 (명세 §5.4, §5.5).
+  // true 면 고른 장소를 기록에 넣지 않고 기준 위치로 저장한다.
   const [pickingReference, setPickingReference] = useState(false)
   const title = pickingReference ? '내 위치 지정' : '장소 검색'
   const referenceLabel =
@@ -110,7 +110,7 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
         {!pickingReference && (
           <p className="place-search-reference">
             거리 기준: {referenceLabel}
-            <button type="button" className="link-btn" onClick={() => setPickingReference(true)}>
+            <button type="button" className="link-button" onClick={() => setPickingReference(true)}>
               위치 직접 지정
             </button>
           </p>

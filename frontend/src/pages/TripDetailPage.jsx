@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { categoryIcon, categoryLabel, dateLabel, placeOf } from '../data/records.js'
-import { budgetLabel, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
-import { ApiError, fileUrl } from '../api/client.js'
+import { categoryIcon, categoryLabel, placeOf } from '../data/records.js'
+import { DEFAULT_VISIBILITY } from '../data/visibility.js'
+import { formatDate } from '../utils/date.js'
+import { TRIP_STATUS_MESSAGE, budgetLabel, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
+import { errorMessage, fileUrl } from '../api/client.js'
 import { fetchTripRecords } from '../api/records.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import * as tripApi from '../api/trips.js'
@@ -11,16 +13,16 @@ import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import useTrip from '../hooks/useTrip.js'
 import useMapMode from '../hooks/useMapMode.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
-import ThemeSelector from '../components/ThemeSelector.jsx'
-import HeaderAuth from '../components/HeaderAuth.jsx'
+import AppHeader from '../components/AppHeader.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import DetailStatus from '../components/DetailStatus.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import RecordRegisterModal from '../components/RecordRegisterModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import VisibilitySelect from '../components/VisibilitySelect.jsx'
-import { ArrowLeftIcon, MapPinIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
+import { ArrowLeftIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
 // 상세 화면의 공통 레이아웃(.detail-page / .detail-inner / .detail-section)은 기록 상세와 같다.
 import '../styles/detailPage.css'
-import '../styles/confirmPanel.css'
 import './TripDetailPage.css'
 /** 여행을 서버에서 읽고, 읽는 중·없음·실패를 처리한다. 화면은 여행이 도착한 뒤 TripDetailView 가 그린다. */
 export default function TripDetailPage() {
@@ -32,24 +34,15 @@ export default function TripDetailPage() {
     return <TripDetailView key={trip.id} trip={trip} onTripChange={setTrip} />
   }
 
-  // 볼 수 없는 여행과 없는 여행을 구분해 표시하지 않는다. 구분하면 존재가 드러난다.
-  const message =
-    status === REQUEST_STATUS.LOADING
-      ? { title: '여행을 불러오는 중이에요…', desc: '' }
-      : status === REQUEST_STATUS.ERROR
-        ? { title: '여행을 불러오지 못했습니다', desc: '잠시 후 다시 시도해주세요.' }
-        : { title: '여행을 찾을 수 없습니다', desc: '존재하지 않거나 볼 수 없는 여행입니다.' }
-  return (
-    <main className="detail-page">
-      <div className="detail-missing">
-        <h1>{message.title}</h1>
-        {message.desc && <p className="detail-missing-desc">{message.desc}</p>}
-        <Link to="/trips" className="detail-missing-link">
-          <ArrowLeftIcon /> 여행 목록으로
-        </Link>
-      </div>
-    </main>
-  )
+  return <DetailStatus {...TRIP_STATUS_MESSAGE[status]} backTo="/trips" backLabel="여행 목록으로" />
+}
+
+const DELETE_ERROR = {
+  TRIP_NOT_FOUND: '이미 삭제된 여행입니다.',
+}
+
+const VISIBILITY_ERROR = {
+  GROUP_NOT_FOUND: '공유할 수 없는 그룹이 선택되어 있습니다. 그룹 선택을 다시 확인해주세요.',
 }
 
 /** 공유 그룹 id 를 순서와 무관하게 비교할 수 있는 문자열로 만든다. */
@@ -58,7 +51,7 @@ const groupKey = (ids) => [...ids].sort((a, b) => a - b).join(',')
 /**
  * 불러온 여행을 그린다. 수정·공개 범위 변경은 서버 응답으로 `onTripChange` 를 불러 갈아 끼운다.
  *
- * 하위 기록은 등록순으로 한 페이지씩 읽어 "더 보기"로 이어 붙인다 (명세 §5.2.1). 여행지 수는
+ * 하위 기록은 등록순으로 한 페이지씩 읽어 "더 보기"로 이어 붙인다. 여행지 수는
  * 목록 길이가 아니라 여행의 `recordCount` 다 — 목록은 아직 다 읽지 않았을 수 있다.
  */
 function TripDetailView({ trip, onTripChange }) {
@@ -76,12 +69,12 @@ function TripDetailView({ trip, onTripChange }) {
   )
   const records = usePagedList(loadRecords)
   const [registerOpen, setRegisterOpen] = useState(false)
-  // 사진만 올리지 못한 채 등록된 기록. 재업로드하러 갈 수 있게 링크를 남긴다 (명세 §5.3).
+  // 사진만 올리지 못한 채 등록된 기록. 재업로드하러 갈 수 있게 링크를 남긴다.
   const [photoFailedRecord, setPhotoFailedRecord] = useState(null)
 
   const sharedGroups = trip.sharedGroups ?? []
   const [mapModalRecord, setMapModalRecord] = useState(null)
-  const [visibilityDraft, setVisibilityDraft] = useState(trip.visibility ?? 'PRIVATE')
+  const [visibilityDraft, setVisibilityDraft] = useState(trip.visibility ?? DEFAULT_VISIBILITY)
   const [groupDraft, setGroupDraft] = useState(sharedGroups.map((g) => g.id))
   const [savedMessage, setSavedMessage] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -93,8 +86,6 @@ function TripDetailView({ trip, onTripChange }) {
   const visibilityChanged =
     visibilityDraft !== trip.visibility ||
     (visibilityDraft === 'GROUP' && groupKey(groupDraft) !== groupKey(sharedGroups.map((g) => g.id)))
-
-  const errorText = (err, fallback) => (err instanceof ApiError ? err.message : fallback)
 
   const handleMapButtonClick = (record) => {
     const place = placeOf(record)
@@ -120,11 +111,11 @@ function TripDetailView({ trip, onTripChange }) {
   const handleDelete = async () => {
     setBusy(true)
     try {
-      // 하위 기록은 서버가 함께 지운다 (공통 명세 §3.9).
+      // 하위 기록은 서버가 함께 지운다.
       await tripApi.deleteTrip(trip.id)
       navigate('/trips')
     } catch (err) {
-      setActionError(errorText(err, '여행을 삭제하지 못했습니다.'))
+      setActionError(errorMessage(err, DELETE_ERROR, '여행을 삭제하지 못했습니다.'))
       setBusy(false)
     }
   }
@@ -143,29 +134,86 @@ function TripDetailView({ trip, onTripChange }) {
             : '이제 나만 볼 수 있습니다'
       setSavedMessage(`여행지 ${recordCount}곳이 ${where}.`)
     } catch (err) {
-      setSavedMessage(errorText(err, '공개 범위를 바꾸지 못했습니다.'))
+      setSavedMessage(errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했습니다.'))
     } finally {
       setBusy(false)
     }
   }
 
-  const closeModal = (close) => () => {
-    close()
+  const closeDeleteConfirm = () => {
+    setConfirmingDelete(false)
     setActionError('')
+  }
+
+  /** 하위 기록 자리. 실패·첫 로딩·빈 목록이면 안내 한 줄이고, 아니면 카드 목록이다. */
+  const renderRecords = () => {
+    if (records.status === REQUEST_STATUS.ERROR) {
+      return (
+        <div className="empty-state">
+          여행지를 불러오지 못했습니다.{' '}
+          <button type="button" className="link-button" onClick={records.reload}>
+            다시 시도
+          </button>
+        </div>
+      )
+    }
+    if (records.status === REQUEST_STATUS.LOADING && records.items.length === 0) {
+      return <div className="empty-state">여행지를 불러오는 중이에요…</div>
+    }
+    if (records.items.length === 0) {
+      return (
+        <div className="empty-state">
+          아직 등록된 여행지가 없습니다.
+          {isOwner && ' 다녀온 곳을 추가해보세요.'}
+        </div>
+      )
+    }
+    return (
+      <ul className="place-grid">
+        {records.items.map((record) => (
+          <li key={record.id} className="place-card">
+            <div className="place-thumb">
+              {/* 첫 사진이 있으면 그것을, 없으면 카테고리 아이콘을 둔다. */}
+              {record.thumbnailUrl ? (
+                <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
+              ) : (
+                <span className="place-thumb-icon">{categoryIcon(record.category)}</span>
+              )}
+              <span className="place-category-badge">{categoryLabel(record.category)}</span>
+            </div>
+            <div className="place-body">
+              <h3 className="place-name">
+                <Link to={`/records/${record.id}`} className="place-card-link">
+                  {record.name}
+                </Link>
+              </h3>
+              <p className="place-region">{record.address}</p>
+              <div className="place-meta">
+                <span className="place-rating">★ {record.rating.toFixed(1)}</span>
+                {record.distanceKm != null && (
+                  <span className="place-distance">{record.distanceKm.toFixed(1)}km</span>
+                )}
+                <span className="place-date">{formatDate(record.createdAt)}</span>
+              </div>
+              {record.memo && <p className="place-memo">{record.memo}</p>}
+              <button
+                type="button"
+                className="place-map-btn"
+                onClick={() => handleMapButtonClick(record)}
+              >
+                <MapViewIcon />
+                지도
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )
   }
 
   return (
     <>
-      <header className="app-header">
-        <Link to="/" className="app-title app-title-link">
-          <MapPinIcon className="app-title-icon" />
-          여행 지도 <span className="by-yong">by YONG</span>
-        </Link>
-        <div className="header-actions">
-          <ThemeSelector />
-          <HeaderAuth />
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="detail-page">
         <div className="detail-inner">
@@ -198,7 +246,7 @@ function TripDetailView({ trip, onTripChange }) {
             </p>
             <p className="trip-detail-owner">
               by {isOwner ? '나' : trip.owner.name}
-              {/* 예산은 여행을 볼 수 있는 사람에게 함께 보인다 (공통 명세 §3.5). */}
+              {/* 예산은 여행을 볼 수 있는 사람에게 함께 보인다. */}
               {trip.budget != null && (
                 <span className="trip-detail-budget">예산 {budgetLabel(trip.budget)}</span>
               )}
@@ -224,7 +272,7 @@ function TripDetailView({ trip, onTripChange }) {
                 </span>
               </summary>
               <div className="collapsible-body">
-                {/* 범위는 여행에만 있다. 기록 화면에는 바꾸는 수단을 두지 않는다 (공통 명세 §3.5). */}
+                {/* 범위는 여행에만 있다. 기록 화면에는 바꾸는 수단을 두지 않는다. */}
                 <VisibilitySelect
                   value={visibilityDraft}
                   onChange={setVisibilityDraft}
@@ -270,61 +318,7 @@ function TripDetailView({ trip, onTripChange }) {
               </p>
             )}
 
-            {records.status === REQUEST_STATUS.ERROR ? (
-              <div className="empty-state">
-                여행지를 불러오지 못했습니다.{' '}
-                <button type="button" className="link-button" onClick={records.reload}>
-                  다시 시도
-                </button>
-              </div>
-            ) : records.status === REQUEST_STATUS.LOADING && records.items.length === 0 ? (
-              <div className="empty-state">여행지를 불러오는 중이에요…</div>
-            ) : records.items.length === 0 ? (
-              <div className="empty-state">
-                아직 등록된 여행지가 없습니다.
-                {isOwner && ' 다녀온 곳을 추가해보세요.'}
-              </div>
-            ) : (
-              <ul className="place-grid">
-                {records.items.map((record) => (
-                  <li key={record.id} className="place-card">
-                    <div className="place-thumb">
-                      {/* 첫 사진이 있으면 그것을, 없으면 카테고리 아이콘을 둔다 (명세 §4.5). */}
-                      {record.thumbnailUrl ? (
-                        <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
-                      ) : (
-                        <span className="place-thumb-icon">{categoryIcon(record.category)}</span>
-                      )}
-                      <span className="place-category-badge">{categoryLabel(record.category)}</span>
-                    </div>
-                    <div className="place-body">
-                      <h3 className="place-name">
-                        <Link to={`/records/${record.id}`} className="place-card-link">
-                          {record.name}
-                        </Link>
-                      </h3>
-                      <p className="place-region">{record.address}</p>
-                      <div className="place-meta">
-                        <span className="place-rating">★ {record.rating.toFixed(1)}</span>
-                        {record.distanceKm != null && (
-                          <span className="place-distance">{record.distanceKm.toFixed(1)}km</span>
-                        )}
-                        <span className="place-date">{dateLabel(record.createdAt)}</span>
-                      </div>
-                      {record.memo && <p className="place-memo">{record.memo}</p>}
-                      <button
-                        type="button"
-                        className="place-map-btn"
-                        onClick={() => handleMapButtonClick(record)}
-                      >
-                        <MapViewIcon />
-                        지도
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {renderRecords()}
             {records.hasNext && (
               <button type="button" className="link-button" onClick={records.loadMore}>
                 더 보기
@@ -335,34 +329,18 @@ function TripDetailView({ trip, onTripChange }) {
       </main>
 
       {confirmingDelete && (
-        <div className="modal-overlay" onClick={closeModal(() => setConfirmingDelete(false))}>
-          <div
-            className="modal-panel confirm-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="여행 삭제 확인"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>이 여행을 삭제할까요?</h2>
-            {/* 하위 기록이 함께 지워진다는 사실과 건수를 반드시 문구에 담는다 (공통 명세 §3.9). */}
-            <p className="confirm-desc">
-              이 여행과 여행지 {recordCount}곳의 기록이 함께 삭제됩니다. 되돌릴 수 없어요.
-            </p>
-            {actionError && <p className="field-error">{actionError}</p>}
-            <div className="confirm-actions">
-              <button
-                type="button"
-                className="confirm-cancel"
-                onClick={closeModal(() => setConfirmingDelete(false))}
-              >
-                취소
-              </button>
-              <button type="button" className="confirm-ok" disabled={busy} onClick={handleDelete}>
-                {busy ? '삭제하는 중…' : '삭제'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="이 여행을 삭제할까요?"
+          error={actionError}
+          confirmLabel="삭제"
+          busyLabel="삭제하는 중…"
+          busy={busy}
+          onConfirm={handleDelete}
+          onCancel={closeDeleteConfirm}
+        >
+          {/* 하위 기록이 함께 지워진다는 사실과 건수를 반드시 문구에 담는다. */}
+          이 여행과 여행지 {recordCount}곳의 기록이 함께 삭제됩니다. 되돌릴 수 없어요.
+        </ConfirmDialog>
       )}
 
       {mapModalRecord && (

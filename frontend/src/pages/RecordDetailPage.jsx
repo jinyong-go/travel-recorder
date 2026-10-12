@@ -1,54 +1,39 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, fileUrl } from '../api/client.js'
+import { ApiError, errorMessage, fileUrl } from '../api/client.js'
 import * as recordApi from '../api/records.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
-import {
-  CATEGORIES,
-  MEMO_MAX_LENGTH,
-  categoryIcon,
-  categoryLabel,
-  dateLabel,
-  placeOf,
-} from '../data/records.js'
+import { categoryIcon, categoryLabel, placeOf, recordPayload } from '../data/records.js'
+import { formatDate } from '../utils/date.js'
 import useLatestRequest from '../hooks/useLatestRequest.js'
 import useTrip from '../hooks/useTrip.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
-import {
-  ALLOWED_PHOTO_ACCEPT,
-  MAX_PHOTO_SIZE_MB,
-  MAX_PHOTO_TOTAL_MB,
-  validatePhotoFiles,
-} from '../config/uploadLimits.js'
 import { haversineDistanceKm } from '../utils/geo.js'
 import useMapMode from '../hooks/useMapMode.js'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
-import ThemeSelector from '../components/ThemeSelector.jsx'
-import HeaderAuth from '../components/HeaderAuth.jsx'
+import AppHeader from '../components/AppHeader.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import DetailStatus from '../components/DetailStatus.jsx'
 import StarRatingDisplay from '../components/StarRatingDisplay.jsx'
-import StarRatingInput from '../components/StarRatingInput.jsx'
-import RequiredNote from '../components/RequiredNote.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
-import PlaceSearchModal from '../components/PlaceSearchModal.jsx'
+import RecordForm from '../components/RecordForm.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
-import {
-  ArrowLeftIcon,
-  CloseIcon,
-  MapPinIcon,
-  MapViewIcon,
-  PhotoIcon,
-  SearchIcon,
-} from '../components/icons.jsx'
-// 수정 폼의 입력 요소(장소 검색 줄·카테고리 칩·파일 선택)는 등록 폼과 같은 생김새를 쓴다.
-import '../styles/form.css'
+import { ArrowLeftIcon, MapViewIcon } from '../components/icons.jsx'
 import '../styles/detailPage.css'
-import '../styles/confirmPanel.css'
 import './RecordDetailPage.css'
-const SELECTABLE_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'all')
 
-/** 수정 초안의 사진 하나를 그릴 주소. 이미 올라간 사진은 서버 URL, 새로 고른 파일은 미리보기다. */
-const photoSrc = (photo) => photo.previewUrl ?? fileUrl(photo.url)
+const DELETE_ERROR = {
+  RECORD_NOT_FOUND: '이미 삭제된 기록입니다.',
+}
 
+const SAVE_ERROR = {
+  RECORD_NOT_FOUND: '기록을 찾을 수 없습니다. 이미 삭제되었을 수 있어요.',
+}
+
+/**
+ * 기록 하나의 상세. 작성자(= 소속 여행 소유자)는 같은 카드 안에서 수정·삭제할 수 있다.
+ * 공개 범위는 소속 여행의 것을 읽기 전용으로 보여 준다.
+ */
 export default function RecordDetailPage() {
   const { recordId } = useParams()
   const navigate = useNavigate()
@@ -88,61 +73,43 @@ export default function RecordDetailPage() {
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
-  // 장소·카테고리·평점·메모·사진을 한 번에 고친다. 저장 전까지는 전부 초안이다.
+  // 장소·카테고리·평점·메모·사진을 한 번에 고친다. 저장 전까지의 초안은 RecordForm 이 들고 있다.
   const [editing, setEditing] = useState(false)
-  const [placeDraft, setPlaceDraft] = useState(null)
-  const [categoryDraft, setCategoryDraft] = useState('')
-  const [ratingDraft, setRatingDraft] = useState(0)
-  const [memoDraft, setMemoDraft] = useState('')
-  const [photosDraft, setPhotosDraft] = useState([])
   const [editError, setEditError] = useState('')
-  const [photoErrors, setPhotoErrors] = useState([])
-  const [searchOpen, setSearchOpen] = useState(false)
-  // 지울 사진의 위치. 0번도 지울 수 있으므로 없음은 null 로 구분한다.
-  const [removingPhotoIndex, setRemovingPhotoIndex] = useState(null)
   // 저장·삭제 요청이 나가 있는 동안 버튼을 막는다.
   const [busy, setBusy] = useState(false)
-  // 저장은 됐지만 사진 단계 일부가 실패했을 때의 안내 (공통 명세 §6.2 와 같은 원칙).
+  // 저장은 됐지만 사진 단계 일부가 실패했을 때의 안내. 등록과 같이 본문은 되돌리지 않는다.
   const [saveNotice, setSaveNotice] = useState('')
   const [deleteError, setDeleteError] = useState('')
 
-  // 공개 범위는 소속 여행의 값이고 작성자(= 여행 소유자)에게만 보여준다 (명세 §5.6).
+  // 공개 범위는 소속 여행의 값이고 작성자(= 여행 소유자)에게만 보여준다.
   // 기록 응답에는 없으므로 작성자일 때만 여행을 읽는다. 열람자에게는 내려오지도 않는다.
   const { trip } = useTrip(isAuthor ? record.trip.id : null)
 
-  if (recordStatus === REQUEST_STATUS.LOADING || recordStatus === REQUEST_STATUS.ERROR) {
-    const loading = recordStatus === REQUEST_STATUS.LOADING
-    return (
-      <main className="detail-page">
-        <div className="detail-missing">
-          <h1>{loading ? '기록을 불러오는 중이에요…' : '기록을 불러오지 못했습니다'}</h1>
-          {!loading && <p className="detail-missing-desc">잠시 후 다시 시도해주세요.</p>}
-        </div>
-      </main>
-    )
+  if (recordStatus === REQUEST_STATUS.LOADING) return <DetailStatus title="기록을 불러오는 중이에요…" />
+
+  if (recordStatus === REQUEST_STATUS.ERROR) {
+    return <DetailStatus title="기록을 불러오지 못했습니다" desc="잠시 후 다시 시도해주세요." />
   }
 
   if (recordStatus === REQUEST_STATUS.MISSING) {
     // 없는 기록과 볼 권한이 없는 기록을 구분해 보여주지 않는다.
     // 문구가 달라지는 순간 그 차이만으로 비공개 기록의 존재가 드러난다.
     return (
-      <main className="detail-page">
-        <div className="detail-missing">
-          <h1>기록을 찾을 수 없습니다</h1>
-          <p className="detail-missing-desc">존재하지 않거나 볼 수 없는 기록이에요.</p>
-          <Link to="/trips" className="detail-missing-link">
-            <ArrowLeftIcon /> 여행 목록으로
-          </Link>
-        </div>
-      </main>
+      <DetailStatus
+        title="기록을 찾을 수 없습니다"
+        desc="존재하지 않거나 볼 수 없는 기록이에요."
+        backTo="/trips"
+        backLabel="여행 목록으로"
+      />
     )
   }
 
   const photos = record.photos
   const place = placeOf(record)
-  // 소유자에게만 채워지는 값이다. 열람자에게는 null 이다 (backend §4.3.1).
+  // 소유자에게만 채워지는 값이다. 열람자에게는 null 이다.
   const sharedGroups = trip?.sharedGroups ?? []
-  // 서버는 저장하지 않는 값이다. 기준 위치는 이 브라우저의 것이다 (§5.5).
+  // 서버는 저장하지 않는 값이다. 기준 위치는 이 브라우저의 것이다.
   const distanceKm = haversineDistanceKm(referenceLocation, place.location)
 
   const handleMapClick = () => {
@@ -153,85 +120,50 @@ export default function RecordDetailPage() {
     }
   }
 
+  const closeDeleteConfirm = () => {
+    setConfirmingDelete(false)
+    setDeleteError('')
+  }
+
   const handleDelete = async () => {
     setBusy(true)
     try {
       await recordApi.deleteRecord(record.id)
       navigate(`/trips/${record.trip.id}`)
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : '기록을 삭제하지 못했습니다.')
+      setDeleteError(errorMessage(err, DELETE_ERROR, '기록을 삭제하지 못했습니다.'))
       setBusy(false)
     }
   }
 
-  /** 새로 고른 사진의 미리보기 URL 을 해제한다. 저장·취소 어느 쪽으로 끝나도 부른다. */
-  const releasePreviews = (draft) =>
-    draft.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl))
-
-  const cancelEdit = () => {
-    releasePreviews(photosDraft)
-    setEditing(false)
-  }
-
   const startEdit = () => {
-    setPlaceDraft(place)
-    setCategoryDraft(record.category)
-    setRatingDraft(record.rating)
-    setMemoDraft(record.memo ?? '')
-    setPhotosDraft(photos)
     setEditError('')
     setSaveNotice('')
-    setPhotoErrors([])
     setEditing(true)
   }
 
-  /** 장소·카테고리·평점·메모·사진을 한 번에 반영한다. 하나라도 검증에 걸리면 아무것도 바꾸지 않는다. */
-  const handleSave = async () => {
-    if (!placeDraft) {
-      setEditError('장소를 검색해 선택해주세요.')
-      return
-    }
-    if (!categoryDraft) {
-      setEditError('카테고리를 선택해주세요.')
-      return
-    }
-    if (!ratingDraft) {
-      setEditError('평점을 선택해주세요.')
-      return
-    }
-    if (memoDraft.length > MEMO_MAX_LENGTH) {
-      setEditError(`메모는 ${MEMO_MAX_LENGTH}자 이하로 입력해주세요.`)
-      return
-    }
-
+  /**
+   * 본문을 먼저 저장하고, 사진은 원래 목록과 초안을 비교해 지울 것과 올릴 것을 나눠 반영한다.
+   * 검증은 폼이 이미 마쳤다.
+   */
+  const handleSave = async (values) => {
     setBusy(true)
     setEditError('')
 
-    // 1단계: 기록 본문. 전체 갱신이라 입력칸이 없는 태그·도로명주소도 기존 값을 실어 보낸다.
+    // 1단계: 기록 본문. 전체 갱신이라 입력칸이 없는 태그도 기존 값을 실어 보낸다.
     // 여기서 실패하면 아무것도 바뀌지 않았으므로 수정 폼을 그대로 둔다.
     try {
-      await recordApi.updateRecord(record.id, {
-        name: placeDraft.name,
-        category: categoryDraft,
-        tags: record.tags,
-        address: placeDraft.address,
-        roadAddress: placeDraft.roadAddress ?? null,
-        externalLink: placeDraft.link ?? null,
-        latitude: placeDraft.location.lat,
-        longitude: placeDraft.location.lng,
-        rating: ratingDraft,
-        memo: memoDraft.trim() || null,
-      })
+      await recordApi.updateRecord(record.id, { ...recordPayload(values), tags: record.tags })
     } catch (err) {
-      setEditError(err instanceof ApiError ? err.message : '기록을 저장하지 못했습니다.')
+      setEditError(errorMessage(err, SAVE_ERROR, '기록을 저장하지 못했습니다.'))
       setBusy(false)
       return
     }
 
     // 2단계: 사진. 본문은 이미 저장됐으므로 여기서 실패해도 되돌리지 않고, 무엇이 안 됐는지만
-    // 알린다. 다시 읽은 화면이 실제 남은 사진을 보여준다 (공통 명세 §6.2 와 같은 원칙).
+    // 알린다. 다시 읽은 화면이 실제 남은 사진을 보여준다.
     const failures = []
-    const removed = photos.filter((p) => !photosDraft.some((d) => d.id === p.id))
+    const removed = photos.filter((p) => !values.photos.some((d) => d.id === p.id))
     for (const photo of removed) {
       try {
         await recordApi.deletePhoto(record.id, photo.id)
@@ -240,7 +172,7 @@ export default function RecordDetailPage() {
         break
       }
     }
-    const added = photosDraft.filter((p) => p.file)
+    const added = values.photos.filter((p) => p.file)
     if (added.length > 0) {
       try {
         await recordApi.uploadPhotos(
@@ -252,7 +184,6 @@ export default function RecordDetailPage() {
       }
     }
 
-    releasePreviews(photosDraft)
     await loadRecord()
     setEditing(false)
     setBusy(false)
@@ -261,45 +192,9 @@ export default function RecordDetailPage() {
     }
   }
 
-  const handlePhotoAdd = (e) => {
-    const files = Array.from(e.target.files ?? [])
-    // 이미 올라간 사진은 다시 보내지 않으므로 합계 검사는 이번에 새로 고른 파일만 대상으로 한다.
-    const selectedBytes = photosDraft.reduce((sum, p) => sum + (p.file?.size ?? 0), 0)
-    const { accepted, errors: rejected } = validatePhotoFiles(files, selectedBytes)
-    setPhotoErrors(rejected)
-    if (accepted.length > 0) {
-      setPhotosDraft((prev) => [
-        ...prev,
-        ...accepted.map((file) => ({ file, previewUrl: URL.createObjectURL(file) })),
-      ])
-    }
-    // 같은 파일을 연이어 고를 수 있도록 값을 비운다.
-    e.target.value = ''
-  }
-
-  /** 초안에서만 뺀다. 이미 올라간 사진은 저장을 눌러야 서버에서 지워진다. */
-  const handlePhotoRemove = () => {
-    setPhotoErrors([])
-    setPhotosDraft((prev) => {
-      const target = prev[removingPhotoIndex]
-      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
-      return prev.filter((_, i) => i !== removingPhotoIndex)
-    })
-    setRemovingPhotoIndex(null)
-  }
-
   return (
     <>
-      <header className="app-header">
-        <Link to="/" className="app-title app-title-link">
-          <MapPinIcon className="app-title-icon" />
-          여행 지도 <span className="by-yong">by YONG</span>
-        </Link>
-        <div className="header-actions">
-          <ThemeSelector />
-          <HeaderAuth />
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="detail-page">
         <div className="detail-inner">
@@ -310,137 +205,22 @@ export default function RecordDetailPage() {
           {/* 기록 내용은 카드 하나에 모은다. 소속 여행과 삭제만 따로 둔다. */}
           <section className="detail-summary">
             {editing ? (
-              <div className="detail-edit-form">
-                <RequiredNote />
-
-                <div className="form-field">
-                  <label htmlFor="edit-place-name" className="field-required">장소명</label>
-                  {/* 장소명은 직접 입력할 수 없다. 검색 결과에서만 채운다 (§5.3). */}
-                  <div className="place-search-row">
-                    <input
-                      id="edit-place-name"
-                      aria-required="true"
-                      type="text"
-                      value={placeDraft?.name ?? ''}
-                      placeholder="검색 버튼으로 장소를 선택해주세요"
-                      disabled
-                      readOnly
-                    />
-                    <button
-                      type="button"
-                      className="search-trigger-btn"
-                      onClick={() => setSearchOpen(true)}
-                    >
-                      <SearchIcon />
-                      검색
-                    </button>
-                  </div>
-                  {placeDraft?.address && <p className="field-hint">{placeDraft.address}</p>}
-                </div>
-
-                <div className="form-field">
-                  <span className="field-label field-required">카테고리</span>
-                  <div
-                    className="category-choice-group"
-                    role="radiogroup"
-                    aria-label="카테고리"
-                    aria-required="true"
-                  >
-                    {SELECTABLE_CATEGORIES.map((c) => (
-                      <button
-                        key={c.key}
-                        type="button"
-                        role="radio"
-                        aria-checked={categoryDraft === c.key}
-                        className={`category-choice${categoryDraft === c.key ? ' active' : ''}`}
-                        onClick={() => setCategoryDraft(c.key)}
-                      >
-                        {categoryIcon(c.key)} {c.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="form-field">
-                  <span className="field-label field-required">평점</span>
-                  <StarRatingInput value={ratingDraft} onChange={setRatingDraft} />
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="edit-memo">메모</label>
-                  <textarea
-                    id="edit-memo"
-                    className="detail-memo-input"
-                    rows={4}
-                    value={memoDraft}
-                    onChange={(e) => setMemoDraft(e.target.value)}
-                    placeholder="이 방문에 대한 메모를 남겨보세요"
-                  />
-                </div>
-
-                <div className="form-field">
-                  <span className="field-label">사진</span>
-                  <div className="photo-upload-row">
-                    <input
-                      id="add-photos"
-                      className="photo-upload-input"
-                      type="file"
-                      accept={ALLOWED_PHOTO_ACCEPT}
-                      multiple
-                      onChange={handlePhotoAdd}
-                    />
-                    <label htmlFor="add-photos" className="photo-upload-btn">
-                      <PhotoIcon />
-                      사진 추가
-                    </label>
-                    <span className="photo-upload-hint">
-                      JPG·PNG·WEBP, 장당 {MAX_PHOTO_SIZE_MB}MB · 합계 {MAX_PHOTO_TOTAL_MB}MB 이하
-                    </span>
-                  </div>
-                  {photoErrors.map((message) => (
-                    <p className="field-error" key={message}>
-                      {message}
-                    </p>
-                  ))}
-                  {photosDraft.length > 0 && (
-                    <ul className="detail-photo-grid">
-                      {photosDraft.map((photo, i) => (
-                        <li key={photo.id ?? photo.previewUrl} className="detail-photo-item">
-                          <img
-                            src={photoSrc(photo)}
-                            alt={`${record.name} 사진 ${i + 1}`}
-                            loading="lazy"
-                          />
-                          <button
-                            type="button"
-                            className="detail-photo-remove"
-                            onClick={() => setRemovingPhotoIndex(i)}
-                            aria-label={`사진 ${i + 1} 삭제`}
-                          >
-                            <CloseIcon />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {editError && <p className="field-error">{editError}</p>}
-
-                <div className="detail-edit-actions">
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={cancelEdit}
-                    disabled={busy}
-                  >
-                    취소
-                  </button>
-                  <button type="button" className="btn-primary" onClick={handleSave} disabled={busy}>
-                    {busy ? '저장하는 중…' : '저장'}
-                  </button>
-                </div>
-              </div>
+              <RecordForm
+                initialValues={{
+                  place,
+                  category: record.category,
+                  rating: record.rating,
+                  memo: record.memo ?? '',
+                  photos,
+                }}
+                reference={reference}
+                submitLabel="저장"
+                submittingLabel="저장하는 중…"
+                submitting={busy}
+                error={editError}
+                onSubmit={handleSave}
+                onCancel={() => setEditing(false)}
+              />
             ) : (
               <>
                 <div className="detail-section-head">
@@ -491,7 +271,7 @@ export default function RecordDetailPage() {
                   <div className="detail-meta-item">
                     <dt>등록일</dt>
                     <dd>
-                      {dateLabel(record.createdAt)}
+                      {formatDate(record.createdAt)}
                       {record.updatedAt !== record.createdAt && ' (수정됨)'}
                     </dd>
                   </div>
@@ -526,7 +306,6 @@ export default function RecordDetailPage() {
                   <h2 className="detail-section-title">평점과 메모</h2>
                   <div className="detail-rating-row">
                     <StarRatingDisplay value={record.rating} />
-                    <span className="detail-rating-value">{record.rating.toFixed(1)}</span>
                   </div>
                   {record.memo ? (
                     <p className="detail-memo">{record.memo}</p>
@@ -538,7 +317,7 @@ export default function RecordDetailPage() {
             )}
           </section>
 
-          {/* 소속 여행. 공개 범위는 여기서 바꾸지 않고 여행 화면에서 바꾼다 (공통 명세 §3.5). */}
+          {/* 소속 여행. 공개 범위는 여기서 바꾸지 않고 여행 화면에서 바꾼다. */}
           <section className="detail-section">
             <h2 className="detail-section-title">소속 여행</h2>
             <p className="detail-trip-link">
@@ -560,80 +339,17 @@ export default function RecordDetailPage() {
       </main>
 
       {confirmingDelete && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setConfirmingDelete(false)
-            setDeleteError('')
-          }}
+        <ConfirmDialog
+          title="이 기록을 삭제할까요?"
+          error={deleteError}
+          confirmLabel="삭제"
+          busyLabel="삭제하는 중…"
+          busy={busy}
+          onConfirm={handleDelete}
+          onCancel={closeDeleteConfirm}
         >
-          <div
-            className="modal-panel confirm-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="기록 삭제 확인"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>이 기록을 삭제할까요?</h2>
-            <p className="confirm-desc">
-              삭제하면 목록과 공유 대상 모두에게서 사라집니다. 되돌릴 수 없어요.
-            </p>
-            {deleteError && <p className="field-error">{deleteError}</p>}
-            <div className="confirm-actions">
-              <button
-                type="button"
-                className="confirm-cancel"
-                onClick={() => setConfirmingDelete(false)}
-              >
-                취소
-              </button>
-              <button type="button" className="confirm-ok" onClick={handleDelete} disabled={busy}>
-                {busy ? '삭제하는 중…' : '삭제'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {removingPhotoIndex !== null && (
-        <div className="modal-overlay" onClick={() => setRemovingPhotoIndex(null)}>
-          <div
-            className="modal-panel confirm-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="사진 삭제 확인"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>이 사진을 삭제할까요?</h2>
-            <p className="confirm-desc">
-              사진 {removingPhotoIndex + 1}번을 목록에서 뺍니다. 저장을 눌러야 실제로 지워지며,
-              취소하면 되돌아옵니다.
-            </p>
-            <div className="confirm-actions">
-              <button
-                type="button"
-                className="confirm-cancel"
-                onClick={() => setRemovingPhotoIndex(null)}
-              >
-                취소
-              </button>
-              <button type="button" className="confirm-ok" onClick={handlePhotoRemove}>
-                삭제
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {searchOpen && (
-        <PlaceSearchModal
-          reference={reference}
-          onSelect={(place) => {
-            setPlaceDraft(place)
-            setSearchOpen(false)
-          }}
-          onClose={() => setSearchOpen(false)}
-        />
+          삭제하면 목록과 공유 대상 모두에게서 사라집니다. 되돌릴 수 없어요.
+        </ConfirmDialog>
       )}
 
       {mapOpen && <PlaceMapModal place={place} onClose={() => setMapOpen(false)} />}

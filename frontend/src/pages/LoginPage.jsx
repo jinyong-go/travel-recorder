@@ -1,18 +1,26 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-// 네이버 OAuth 복구 시 아래 import 를 되살린다 (명세 §2.1).
-// import { NAVER_LOGIN_URL } from '../config/api.js'
+import { errorMessage } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
 import './LoginPage.css'
 
-// 로그인 실패/세션 만료 안내 (SPECIFICATION.md 2.1)
-const ERROR_MESSAGES = {
+const LOGIN_FAILED = '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.'
+
+// 주소의 `?error=` 로 넘어오는 안내. 세션 만료는 AuthContext 가 이 화면으로 보낼 때 붙인다.
+const QUERY_ERROR = {
   access_denied: '네이버 로그인 동의가 취소되었습니다. 다시 시도해 주세요.',
   session_expired: '세션이 만료되었습니다. 다시 로그인해 주세요.',
 }
 
+const LOGIN_ERROR = {
+  UNAUTHENTICATED: '아이디 또는 비밀번호가 올바르지 않습니다.',
+}
+
+/**
+ * 로그인 화면. 지금은 임시 아이디/비밀번호 로그인이며, 성공하면 들어오기 전에 보던 곳으로 돌려보낸다.
+ */
 export default function LoginPage() {
   const [searchParams] = useSearchParams()
   const { login } = useAuth()
@@ -26,11 +34,11 @@ export default function LoginPage() {
 
   const errorKey = searchParams.get('error')
   const queryErrorMessage = errorKey
-    ? (ERROR_MESSAGES[errorKey] ?? '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+    ? (QUERY_ERROR[errorKey] ?? LOGIN_FAILED)
     : null
-  const errorMessage = formError ?? queryErrorMessage
+  const shownError = formError ?? queryErrorMessage
 
-  // 공유받은 여행 링크를 타고 들어온 경우처럼, 보던 곳으로 돌려보낸다 (명세 §2.1).
+  // 공유받은 여행 링크를 타고 들어온 경우처럼, 보던 곳으로 돌려보낸다.
   const redirectTo = location.state?.from ?? '/trips'
 
   const handleSubmit = async (e) => {
@@ -43,16 +51,10 @@ export default function LoginPage() {
       await login(username.trim(), password)
       navigate(redirectTo, { replace: true })
     } catch (error) {
-      setFormError(error.message)
+      setFormError(errorMessage(error, LOGIN_ERROR, LOGIN_FAILED))
       setSubmitting(false)
     }
   }
-
-  // 네이버 OAuth 복구 시 되살린다. 인증 화면으로는 브라우저 전체가 이동해야 하므로
-  // XHR 이 아닌 location 이동을 쓴다 (명세 §2.1).
-  // const handleNaverLogin = () => {
-  //   window.location.href = NAVER_LOGIN_URL
-  // }
 
   return (
     <>
@@ -75,9 +77,9 @@ export default function LoginPage() {
             로그인하면 여행을 만들고 다녀온 곳을 기록할 수 있습니다.
           </p>
 
-          {errorMessage && (
+          {shownError && (
             <p className="login-error" role="alert">
-              {errorMessage}
+              {shownError}
             </p>
           )}
 
@@ -117,18 +119,11 @@ export default function LoginPage() {
             <code>password</code>
           </p>
 
-          {/* 네이버 OAuth 복구 시 주석을 푼다 (명세 §2.1). NaverIcon 도 함께 import 한다.
-          <button type="button" className="naver-login-btn" onClick={handleNaverLogin}>
-            <NaverIcon />
-            네이버로 로그인
-          </button>
-          */}
-
           <p className="login-note">
-            로그인 없이도 등록된 여행지를 둘러볼 수 있어요.
+            로그인 없이도 공개된 여행을 둘러볼 수 있어요.
           </p>
           <Link to="/trips?scope=public" className="login-browse-link">
-            <ArrowLeftIcon /> 여행지 둘러보기
+            <ArrowLeftIcon /> 여행 둘러보기
           </Link>
         </div>
       </main>

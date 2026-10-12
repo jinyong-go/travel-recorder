@@ -4,17 +4,16 @@ import { ApiError } from '../api/client.js'
 import * as api from '../api/groups.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import usePagedList from '../hooks/usePagedList.js'
-import ThemeSelector from '../components/ThemeSelector.jsx'
-import HeaderAuth from '../components/HeaderAuth.jsx'
-import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
-import '../styles/confirmPanel.css'
+import { formatDate } from '../utils/date.js'
+import AppHeader from '../components/AppHeader.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import { ArrowLeftIcon } from '../components/icons.jsx'
 import '../styles/groupPages.css'
 import './InvitesPage.css'
-const formatDate = (iso) => new Date(iso).toLocaleDateString('ko-KR')
 
 /**
- * 끝난 방식의 표기. 같은 사실을 받은 쪽과 보낸 쪽이 각자의 시점으로 읽으므로 주어가 드러나야 한다
- * (명세 §5.8.4). 예: 내가 거절한 것은 "거절함", 상대가 거절한 것은 "거절됨".
+ * 끝난 방식의 표기. 같은 사실을 받은 쪽과 보낸 쪽이 각자의 시점으로 읽으므로 주어가 드러나야 한다.
+ * 예: 내가 거절한 것은 "거절함", 상대가 거절한 것은 "거절됨".
  */
 const OUTCOME_LABEL = {
   received: {
@@ -31,6 +30,9 @@ const OUTCOME_LABEL = {
   },
 }
 
+/**
+ * 초대함. 받은/보낸 탭(`tab`, 경로가 정한다)마다 대기 중인 초대와 끝난 초대를 따로 읽는다.
+ */
 export default function InvitesPage({ tab }) {
   const navigate = useNavigate()
   const [inviteError, setInviteError] = useState('')
@@ -41,7 +43,7 @@ export default function InvitesPage({ tab }) {
   const busy = processing !== null
   const isProcessing = (action, id) => processing?.action === action && processing.id === id
 
-  // 탭마다 담기는 항목과 동작이 달라 목록을 따로 부른다 (명세 §5.8.4).
+  // 탭마다 담기는 항목과 동작이 달라 목록을 따로 부른다.
   const loadPending = useCallback(
     (page) => (tab === 'received' ? api.fetchReceivedInvites(page) : api.fetchSentInvites(page)),
     [tab],
@@ -74,8 +76,8 @@ export default function InvitesPage({ tab }) {
     } catch (err) {
       const code = err instanceof ApiError ? err.code : null
       if (code === 'GROUP_MEMBER_LIMIT_EXCEEDED') {
-        // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다 (§3.7).
-        setInviteError('그룹 정원(5명)이 가득 찼습니다. 자리가 나면 다시 수락할 수 있습니다.')
+        // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다.
+        setInviteError('그룹 정원이 가득 찼습니다. 자리가 나면 다시 수락할 수 있습니다.')
       } else {
         setInviteError('이미 처리되었거나 취소된 초대입니다.')
         pending.reload()
@@ -114,18 +116,9 @@ export default function InvitesPage({ tab }) {
 
   return (
     <>
-      <header className="app-header">
-        <Link to="/" className="app-title app-title-link">
-          <MapPinIcon className="app-title-icon" />
-          여행 지도 <span className="by-yong">by YONG</span>
-        </Link>
-        <div className="header-actions">
-          <ThemeSelector />
-          {/* 받은 탭의 대기 목록이 곧 받은 초대 목록이라 그 건수를 넘겨 헤더가 같은 요청을
-              다시 보내지 않게 한다. 보낸 탭에서는 헤더가 직접 읽는다. */}
-          <HeaderAuth receivedCount={tab === 'received' ? (pending.total ?? 0) : undefined} />
-        </div>
-      </header>
+      {/* 받은 탭의 대기 목록이 곧 받은 초대 목록이라 그 건수를 넘겨 헤더가 같은 요청을
+          다시 보내지 않게 한다. 보낸 탭에서는 헤더가 직접 읽는다. */}
+      <AppHeader receivedCount={tab === 'received' ? (pending.total ?? 0) : undefined} />
 
       <main className="groups-page">
         <div className="groups-inner">
@@ -218,7 +211,7 @@ export default function InvitesPage({ tab }) {
                 ))}
               </ul>
             )}
-            {/* 이력은 지워지지 않아 계정이 오래될수록 길어진다 (명세 §5.8.4). */}
+            {/* 이력은 지워지지 않아 계정이 오래될수록 길어진다. */}
             {pending.hasNext && (
               <button type="button" className="link-button" onClick={pending.loadMore}>
                 더 보기
@@ -243,7 +236,7 @@ export default function InvitesPage({ tab }) {
                 {history.items.map((item) => (
                   <li key={item.id} className="invite-item">
                     {/* 삭제된 그룹도 표시는 다른 항목과 같고, 갈 곳이 없으므로 링크만 걸지
-                        않는다. 삭제 사실은 결과 배지가 말한다 (공통 명세 §3.7). */}
+                        않는다. 삭제 사실은 결과 배지가 말한다. */}
                     {item.group.deleted ? (
                       <span className="invite-group-name">{item.group.name}</span>
                     ) : (
@@ -253,7 +246,7 @@ export default function InvitesPage({ tab }) {
                     )}
                     <span className="invite-counterpart">{item.counterpart.name}</span>
                     {/* 색이 가르는 기준은 "그룹에 들어갔는가" 하나다. 끝난 방식마다 색을
-                        주지 않는다 — 문구가 이미 말하는 것을 반복할 뿐이다 (명세 §5.8.4). */}
+                        주지 않는다 — 문구가 이미 말하는 것을 반복할 뿐이다. */}
                     <span
                       className={`invite-outcome ${
                         item.outcome === 'ACCEPTED'
@@ -278,40 +271,22 @@ export default function InvitesPage({ tab }) {
       </main>
 
       {rejecting && (
-        <div className="modal-overlay" onClick={() => setRejecting(null)}>
-          <div
-            className="modal-panel confirm-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="초대를 거절할까요?"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>초대를 거절할까요?</h2>
-            <p className="confirm-desc">
-              &apos;{rejecting.group.name}&apos; 초대가 지난 초대로 넘어가고,{' '}
-              <strong>거절한 사실이 보낸 사람에게도 보입니다.</strong> 다시 참여하려면 상대가 새로
-              초대해야 해요.
-            </p>
-            <div className="confirm-actions">
-              <button type="button" className="confirm-cancel" onClick={() => setRejecting(null)}>
-                취소
-              </button>
-              <button
-                type="button"
-                className="confirm-ok"
-                disabled={busy}
-                onClick={() => {
-                  const invite = rejecting
-                  setRejecting(null)
-                  setInviteError('')
-                  handleReject(invite)
-                }}
-              >
-                거절
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="초대를 거절할까요?"
+          confirmLabel="거절"
+          busy={busy}
+          onConfirm={() => {
+            const invite = rejecting
+            setRejecting(null)
+            setInviteError('')
+            handleReject(invite)
+          }}
+          onCancel={() => setRejecting(null)}
+        >
+          &apos;{rejecting.group.name}&apos; 초대가 지난 초대로 넘어가고,{' '}
+          <strong>거절한 사실이 보낸 사람에게도 보입니다.</strong> 다시 참여하려면 상대가 새로
+          초대해야 해요.
+        </ConfirmDialog>
       )}
     </>
   )

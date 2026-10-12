@@ -13,7 +13,7 @@ export default function StarRatingInput({ value, onChange }) {
       className="star-rating-input"
       role="radiogroup"
       aria-label="별점"
-      // 별점을 받는 폼(기록 등록·수정)은 모두 평점이 필수다 (명세 §5.3).
+      // 별점을 받는 폼(기록 등록·수정)은 모두 평점이 필수다.
       aria-required="true"
       onMouseLeave={() => setHoverValue(0)}
     >

@@ -110,7 +110,7 @@
   white-space: nowrap;
 }
 
-/* 그룹 목록에서 초대함으로 보내는 알림 줄. 목록 자체는 여기서 그리지 않는다 (명세 §5.8.4). */
+/* 그룹 목록에서 초대함으로 보내는 알림 줄. 목록 자체는 여기서 그리지 않는다. */
 .invite-notice {
   display: flex;
   align-items: center;
