@@ -4,16 +4,15 @@ import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
 import com.yong.travel.group.persistence.GroupEntity
-import com.yong.travel.trip.persistence.TripEntity
-import com.yong.travel.trip.persistence.TripShareEntity
-import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.domain.TripScope
+import com.yong.travel.trip.domain.TripVisibility
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root
 import jakarta.persistence.criteria.Subquery
 import org.springframework.data.jpa.domain.Specification
 
+/** 여행 목록의 동적 조회 조건. 공개 범위 판정이 여기서 쿼리에 실린다. */
 object TripSpecifications {
 
     /**
@@ -22,8 +21,10 @@ object TripSpecifications {
      * 공개 범위 판정을 조회 쿼리에 실어 보내는 것이 핵심이다. 전부 읽어 온 뒤 애플리케이션에서
      * 걸러 내면 페이지네이션 건수가 어긋나고, 거르는 걸 한 번 빠뜨리는 순간 곧바로 정보 유출이 된다.
      *
-     * @param userId 비로그인이면 null. 이 경우 PUBLIC 만 조회된다.
+     * @param scope 조회 범위
+     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
      * @param groupIds 요청자가 속한 그룹 id 목록
+     * @return 범위 조건
      */
     fun withScope(scope: TripScope, userId: Long?, groupIds: List<Long>): Specification<TripEntity> =
         Specification { root, query, cb ->
@@ -49,7 +50,12 @@ object TripSpecifications {
             }
         }
 
-    /** 여행 이름 부분 일치. 기록 목록과 달리 주소는 보지 않는다 — 여행은 주소를 갖지 않는다. */
+    /**
+     * 여행 이름 부분 일치 조건. 기록 목록과 달리 주소는 보지 않는다 — 여행은 주소를 갖지 않는다.
+     *
+     * @param keyword 검색어. 비었으면 조건을 걸지 않는다
+     * @return 검색어 조건
+     */
     fun withKeyword(keyword: String?): Specification<TripEntity> =
         Specification { root, _, cb ->
             val trimmed = keyword?.trim()?.takeIf { it.isNotEmpty() }

@@ -1,6 +1,5 @@
 package com.yong.travel.group.persistence
 
-import com.yong.travel.group.persistence.GroupInviteEntity
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -8,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
+/** 대기 중인 초대의 조회와 삭제. 목록은 관점(그룹·받은 사람·보낸 사람)마다 따로 둔다. */
 interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
 
     /**
@@ -18,6 +18,10 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
      * 받는 사람·보낸 사람을 fetch join 한다. 받는 사람은 행마다 달라, 빠뜨리면 행마다 사용자 조회가
      * 따로 나간다. 그룹은 호출부가 권한 확인 때 이미 읽어 두므로 조인하지 않는다.
      * fetch join 이 든 쿼리로는 건수를 셀 수 없어 countQuery 를 따로 둔다 (아래 목록도 같다).
+     *
+     * @param groupId 그룹 id
+     * @param pageable 페이지 요청
+     * @return 오래된 순의 대기 초대 한 페이지
      */
     @Query(
         value = """
@@ -35,6 +39,10 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
      * 받은 초대 목록. 나를 초대할 수 있는 그룹 수에 제한이 없어 역시 페이지로 끊는다.
      *
      * 그룹·보낸 사람은 행마다 다르고 받는 사람(나)도 응답 변환에서 읽으므로 셋 다 fetch join 한다.
+     *
+     * @param inviteeId 초대받은 사용자 id
+     * @param pageable 페이지 요청
+     * @return 오래된 순의 받은 초대 한 페이지
      */
     @Query(
         value = """
@@ -60,6 +68,10 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
      * 아래 fetch join 은 결과를 거르지 않고 응답에 쓸 그룹·사람을 함께 읽기 위한 것이라 이 판단과 무관하다.
      *
      * 그룹·받는 사람은 행마다 다르고 보낸 사람(나)도 응답 변환에서 읽으므로 셋 다 fetch join 한다.
+     *
+     * @param invitedById 초대를 보낸 사용자 id
+     * @param pageable 페이지 요청
+     * @return 오래된 순의 보낸 초대 한 페이지
      */
     @Query(
         value = """
@@ -77,9 +89,22 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
         pageable: Pageable,
     ): Page<GroupInviteEntity>
 
+    /**
+     * 같은 그룹·같은 상대의 대기 초대를 찾는다. 유니크 제약상 많아야 하나다.
+     *
+     * @param groupId 그룹 id
+     * @param inviteeId 초대받은 사용자 id
+     * @return 대기 초대. 없으면 null
+     */
     fun findByGroupIdAndInviteeId(groupId: Long, inviteeId: Long): GroupInviteEntity?
 
-    /** 그룹 삭제 시 이력으로 옮길 대상. 대기 초대는 정원과 무관하게 쌓일 수 있어 페이지로 끊지 않는다. */
+    /**
+     * 그룹 삭제 시 이력으로 옮길 대기 초대를 읽는다. 정원과 무관하게 쌓일 수 있지만 한 번에 옮겨야 해서
+     * 페이지로 끊지 않는다.
+     *
+     * @param groupId 그룹 id
+     * @return 그 그룹의 대기 초대 전부
+     */
     fun findByGroupId(groupId: Long): List<GroupInviteEntity>
 
     /**
@@ -89,6 +114,9 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
      * **다른 벌크 삭제와 달리 영속성 컨텍스트를 비운다.** 호출부가 읽어 둔 초대 엔티티가 컨텍스트에
      * 남은 채 그룹 엔티티를 지우면, 지워진 그룹을 가리키는 초대 때문에 flush 가 실패한다.
      * 그룹은 이 호출 뒤 준영속이 되며, 호출부의 `groupRepository.delete` 가 다시 찾아 지운다.
+     *
+     * @param groupId 그룹 id
+     * @return 지운 행 수
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from GroupInviteEntity i where i.group.id = :groupId")

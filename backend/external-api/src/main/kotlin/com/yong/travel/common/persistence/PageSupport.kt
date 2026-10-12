@@ -11,11 +11,19 @@ const val DEFAULT_PAGE_SIZE = 10
 /**
  * 목록 요청의 `page` 를 페이지 요청으로 바꾼다.
  *
- * 크기는 서버가 정하므로 요청에서 받지 않으며, 음수 `page` 는 0으로 본다.
+ * 크기는 서버가 정하므로 요청에서 받지 않는다.
+ *
+ * @param page 0부터 시작하는 페이지 번호. 음수는 0으로 본다
+ * @param sort 정렬. 생략하면 정렬하지 않는다
+ * @return 기본 페이지 크기의 페이지 요청
  */
 fun listPageRequest(page: Int, sort: Sort = Sort.unsorted()): PageRequest =
     PageRequest.of(page.coerceAtLeast(0), DEFAULT_PAGE_SIZE, sort)
 
-/** 조회 결과 → 서비스 반환형. Spring Data 타입이 서비스 밖으로 나가지 않게 하는 경계다. */
+/**
+ * 조회 결과 → 서비스 반환형. Spring Data 타입이 서비스 밖으로 나가지 않게 하는 경계다.
+ *
+ * @return 내용과 페이지 메타데이터를 옮긴 페이지
+ */
 fun <T : Any> Page<T>.toPageResult(): PageResult<T> =
     PageResult(content, number, size, totalElements)

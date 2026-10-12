@@ -10,6 +10,7 @@ data class NaverLocalSearchResponse(
     val items: List<NaverLocalSearchItem> = emptyList(),
 )
 
+/** 지역 검색 결과 한 건. `title` 에는 검색어 강조용 HTML 태그가 섞여 온다. */
 data class NaverLocalSearchItem(
     val title: String,
     val link: String? = null,

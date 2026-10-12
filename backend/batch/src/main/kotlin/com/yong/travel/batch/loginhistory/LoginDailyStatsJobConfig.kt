@@ -33,12 +33,27 @@ class LoginDailyStatsJobConfig(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 로그인 통계 잡. 스텝 하나로 끝난다.
+     *
+     * @param jobRepository 잡 실행 저장소
+     * @param loginDailyStatsStep 집계 스텝
+     * @return 잡
+     */
     @Bean
     fun loginDailyStatsJob(jobRepository: JobRepository, loginDailyStatsStep: Step): Job =
         JobBuilder(JOB_NAME, jobRepository)
             .start(loginDailyStatsStep)
             .build()
 
+    /**
+     * 집계 태스크릿을 트랜잭션 하나로 도는 스텝.
+     *
+     * @param jobRepository 잡 실행 저장소
+     * @param transactionManager 지우고 넣기를 하나로 묶을 트랜잭션 관리자
+     * @param loginDailyStatsTasklet 집계 태스크릿
+     * @return 스텝
+     */
     @Bean
     fun loginDailyStatsStep(
         jobRepository: JobRepository,
@@ -49,7 +64,12 @@ class LoginDailyStatsJobConfig(
             .tasklet(loginDailyStatsTasklet, transactionManager)
             .build()
 
-    /** 잡 파라미터 `targetDate` 를 읽어야 하므로 스텝이 실행될 때 만든다. */
+    /**
+     * 하루치 합계를 지우고 다시 넣는 태스크릿. 잡 파라미터 `targetDate` 를 읽어야 하므로 스텝이 실행될 때 만든다.
+     *
+     * @param targetDate 집계할 날짜(`yyyy-MM-dd`). 없으면 한국 시간 기준 어제다
+     * @return 태스크릿. 거부한 날짜면 실행 중에 `IllegalArgumentException` 을 던진다
+     */
     @Bean
     @StepScope
     fun loginDailyStatsTasklet(@Value("#{jobParameters['targetDate']}") targetDate: String?): Tasklet =
@@ -84,8 +104,7 @@ class LoginDailyStatsJobConfig(
      *
      * 오늘 이후는 아직 끝나지 않은 날이라 거부한다. 원본 보관 기간이 지났을 수 있는 날짜도 거부한다 —
      * 원본이 지워진 만큼 실제 값이 작게 덮이고, 그 손실은 되돌릴 수 없다.
-     *
-     * @throws IllegalArgumentException 거부한 날짜. 잡이 실패로 끝나 종료 코드로 드러난다.
+     * 거부하면 `IllegalArgumentException` 을 던지므로 잡이 실패로 끝나 종료 코드로 드러난다.
      */
     private fun resolveTargetDate(targetDate: String?): LocalDate {
         val today = LocalDate.now(ZONE)

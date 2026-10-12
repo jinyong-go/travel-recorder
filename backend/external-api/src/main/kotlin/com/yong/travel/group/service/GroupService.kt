@@ -4,20 +4,25 @@ import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.auth.persistence.toUser
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
-import com.yong.travel.group.persistence.GroupEntity
-import com.yong.travel.group.persistence.GroupMemberEntity
-import com.yong.travel.group.persistence.InviteHistoryEntity
 import com.yong.travel.group.domain.Group
 import com.yong.travel.group.domain.InviteOutcome
+import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.group.persistence.GroupInviteRepository
-import com.yong.travel.group.persistence.InviteHistoryRepository
+import com.yong.travel.group.persistence.GroupMemberEntity
 import com.yong.travel.group.persistence.GroupMemberRepository
 import com.yong.travel.group.persistence.GroupRepository
+import com.yong.travel.group.persistence.InviteHistoryEntity
+import com.yong.travel.group.persistence.InviteHistoryRepository
 import com.yong.travel.trip.persistence.TripShareRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+/**
+ * 공유 그룹의 생성·수정·삭제와 멤버십 관리. 멤버 추가만은 초대를 거치므로 [GroupInviteService] 의 몫이다.
+ *
+ * 다른 도메인이 쓰는 판정 재료(속한 그룹 id, 공유 가능한 그룹)도 여기서 내준다.
+ */
 @Service
 @Transactional(readOnly = true)
 class GroupService(
@@ -45,7 +50,7 @@ class GroupService(
     }
 
     /**
-     * 그룹 상세를 멤버 목록과 함께 조회한다.
+     * 그룹 상세를 멤버 명단과 함께 조회한다.
      *
      * @param groupId 조회할 그룹 id
      * @param userId 조회를 요청한 사용자 id
@@ -63,7 +68,7 @@ class GroupService(
     }
 
     /**
-     * 그룹을 만들고 소유자를 첫 멤버로 함께 넣는다.
+     * 그룹을 만들고 만든 사람을 소유자이자 첫 멤버로 넣는다.
      *
      * @param userId 그룹을 만드는 사용자 id. 그대로 소유자가 된다
      * @param name 그룹 이름. 앞뒤 공백을 지워 저장한다
@@ -88,11 +93,11 @@ class GroupService(
     }
 
     /**
-     * 그룹의 이름과 메모를 바꾼다.
+     * 그룹의 이름과 메모를 바꾼다. 소유자만 할 수 있다.
      *
      * @param groupId 수정할 그룹 id
      * @param userId 수정을 요청한 사용자 id
-     * @param name 새 이름
+     * @param name 새 이름. 앞뒤 공백을 지워 저장한다
      * @param memo 새 메모. **이름과 함께 덮어쓰므로 `null` 이면 기존 메모가 지워진다**
      * @return 수정된 그룹 상세
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
@@ -104,12 +109,13 @@ class GroupService(
         requireOwner(group, userId)
         group.name = name.trim()
         group.memo = memo.blankToNull()
+        val saved = groupRepository.save(group)
         log.debug("그룹 수정 groupId={} ownerId={}", groupId, userId)
-        return detailOf(groupRepository.save(group))
+        return detailOf(saved)
     }
 
     /**
-     * 그룹과 그에 딸린 멤버·대기 초대·공유 관계를 모두 지운다.
+     * 그룹과 그에 딸린 멤버·대기 초대·공유 관계를 모두 지운다. 소유자만 할 수 있다.
      *
      * 이 그룹으로만 공유되던 여행은 결과적으로 비공개가 되며, 여행과 하위 기록 자체는 삭제되지 않는다.
      * 대기 중이던 초대는 받는 쪽에서 이유 없이 사라지는 일이라 `GROUP_DELETED` 이력으로 남긴다.
@@ -127,12 +133,12 @@ class GroupService(
         tripShareRepository.deleteByGroupId(groupId)
         val pending = groupInviteRepository.findByGroupId(groupId)
         inviteHistoryRepository.saveAll(pending.map { InviteHistoryEntity.from(it, InviteOutcome.GROUP_DELETED) })
-        log.debug("그룹 삭제 groupId={} ownerId={} 이력으로_넘긴_대기초대={}건", groupId, userId, pending.size)
         // 초대 벌크 삭제가 영속성 컨텍스트를 비우므로 이 뒤로 group 은 준영속이다.
         // groupRepository.delete 가 다시 찾아 지운다 (GroupInviteRepository.deleteByGroupId 참고).
         groupInviteRepository.deleteByGroupId(groupId)
         groupMemberRepository.deleteByGroupId(groupId)
         groupRepository.delete(group)
+        log.debug("그룹 삭제 groupId={} ownerId={} pendingInvites={}", groupId, userId, pending.size)
     }
 
     /**
@@ -211,18 +217,18 @@ class GroupService(
 
         val accessible = groupIdsOf(userId).toSet()
         if (!accessible.containsAll(distinct)) {
-            log.debug("공유 대상 그룹 차단 userId={} 요청={} 접근가능={}", userId, distinct, accessible)
+            log.debug("공유 대상 그룹 차단 userId={} requested={} accessible={}", userId, distinct, accessible)
             throw ApiException(ErrorCode.GROUP_NOT_FOUND)
         }
         return groupRepository.findAllById(distinct)
     }
 
-    // 그룹 단건 조회. 없으면 GROUP_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다.
+    /** 그룹 단건 조회. 없으면 GROUP_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다. */
     private fun findGroup(groupId: Long): GroupEntity =
         groupRepository.findById(groupId)
             .orElseThrow { ApiException(ErrorCode.GROUP_NOT_FOUND) }
 
-    // 소유자만 통과시킨다. update·delete·removeMember 가 같은 관문을 쓴다.
+    /** 소유자만 통과시킨다. update·delete·removeMember 가 같은 관문을 쓴다. */
     private fun requireOwner(group: GroupEntity, userId: Long) {
         if (group.owner.id != userId) {
             log.debug("그룹 소유자 아님 groupId={} userId={} ownerId={}", group.id, userId, group.owner.id)
@@ -230,7 +236,7 @@ class GroupService(
         }
     }
 
-    // 공백만 남은 메모는 "메모 없음" 과 같다. 카드에 빈 줄만 그려지지 않도록 null 로 모은다.
+    /** 공백만 남은 메모는 "메모 없음" 과 같다. 카드에 빈 줄만 그려지지 않도록 null 로 모은다. */
     private fun String?.blankToNull(): String? = this?.trim()?.takeIf { it.isNotBlank() }
 
     /** 단건 응답. 이 그룹의 명단만 읽어 [toDomain] 에 넘긴다. */
@@ -261,13 +267,13 @@ class GroupService(
             memo = memo,
             // 소유자는 반드시 멤버 행을 갖는다 (create 참고). 없다면 데이터가 깨진 것이라 500 이 맞다.
             owner = members.firstOrNull { it.user.id == ownerId }
-                ?: error("그룹 ${'$'}groupId 의 소유자 멤버 행이 없다"),
+                ?: error("그룹 $groupId 의 소유자 멤버 행이 없다"),
             members = members,
             memberLimit = GroupEntity.MEMBER_LIMIT,
         )
     }
 
-    // 멤버 행 → 도메인. 이름과 프로필 사진까지만 담는다.
+    /** 멤버 행 → 도메인. 이름과 프로필 사진까지만 담는다. */
     private fun GroupMemberEntity.toDomain() = Group.Member(
         user = user.toUser(),
         joinedAt = joinedAt,

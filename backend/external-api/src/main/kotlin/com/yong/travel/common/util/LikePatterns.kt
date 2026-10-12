@@ -8,6 +8,9 @@ const val LIKE_ESCAPE = '\\'
  *
  * 그대로 두면 `%` 하나로 전체가, `_` 로 임의의 한 글자가 걸린다. 이스케이프 문자 자신을 가장 먼저
  * 바꿔야 뒤에서 붙인 이스케이프가 다시 이스케이프되지 않는다.
+ *
+ * @param keyword 사용자가 입력한 검색어
+ * @return 앞뒤에 `%` 를 붙인 LIKE 패턴. escape 문자는 [LIKE_ESCAPE] 다
  */
 fun containsPattern(keyword: String): String =
     "%" + keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"

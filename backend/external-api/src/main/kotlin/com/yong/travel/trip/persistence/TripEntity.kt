@@ -92,6 +92,7 @@ class TripEntity(
     var deletedAt: Instant? = null
         protected set
 
+    /** 수정 시각을 갱신한다. flush 시점에 JPA 가 부른다. */
     @PreUpdate
     fun onUpdate() {
         updatedAt = Instant.now()
@@ -109,6 +110,8 @@ class TripEntity(
      * **모든 경로**가 이 처리를 직접 해야 한다 — 사진 삭제, 기록 삭제, 기록의 소속 여행 변경.
      * 빠뜨리면 없는 사진을 가리키는 커버가 남아 여행 조회가 깨진다. 그래서 경로마다 흩어 놓지
      * 않고 상태를 가진 이곳에 모아 둔다.
+     *
+     * @param photoIds 이 여행에서 사라지는 사진 id 들
      */
     fun clearCoverIfAmong(photoIds: Collection<UUID>) {
         val current = coverPhoto?.id ?: return

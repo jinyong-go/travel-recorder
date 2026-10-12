@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import kotlin.math.floor
 
+/** 기록 등록 요청. */
 data class TripRecordCreateRequest(
     /**
      * 소속 여행. 필수이며, 요청자가 소유하지 않은 여행이면 404 TRIP_NOT_FOUND 다.
@@ -67,11 +68,19 @@ data class TripRecordCreateRequest(
     val isTagLengthValid: Boolean
         get() = areTagsWithinLength(tags)
 
+    /**
+     * 검증을 마친 요청을 서비스 입력으로 옮긴다.
+     *
+     * @return 기록 등록 입력
+     */
     fun toCommand() = TripRecordCreateCommand(
         tripId, name, category, tags, address, roadAddress, externalLink, latitude, longitude, rating, memo,
     )
 }
 
+/**
+ * 기록 수정 요청. 소속 여행은 담지 않는다 — 여행 이동은 [TripChangeRequest] 로 한다.
+ */
 data class TripRecordUpdateRequest(
     @field:NotBlank
     @field:Size(max = 255)
@@ -120,6 +129,11 @@ data class TripRecordUpdateRequest(
     val isTagLengthValid: Boolean
         get() = areTagsWithinLength(tags)
 
+    /**
+     * 검증을 마친 요청을 서비스 입력으로 옮긴다.
+     *
+     * @return 기록 수정 입력
+     */
     fun toCommand() = TripRecordUpdateCommand(
         name, category, tags, address, roadAddress, externalLink, latitude, longitude, rating, memo,
     )

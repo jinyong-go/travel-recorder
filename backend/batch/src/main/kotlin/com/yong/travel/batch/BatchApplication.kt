@@ -13,6 +13,11 @@ import kotlin.system.exitProcess
 @SpringBootApplication
 class BatchApplication
 
+/**
+ * 배치를 띄워 잡 하나를 돌리고, 그 결과를 종료 코드로 돌려주며 끝난다.
+ *
+ * @param args 명령행 인자. 실행할 잡 이름(`--spring.batch.job.name=…`)과 잡 파라미터를 받는다
+ */
 fun main(args: Array<String>) {
     exitProcess(SpringApplication.exit(runApplication<BatchApplication>(*args)))
 }

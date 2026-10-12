@@ -5,13 +5,24 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
 import org.springframework.security.web.csrf.CsrfTokenRepository
-import org.springframework.security.web.SecurityFilterChain
 
+/**
+ * 보안 필터 체인 구성 — 세션 쿠키 인증, CSRF 쿠키 토큰, 요청 인가.
+ *
+ * 인가는 현재 전부 `permitAll` 이고 컨트롤러가 `requireLogin` 으로 직접 막는다.
+ */
 @Configuration
 class SecurityConfig {
 
+    /**
+     * 세션·CSRF·인가 규칙을 건 필터 체인을 만든다.
+     *
+     * @param http Spring Security 의 HTTP 보안 빌더
+     * @return 완성된 필터 체인
+     */
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http {
@@ -29,16 +40,10 @@ class SecurityConfig {
                 // TODO: 기능 개발 완료 후 authenticated 로 되돌리기
                 authorize(anyRequest, permitAll)
             }
-            // 네이버 OAuth 는 임시 인메모리 로그인으로 대체된 상태다.
-            // 복구할 때 아래 블록과 생성자의 UserService 주입을 함께 되살린다.
-            // UserService 와 application.yml 의 네이버 등록 정보는 그대로 두었다 —
-            // 이 블록이 없으면 호출되지 않고, 등록 정보가 남아 있어야 Spring Boot 가
-            // 기본 인메모리 계정을 자동 생성하지 않는다.
-            // oauth2Login {
-            //     userInfoEndpoint {
-            //         userService = this@SecurityConfig.userService
-            //     }
-            // }
+            // 네이버 OAuth 는 임시 인메모리 로그인으로 대체된 상태다. 복구할 때는 생성자에 UserService 를
+            // 주입받고, 이 자리에 oauth2Login 블록을 두어 userInfoEndpoint 의 userService 로 그것을 건다.
+            // UserService 와 application.yml 의 네이버 등록 정보는 그대로 두었다 — 그 블록이 없으면
+            // 호출되지 않고, 등록 정보가 남아 있어야 Spring Boot 가 기본 인메모리 계정을 자동 생성하지 않는다.
         }
         return http.build()
     }
@@ -46,6 +51,8 @@ class SecurityConfig {
     /**
      * CSRF 토큰 저장소. 로그인·로그아웃 컨트롤러가 토큰을 비울 때 같은 쿠키 설정을 써야 하므로
      * 빈으로 꺼내 둔다 — 따로 만들면 쿠키 이름·경로가 어긋나 비우지 못할 수 있다.
+     *
+     * @return 쿠키 기반 토큰 저장소
      */
     @Bean
     fun csrfTokenRepository(): CsrfTokenRepository = CookieCsrfTokenRepository()

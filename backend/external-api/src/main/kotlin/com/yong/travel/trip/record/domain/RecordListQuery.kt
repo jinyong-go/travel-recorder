@@ -19,6 +19,7 @@ enum class RecordScope {
     PUBLIC,
 }
 
+/** 기록 목록 정렬. 거리순은 기준 좌표가 있을 때만 의미가 있다. */
 enum class RecordSort {
     RECENT,
 
@@ -28,6 +29,7 @@ enum class RecordSort {
     DISTANCE,
 }
 
+/** 기록 목록 조회 조건. 컨트롤러가 쿼리 파라미터를 옮겨 담아 서비스에 넘긴다. */
 data class RecordListQuery(
     /** null 이면 `tripId` 가 반드시 있고, 그 여행의 하위 기록 전부다. */
     val scope: RecordScope?,

@@ -29,6 +29,7 @@ enum class TripSort {
     START_DATE,
 }
 
+/** 여행 목록 조회 조건. 컨트롤러가 쿼리 파라미터를 옮겨 담아 서비스에 넘긴다. */
 data class TripListQuery(
     val scope: TripScope,
 

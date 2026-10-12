@@ -30,7 +30,12 @@ data class Group(
 ) {
     val memberCount: Int get() = members.size
 
-    /** 요청자가 소유자인지. 요청자마다 달라지는 값이라 저장하지 않고 물어보게 한다. */
+    /**
+     * 요청자가 소유자인지. 요청자마다 달라지는 값이라 저장하지 않고 물어보게 한다.
+     *
+     * @param userId 요청자의 사용자 id
+     * @return 소유자면 true
+     */
     fun isOwnedBy(userId: Long): Boolean = owner.user.id == userId
 
     /** 멤버 한 명 — 누구인지와 언제 들어왔는지. */

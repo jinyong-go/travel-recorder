@@ -1,12 +1,12 @@
 package com.yong.travel.group.persistence
 
-import com.yong.travel.group.persistence.GroupEntity
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
+/** 그룹 조회. 정원 판정용 잠금 조회를 함께 둔다. */
 interface GroupRepository : JpaRepository<GroupEntity, Long> {
 
     /**
@@ -14,6 +14,9 @@ interface GroupRepository : JpaRepository<GroupEntity, Long> {
      *
      * 정원을 강제하는 DB 제약이 없어 애플리케이션 검사가 유일한 관문인데, 검사와 입력 사이에
      * 다른 수락이 끼어들면 6명짜리 그룹이 만들어진다.
+     *
+     * @param id 그룹 id
+     * @return 쓰기 잠금을 건 그룹. 없으면 null
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select g from GroupEntity g where g.id = :id")

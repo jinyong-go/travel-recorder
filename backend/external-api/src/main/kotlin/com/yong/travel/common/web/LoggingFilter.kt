@@ -34,6 +34,13 @@ class LoggingFilter : OncePerRequestFilter() {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 요청을 그대로 넘기고, 끝난 뒤 한 줄을 남긴다.
+     *
+     * @param request 들어온 요청
+     * @param response 나갈 응답. 상태 코드를 읽는다
+     * @param filterChain 이어서 돌 필터 체인
+     */
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -56,7 +63,12 @@ class LoggingFilter : OncePerRequestFilter() {
         }
     }
 
-    /** 사진 서빙과 H2 콘솔은 건당 한 줄을 남길 값어치가 없다. */
+    /**
+     * 로그를 남기지 않을 요청인지. 사진 서빙과 H2 콘솔은 건당 한 줄을 남길 값어치가 없다.
+     *
+     * @param request 들어온 요청
+     * @return 건너뛸 요청이면 true
+     */
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
         request.requestURI.startsWith(PhotoDatabaseService.PHOTO_URL_PREFIX) ||
             request.requestURI.startsWith("/h2-console")

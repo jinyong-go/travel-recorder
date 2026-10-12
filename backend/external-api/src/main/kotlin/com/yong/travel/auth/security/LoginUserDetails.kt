@@ -16,9 +16,24 @@ class LoginUserDetails(
     override val userId: Long,
 ) : UserDetails, LoginUser {
 
+    /**
+     * 권한 목록. 역할을 두지 않으므로 늘 비어 있다.
+     *
+     * @return 빈 목록
+     */
     override fun getAuthorities(): Collection<GrantedAuthority> = emptyList()
 
+    /**
+     * 비밀번호 검증에 쓸 값.
+     *
+     * @return 해시된 비밀번호
+     */
     override fun getPassword(): String = password
 
+    /**
+     * 로그인 아이디.
+     *
+     * @return 고정 계정의 아이디
+     */
     override fun getUsername(): String = username
 }

@@ -23,20 +23,35 @@ class PhotoDatabaseService(
     private val photoDataRepository: PhotoDataRepository,
 ) {
 
-    /** 이미 저장된 사진 메타데이터에 바이너리를 붙인다. 업로드 검증은 호출자의 몫이다. */
+    /**
+     * 이미 저장된 사진 메타데이터에 바이너리를 붙인다. 업로드 검증은 호출자의 몫이다.
+     *
+     * @param photo 저장된 사진 메타데이터. id 가 채워져 있어야 한다
+     * @param file 업로드된 파일
+     */
     @Transactional
     fun store(photo: PhotoEntity, file: MultipartFile) {
         photoDataRepository.save(PhotoDataEntity(photo, file.bytes))
     }
 
     /**
-     * 서빙할 바이너리를 읽는다. 없으면 PHOTO_NOT_FOUND 다.
+     * 서빙할 바이너리를 읽는다.
      *
      * ⚠️ 공개 범위를 판정하지 않는다. 추측 불가능한 UUID 에만 의존하는 알려진 한계다.
+     *
+     * @param photoId 사진 id
+     * @return 바이너리와 Content-Type
+     * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없을 때
      */
     fun load(photoId: UUID): PhotoContent =
         photoDataRepository.findContentById(photoId) ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
 
+    /**
+     * 사진의 접근 URL 을 만든다. 클라이언트는 이 값을 그대로 쓰며 id 로 URL 을 조립하지 않는다.
+     *
+     * @param photoId 사진 id
+     * @return 서버 기준 상대 경로 URL
+     */
     fun urlOf(photoId: UUID): String = "$PHOTO_URL_PREFIX/$photoId"
 
     companion object {

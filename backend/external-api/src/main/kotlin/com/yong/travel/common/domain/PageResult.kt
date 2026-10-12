@@ -16,6 +16,12 @@ data class PageResult<T>(
     val totalPages: Int
         get() = if (size == 0) 0 else ((totalElements + size - 1) / size).toInt()
 
+    /**
+     * 내용만 바꾸고 페이지 메타데이터는 그대로 옮긴다.
+     *
+     * @param transform 항목 하나를 바꾸는 함수
+     * @return 바뀐 내용의 페이지
+     */
     fun <R> map(transform: (T) -> R): PageResult<R> =
         PageResult(content.map(transform), page, size, totalElements)
 }

@@ -6,8 +6,14 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.util.UUID
 
+/** 사진 바이너리 조회. 저장은 기본 `save` 를 쓴다. */
 interface PhotoDataRepository : JpaRepository<PhotoDataEntity, UUID> {
-    /** 서빙에 필요한 Content-Type 과 바이트를 한 번에 읽는다. 없으면 null. */
+    /**
+     * 서빙에 필요한 Content-Type 과 바이트를 한 번에 읽는다.
+     *
+     * @param photoId 사진 id
+     * @return 바이너리와 Content-Type. 없으면 null
+     */
     @Query(
         """
         select new com.yong.travel.photo.domain.PhotoContent(d.photo.contentType, d.data)

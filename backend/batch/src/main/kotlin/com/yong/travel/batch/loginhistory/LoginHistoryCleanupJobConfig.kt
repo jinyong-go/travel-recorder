@@ -31,12 +31,26 @@ class LoginHistoryCleanupJobConfig(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 로그인 이력 정리 잡. 스텝 하나로 끝난다.
+     *
+     * @param jobRepository 잡 실행 저장소
+     * @param loginHistoryCleanupStep 정리 스텝
+     * @return 잡
+     */
     @Bean
     fun loginHistoryCleanupJob(jobRepository: JobRepository, loginHistoryCleanupStep: Step): Job =
         JobBuilder(JOB_NAME, jobRepository)
             .start(loginHistoryCleanupStep)
             .build()
 
+    /**
+     * 보관 기간이 지난 이력을 한 문장으로 지우는 스텝.
+     *
+     * @param jobRepository 잡 실행 저장소
+     * @param transactionManager 삭제를 묶을 트랜잭션 관리자
+     * @return 스텝
+     */
     @Bean
     fun loginHistoryCleanupStep(jobRepository: JobRepository, transactionManager: PlatformTransactionManager): Step =
         StepBuilder("loginHistoryCleanupStep", jobRepository)
@@ -49,7 +63,7 @@ class LoginHistoryCleanupJobConfig(
                 )
                 contribution.incrementWriteCount(deleted.toLong())
                 // 지운 건수와 기준 시각만 남긴다. 지운 행의 IP·User-Agent 를 로그가 대신 보관하지 않는다.
-                log.info("로그인 이력 정리 cutoff={} 삭제={}건", cutoff, deleted)
+                log.info("로그인 이력 정리 cutoff={} deleted={}", cutoff, deleted)
                 RepeatStatus.FINISHED
             }, transactionManager)
             .build()

@@ -1,8 +1,8 @@
 package com.yong.travel.trip.record.persistence
 
-import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.tag.persistence.TagEntity
 import com.yong.travel.trip.persistence.TripEntity
+import com.yong.travel.trip.record.domain.Category
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -102,11 +102,13 @@ class TripRecordEntity(
     var deletedAt: Instant? = null
         protected set
 
+    /** 수정 시각을 갱신한다. flush 시점에 JPA 가 부른다. */
     @PreUpdate
     fun onUpdate() {
         updatedAt = Instant.now()
     }
 
+    /** 삭제 시각을 남긴다. 이미 지워진 기록이면 처음 시각을 그대로 둔다. */
     fun softDelete() {
         if (deletedAt == null) deletedAt = Instant.now()
     }
@@ -117,6 +119,8 @@ class TripRecordEntity(
      * 컬렉션을 새 Set 으로 바꿔 끼우면 Hibernate 가 조인 테이블 행을 전부 지우고 다시 넣는다. 그래서
      * 빠진 것만 지우고 새것만 더해, 바뀐 행만 DELETE·INSERT 되게 한다. [TagEntity] 는 equals 를
      * 재정의하지 않으므로 같은 영속성 컨텍스트에서 읽은 태그 엔티티를 넘겨야 한다.
+     *
+     * @param newTags 맞출 태그 집합
      */
     fun replaceTags(newTags: Set<TagEntity>) {
         tags.retainAll(newTags)

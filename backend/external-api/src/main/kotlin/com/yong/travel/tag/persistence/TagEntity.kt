@@ -8,6 +8,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 
+/** 태그. 이름이 유일하며 여러 기록이 함께 쓴다. */
 @Entity
 @Table(name = "tags", uniqueConstraints = [UniqueConstraint(columnNames = ["name"])])
 class TagEntity(

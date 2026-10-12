@@ -65,6 +65,10 @@ class InviteHistoryEntity(
          *
          * 기록 지점이 넷이라(수락·거절·취소·그룹 삭제) 만드는 방법을 한 곳에 모은다.
          * 한 곳만 빠뜨려도 이력이 조용히 비고, 그런 누락은 조회 시점에 드러나지 않는다.
+         *
+         * @param invite 끝난 대기 초대
+         * @param outcome 끝난 방식
+         * @return 그룹 id·이름을 복사해 둔 이력 행. 아직 저장되지 않았다
          */
         fun from(invite: GroupInviteEntity, outcome: InviteOutcome) = InviteHistoryEntity(
             groupId = requireNotNull(invite.group.id),

@@ -2,9 +2,9 @@ package com.yong.travel.trip.record.presentation
 
 import com.yong.travel.auth.presentation.UserResponse
 import com.yong.travel.photo.presentation.PhotoResponse
+import com.yong.travel.trip.presentation.TripRefResponse
 import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.trip.record.domain.TripRecord
-import com.yong.travel.trip.presentation.TripRefResponse
 import java.time.Instant
 
 /**
@@ -41,6 +41,10 @@ data class TripRecordResponse(
          *
          * `isAuthor` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 필드 이름은 이전 판
          * 그대로 유지한다.
+         *
+         * @param record 기록
+         * @param requesterId 요청자의 사용자 id. 비로그인이면 null
+         * @return 응답 DTO
          */
         fun from(record: TripRecord, requesterId: Long?) = TripRecordResponse(
             id = record.id,
@@ -64,6 +68,7 @@ data class TripRecordResponse(
     }
 }
 
+/** 기록 목록 항목. 사진 목록 대신 썸네일과 사진 수를 담는다. */
 data class TripRecordSummaryResponse(
     val id: Long,
     val trip: TripRefResponse,
@@ -83,7 +88,13 @@ data class TripRecordSummaryResponse(
     val createdAt: Instant,
 ) {
     companion object {
-        /** 기록 목록 항목 → 응답. `isAuthor` 를 여기서 정하는 이유는 [TripRecordResponse.from] 과 같다. */
+        /**
+         * 기록 목록 항목 → 응답. `isAuthor` 를 여기서 정하는 이유는 [TripRecordResponse.from] 과 같다.
+         *
+         * @param record 기록
+         * @param requesterId 요청자의 사용자 id. 비로그인이면 null
+         * @return 응답 DTO
+         */
         fun from(record: TripRecord, requesterId: Long?) = TripRecordSummaryResponse(
             id = record.id,
             trip = TripRefResponse.from(record.trip),

@@ -9,6 +9,7 @@ import com.yong.travel.search.domain.PlaceCandidate
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
+/** 네이버 지역 검색 결과를 후보로 바꿔 거리순 정렬·페이지 자르기까지 해서 돌려준다. */
 @Service
 class PlaceSearchService(
     private val naverLocalSearchClient: NaverLocalSearchClient,
@@ -16,6 +17,16 @@ class PlaceSearchService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 검색어로 장소 후보를 찾는다. 기준 좌표가 둘 다 오면 거리를 계산해 가까운 순으로 정렬한다.
+     *
+     * @param keyword 검색어
+     * @param lat 기준 위도. 계산에만 쓰고 남기지 않는다
+     * @param lng 기준 경도. 계산에만 쓰고 남기지 않는다
+     * @param page 0부터 시작하는 페이지 번호
+     * @return 장소 후보 한 페이지
+     * @throws ApiException `PLACE_SEARCH_UNAVAILABLE` — 외부 검색 API 호출이 실패했을 때
+     */
     fun search(
         keyword: String,
         lat: Double?,
@@ -35,7 +46,7 @@ class PlaceSearchService(
         }
 
         // 기준 좌표(lat,lng)는 남기지 않는다. 계산에만 쓰고 사용자와 묶지 않기로 한 값이다.
-        log.debug("장소 검색 page={} 거리정렬={} 후보={}건", page, lat != null && lng != null, sorted.size)
+        log.debug("장소 검색 page={} sortByDistance={} count={}", page, lat != null && lng != null, sorted.size)
 
         // 원본 API 가 페이지를 모르므로 모아 온 후보를 여기서 자른다.
         val current = page.coerceAtLeast(0)

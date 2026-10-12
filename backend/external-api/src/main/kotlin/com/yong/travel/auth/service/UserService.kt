@@ -13,9 +13,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 /**
- * Naver wraps the profile payload under a top-level "response" object,
- * unlike Google which returns a flat attribute map. This unwraps it so
- * both providers expose the same flat attribute shape downstream.
+ * OAuth 로그인 사용자를 불러와 `users` 에 upsert 한다.
+ *
+ * 네이버는 프로필을 최상위 `response` 객체로 감싸 주고, Google 은 평평한 속성 맵을 준다.
+ * 네이버 응답을 풀어 두 제공자가 이후 단계에 같은 모양의 속성을 넘기게 한다.
  */
 @Service
 class UserService(
@@ -25,6 +26,12 @@ class UserService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 제공자 프로필로 계정을 만들거나 갱신한다.
+     *
+     * @param userRequest OAuth 제공자 등록 정보와 액세스 토큰
+     * @return DB 사용자 PK 를 함께 실은 principal
+     */
     @Transactional
     override fun loadUser(userRequest: OAuth2UserRequest): OAuth2User {
         val oAuth2User = delegate.loadUser(userRequest)
@@ -53,7 +60,7 @@ class UserService(
             )
         val savedUser = userRepository.save(user)
         // 이메일·이름·providerId 는 남기지 않는다. 계정을 가리키는 값은 내부 id 하나로 충분하다.
-        log.debug("로그인 userId={} provider={} 신규가입={}", savedUser.id, provider, existing == null)
+        log.debug("OAuth 로그인 userId={} provider={} newUser={}", savedUser.id, provider, existing == null)
 
         return CustomOAuth2User(
             DefaultOAuth2User(oAuth2User.authorities, attributes, "id"),
@@ -61,6 +68,7 @@ class UserService(
         )
     }
 
+    /** 네이버 응답에서 실제 프로필이 담긴 `response` 객체를 꺼낸다. */
     @Suppress("UNCHECKED_CAST")
     private fun unwrapNaverResponse(oAuth2User: OAuth2User): Map<String, Any> =
         oAuth2User.attributes["response"] as Map<String, Any>

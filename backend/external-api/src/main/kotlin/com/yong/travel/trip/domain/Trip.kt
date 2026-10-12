@@ -44,5 +44,11 @@ data class Trip(
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
+    /**
+     * 요청자가 소유자인지. 요청자마다 달라지는 값이라 저장하지 않고 물어보게 한다.
+     *
+     * @param userId 요청자의 사용자 id. 비로그인이면 null
+     * @return 소유자면 true
+     */
     fun isOwnedBy(userId: Long?): Boolean = userId != null && owner.id == userId
 }

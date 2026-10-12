@@ -21,6 +21,13 @@ class PhotoFileController(
     private val photoDatabaseService: PhotoDatabaseService,
 ) {
 
+    /**
+     * 사진 바이너리를 내려준다. 한 번 올라간 사진은 바뀌지 않으므로 오래 캐시하게 한다.
+     *
+     * @param photoId 사진 id
+     * @return 사진 바이트와 그 Content-Type
+     * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없을 때
+     */
     @GetMapping("${PhotoDatabaseService.PHOTO_URL_PREFIX}/{photoId}")
     fun serve(@PathVariable photoId: UUID): ResponseEntity<ByteArray> {
         val content = photoDatabaseService.load(photoId)

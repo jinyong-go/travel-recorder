@@ -13,18 +13,18 @@ import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
-import com.yong.travel.trip.record.domain.TripRecord
+import com.yong.travel.tag.service.TagService
+import com.yong.travel.trip.domain.TripRef
+import com.yong.travel.trip.persistence.TripEntity
+import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.record.domain.RecordListQuery
 import com.yong.travel.trip.record.domain.RecordSort
+import com.yong.travel.trip.record.domain.TripRecord
 import com.yong.travel.trip.record.domain.TripRecordCreateCommand
 import com.yong.travel.trip.record.domain.TripRecordUpdateCommand
 import com.yong.travel.trip.record.persistence.TripRecordEntity
 import com.yong.travel.trip.record.persistence.TripRecordRepository
 import com.yong.travel.trip.record.persistence.TripRecordSpecifications
-import com.yong.travel.tag.service.TagService
-import com.yong.travel.trip.domain.TripRef
-import com.yong.travel.trip.persistence.TripEntity
-import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.service.TripService
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
@@ -32,6 +32,11 @@ import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+/**
+ * 여행 기록의 조회·등록·수정·이동·삭제.
+ *
+ * 기록의 열람과 편집 권한은 전적으로 소속 여행이 정한다. 판정식은 [TripService] 에 두고 가져다 쓴다.
+ */
 @Service
 @Transactional(readOnly = true)
 class TripRecordService(
@@ -46,6 +51,18 @@ class TripRecordService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 요청자가 볼 수 있는 기록을 조건에 맞춰 페이지로 돌려준다.
+     *
+     * 범위 판정은 조회 쿼리 단계에서 한다. 거리순만은 요청 좌표에 따라 달라지는 값이라 페이지 안에서
+     * 재정렬한다.
+     *
+     * @param query 범위·여행·카테고리·태그·검색어·정렬·기준 좌표
+     * @param userId 요청자의 사용자 id. 비로그인이면 null
+     * @param page 0부터 시작하는 페이지 번호
+     * @return 기록 한 페이지
+     * @throws ApiException `TRIP_NOT_FOUND` — `tripId` 로 좁혔는데 그 여행이 없거나 볼 권한이 없을 때
+     */
     fun list(
         query: RecordListQuery,
         userId: Long?,
@@ -91,21 +108,35 @@ class TripRecordService(
 
         // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 기준 좌표는 남기지 않는다.
         log.debug(
-            "기록 목록 scope={} tripId={} userId={} 건수={}",
+            "기록 목록 scope={} tripId={} userId={} count={}",
             query.scope, query.tripId, userId, found.totalElements,
         )
         if (query.sort != RecordSort.DISTANCE) return records
         return records.copy(content = records.content.sortedBy { it.distanceKm ?: Double.MAX_VALUE })
     }
 
-    /** 볼 권한이 없으면 없는 기록과 똑같이 RECORD_NOT_FOUND 로 응답한다 (존재 은닉). */
+    /**
+     * 기록 상세를 조회한다.
+     *
+     * @param recordId 조회할 기록 id
+     * @param userId 요청자의 사용자 id. 비로그인이면 null
+     * @return 사진·태그까지 담긴 기록 상세
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
+     */
     fun get(recordId: Long, userId: Long?): TripRecord {
         val record = findRecord(recordId)
         requireViewable(record, userId)
         return detailOf(record)
     }
 
-    /** 소속 여행은 요청자가 소유한 것이어야 한다. 아니면 TRIP_NOT_FOUND 다. */
+    /**
+     * 기록을 등록한다. 소속 여행은 요청자가 소유한 것이어야 한다.
+     *
+     * @param authorId 요청자의 사용자 id
+     * @param command 기록 입력값
+     * @return 등록된 기록 상세
+     * @throws ApiException `TRIP_NOT_FOUND` — 소속 여행이 없거나 요청자의 여행이 아닐 때
+     */
     @Transactional
     fun create(authorId: Long, command: TripRecordCreateCommand): TripRecord {
         val trip = requireOwnedTrip(command.tripId, authorId)
@@ -130,6 +161,16 @@ class TripRecordService(
         return detailOf(saved)
     }
 
+    /**
+     * 기록 내용을 덮어쓴다. 소속 여행은 바꾸지 않으며, 그것은 [changeTrip] 의 몫이다.
+     *
+     * @param recordId 수정할 기록 id
+     * @param authorId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
+     * @param command 새 기록 내용
+     * @return 수정된 기록 상세
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
+     */
     @Transactional
     fun update(
         recordId: Long,
@@ -150,9 +191,10 @@ class TripRecordService(
         record.memo = command.memo
         record.replaceTags(tagService.findOrCreateAll(command.tags))
 
-        log.debug("기록 수정 recordId={} authorId={}", recordId, authorId)
         // updatedAt 을 채우는 @PreUpdate 는 flush 시점에 돈다.
-        return detailOf(recordRepository.saveAndFlush(record))
+        val saved = recordRepository.saveAndFlush(record)
+        log.debug("기록 수정 recordId={} authorId={}", recordId, authorId)
+        return detailOf(saved)
     }
 
     /**
@@ -160,6 +202,14 @@ class TripRecordService(
      *
      * 이 기록의 사진이 이전 여행의 커버였다면 그 지정을 푼다 — 커버는 자기 여행의 사진만
      * 가리킬 수 있기 때문이다.
+     *
+     * @param recordId 옮길 기록 id
+     * @param authorId 요청자의 사용자 id. 기록의 현재 여행과 새 여행 모두의 소유자여야 한다
+     * @param tripId 옮겨 갈 여행 id
+     * @return 옮겨진 기록 상세
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
+     * @throws ApiException `TRIP_NOT_FOUND` — 옮겨 갈 여행이 없거나 요청자의 여행이 아닐 때
      */
     @Transactional
     fun changeTrip(
@@ -171,15 +221,19 @@ class TripRecordService(
         requireAuthor(record, authorId)
 
         val newTrip = requireOwnedTrip(tripId, authorId)
-        if (newTrip.id != record.trip.id) {
-            log.debug(
-                "기록 여행 이동 recordId={} authorId={} {} -> {} (공개 범위가 새 여행의 것이 된다)",
-                recordId, authorId, record.trip.id, newTrip.id,
-            )
+        val previousTripId = record.trip.id
+        if (newTrip.id != previousTripId) {
             record.trip.clearCoverIfAmong(photoRepository.findIdsByRecordId(recordId))
             record.trip = newTrip
         }
-        return detailOf(recordRepository.saveAndFlush(record))
+        val saved = recordRepository.saveAndFlush(record)
+        if (newTrip.id != previousTripId) {
+            log.debug(
+                "기록 여행 이동 recordId={} authorId={} fromTripId={} toTripId={}",
+                recordId, authorId, previousTripId, newTrip.id,
+            )
+        }
+        return detailOf(saved)
     }
 
     /**
@@ -190,6 +244,11 @@ class TripRecordService(
      * 대표하게 두면 "커버는 그 여행의 하위 기록에 속한 사진" 이라는 불변식이 깨진다.
      *
      * 공유 관계는 손대지 않는다 — 공유는 여행에 걸려 있고 기록은 갖고 있지 않다.
+     *
+     * @param recordId 삭제할 기록 id
+     * @param authorId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      */
     @Transactional
     fun delete(recordId: Long, authorId: Long) {
@@ -216,10 +275,12 @@ class TripRecordService(
         return trip
     }
 
+    /** 기록 단건 조회. 없으면 RECORD_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다. */
     private fun findRecord(recordId: Long): TripRecordEntity =
         recordRepository.findById(recordId)
             .orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
 
+    /** 볼 수 없는 기록이면 없는 기록과 같은 RECORD_NOT_FOUND 를 던진다. */
     private fun requireViewable(record: TripRecordEntity, userId: Long?) {
         if (canView(record, userId)) return
         // 존재 은닉 때문에 응답이 "없음"과 같다. 왜 가려졌는지는 이 로그에만 드러난다.
@@ -246,7 +307,7 @@ class TripRecordService(
         }
     }
 
-    /** 여러 기록의 사진을 한 번에 읽어 기록 id 로 묶는다. 가입 순서(createdAt)는 그대로 지켜진다. */
+    /** 여러 기록의 사진을 한 번에 읽어 기록 id 로 묶는다. 등록 순서(createdAt)는 그대로 지켜진다. */
     private fun photosOf(recordIds: List<Long>): Map<Long, List<PhotoEntity>> {
         if (recordIds.isEmpty()) return emptyMap()
         return photoRepository.findByRecordIdInOrderByCreatedAtAsc(recordIds)
@@ -260,11 +321,13 @@ class TripRecordService(
             .groupBy({ (it[0] as Number).toLong() }) { it[1] as String }
     }
 
+    /** 사진 엔티티 → 접근 URL 을 붙인 도메인 값. */
     private fun PhotoEntity.toDomain(): Photo {
         val id = requireNotNull(id)
         return Photo(id, photoDatabaseService.urlOf(id))
     }
 
+    /** 여행 엔티티 → 기록에 실리는 소속 여행 참조. */
     private fun TripEntity.toDomain() = TripRef(id = requireNotNull(id), name = name)
 
     /**

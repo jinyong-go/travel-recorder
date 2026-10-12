@@ -1,6 +1,5 @@
 package com.yong.travel.group.persistence
 
-import com.yong.travel.group.persistence.InviteHistoryEntity
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -18,6 +17,10 @@ interface InviteHistoryRepository : JpaRepository<InviteHistoryEntity, Long> {
      * 받은 이력. 응답의 상대(counterpart)가 보냈던 사람이라 그쪽만 fetch join 한다 — 행마다 달라
      * 빠뜨리면 행마다 사용자 조회가 따로 나간다. 받은 사람(나)은 응답에 쓰지 않는다.
      * fetch join 이 든 쿼리로는 건수를 셀 수 없어 countQuery 를 따로 둔다.
+     *
+     * @param inviteeId 초대받았던 사용자 id
+     * @param pageable 페이지 요청
+     * @return 끝난 시각의 최신순 이력 한 페이지
      */
     @Query(
         value = """
@@ -33,7 +36,13 @@ interface InviteHistoryRepository : JpaRepository<InviteHistoryEntity, Long> {
         pageable: Pageable,
     ): Page<InviteHistoryEntity>
 
-    /** 보낸 이력. 상대가 초대받았던 사람이라 그쪽만 fetch join 한다. 이유는 받은 이력과 같다. */
+    /**
+     * 보낸 이력. 상대가 초대받았던 사람이라 그쪽만 fetch join 한다. 이유는 받은 이력과 같다.
+     *
+     * @param invitedById 초대를 보냈던 사용자 id
+     * @param pageable 페이지 요청
+     * @return 끝난 시각의 최신순 이력 한 페이지
+     */
     @Query(
         value = """
             select h from InviteHistoryEntity h

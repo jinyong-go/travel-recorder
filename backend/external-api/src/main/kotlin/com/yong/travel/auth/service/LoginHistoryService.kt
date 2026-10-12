@@ -29,7 +29,9 @@ class LoginHistoryService(
      * 실패하면 예외가 그대로 올라가 로그인도 실패한다. 이력 없이 로그인이 성립하면 목록에 빈틈이
      * 생기고, 그 빈틈은 본인이 볼 때 드러나지 않는다.
      *
-     * @param userAgent `User-Agent` 헤더 원문. 길면 잘라 저장하고, 없으면 null 로 둔다.
+     * @param userId 로그인한 사용자 id
+     * @param ipAddress 요청의 원 클라이언트 주소
+     * @param userAgent `User-Agent` 헤더 원문. 길면 잘라 저장하고, 없으면 null 로 둔다
      */
     @Transactional
     fun record(userId: Long, ipAddress: String, userAgent: String?) {
@@ -45,7 +47,13 @@ class LoginHistoryService(
         log.debug("로그인 이력 기록 userId={} historyId={}", userId, saved.id)
     }
 
-    /** 내 로그인 이력, 최신순. 대상은 언제나 요청자 본인이다. */
+    /**
+     * 내 로그인 이력을 최신순으로 조회한다. 대상은 언제나 요청자 본인이다.
+     *
+     * @param userId 요청자의 사용자 id
+     * @param page 0부터 시작하는 페이지 번호
+     * @return 로그인 이력 한 페이지
+     */
     fun list(userId: Long, page: Int): PageResult<LoginHistoryEntry> =
         loginHistoryRepository.findByUserIdOrderByLoggedInAtDesc(userId, listPageRequest(page))
             .toPageResult().map { it.toDomain() }

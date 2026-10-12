@@ -31,6 +31,7 @@ data class GroupUpdateRequest(
     val memo: String? = null,
 )
 
+/** 초대 요청. 가입자를 이메일 완전 일치로 찾는다. */
 data class InviteRequest(
     @field:NotBlank
     @field:Email

@@ -45,6 +45,11 @@ data class TripRecord(
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
-    /** 요청자가 소속 여행의 소유자인지. 고칠 수 있는 사람은 그 한 명뿐이다. */
+    /**
+     * 요청자가 소속 여행의 소유자인지. 고칠 수 있는 사람은 그 한 명뿐이다.
+     *
+     * @param userId 요청자의 사용자 id. 비로그인이면 null
+     * @return 소속 여행의 소유자면 true
+     */
     fun isAuthoredBy(userId: Long?): Boolean = userId != null && author.id == userId
 }

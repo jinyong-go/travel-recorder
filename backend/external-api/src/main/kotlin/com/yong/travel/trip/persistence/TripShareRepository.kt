@@ -1,11 +1,11 @@
 package com.yong.travel.trip.persistence
 
-import com.yong.travel.trip.persistence.TripShareEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
+/** 여행 ↔ 그룹 공유 행의 조회와 벌크 삭제. */
 interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
 
     /**
@@ -16,10 +16,20 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
      *
      * 응답에 그룹 이름이 실리므로 그룹을 fetch join 한다. 빠뜨리면 공유 행은 한 번에 읽어도
      * 그룹마다 조회가 따로 나간다.
+     *
+     * @param tripIds 여행 id 목록
+     * @return 그룹을 함께 읽은 공유 행
      */
     @Query("select s from TripShareEntity s join fetch s.group where s.trip.id in :tripIds")
     fun findByTripIdIn(@Param("tripIds") tripIds: Collection<Long>): List<TripShareEntity>
 
+    /**
+     * 여행이 이 그룹들 중 하나에라도 공유됐는지 확인한다. GROUP 여행의 열람 판정에 쓴다.
+     *
+     * @param tripId 여행 id
+     * @param groupIds 요청자가 속한 그룹 id 목록
+     * @return 하나라도 공유됐으면 true
+     */
     fun existsByTripIdAndGroupIdIn(tripId: Long, groupIds: Collection<Long>): Boolean
 
     /**
@@ -28,6 +38,9 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
      * 이름 기반 삭제(`deleteBy…`)는 행을 먼저 읽어 와 한 건씩 DELETE 하므로 벌크 삭제로 둔다.
      * 영속성 컨텍스트는 비우지 않는다(clearAutomatically 없음) — 호출부가 이어서 쓰는 엔티티가
      * 준영속이 되면 그 뒤의 변경이 유실된다. 지워진 행의 엔티티가 컨텍스트에 남아도 이후 쓰지 않는다.
+     *
+     * @param tripId 여행 id
+     * @return 지운 행 수
      */
     @Modifying(flushAutomatically = true)
     @Query("delete from TripShareEntity s where s.trip.id = :tripId")
@@ -37,6 +50,9 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
      * 그룹이 사라지면 그 그룹으로 공유되던 관계도 함께 사라진다.
      *
      * 벌크 삭제로 두는 이유는 [deleteByTripId] 와 같다.
+     *
+     * @param groupId 그룹 id
+     * @return 지운 행 수
      */
     @Modifying(flushAutomatically = true)
     @Query("delete from TripShareEntity s where s.group.id = :groupId")

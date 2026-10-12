@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
+/** 여행 기록 API (`/api/records`). */
 @RestController
 @RequestMapping("/api/records")
 class TripRecordController(
@@ -37,6 +38,21 @@ class TripRecordController(
      * 두면 실수로 넓은 범위를 조회하는 쪽이 조용히 기본이 되기 때문이다. `tripId` 만 주면 그 여행의
      * 하위 기록이다 — 열람자는 남의 여행이 공유인지 공개인지 몰라 scope 를 고를 수 없다.
      * MINE/SHARED 는 로그인해야 하며, 비로그인은 PUBLIC 과 tripId 조회만 할 수 있다.
+     *
+     * @param scope 조회 범위. `tripId` 가 없으면 필수
+     * @param tripId 이 여행의 하위 기록으로 한정한다
+     * @param category 카테고리 필터
+     * @param tag 태그 이름 완전 일치 필터
+     * @param keyword 이름·주소 부분 일치 검색어
+     * @param sort 정렬
+     * @param lat 기준 위도. 거리 계산에만 쓴다
+     * @param lng 기준 경도. 거리 계산에만 쓴다
+     * @param page 0부터 시작하는 페이지 번호
+     * @param principal 로그인 사용자. 비로그인이면 null
+     * @return 기록 요약 한 페이지
+     * @throws ApiException `VALIDATION_ERROR` — `scope` 와 `tripId` 가 모두 없을 때
+     * @throws ApiException `UNAUTHENTICATED` — MINE·SHARED 를 비로그인으로 요청했을 때
+     * @throws ApiException `TRIP_NOT_FOUND` — `tripId` 의 여행이 없거나 볼 권한이 없을 때
      */
     @GetMapping
     fun list(
@@ -66,7 +82,14 @@ class TripRecordController(
         return PageResponse.of(records).map { TripRecordSummaryResponse.from(it, userId) }
     }
 
-    /** 기록 상세 조회. 볼 수 없는 기록은 존재하지 않는 것과 같은 404 다. */
+    /**
+     * 기록 상세를 조회한다. 비로그인도 부를 수 있다.
+     *
+     * @param recordId 조회할 기록 id
+     * @param principal 로그인 사용자. 비로그인이면 null
+     * @return 기록 상세
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     */
     @GetMapping("/{recordId}")
     fun get(
         @PathVariable recordId: Long,
@@ -76,7 +99,15 @@ class TripRecordController(
         return TripRecordResponse.from(recordService.get(recordId, userId), userId)
     }
 
-    /** 기록 등록. 소속 여행은 요청자가 소유한 것이어야 하며, 작성자는 그 여행의 소유자다. */
+    /**
+     * 기록을 등록한다. 소속 여행은 요청자가 소유한 것이어야 하며, 작성자는 그 여행의 소유자다.
+     *
+     * @param request 기록 입력값
+     * @param principal 로그인 사용자. 비로그인이면 null
+     * @return 등록된 기록 상세
+     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
+     * @throws ApiException `TRIP_NOT_FOUND` — 소속 여행이 없거나 요청자의 여행이 아닐 때
+     */
     @PostMapping
     fun create(
         @RequestBody @Valid request: TripRecordCreateRequest,
@@ -86,7 +117,17 @@ class TripRecordController(
         return TripRecordResponse.from(recordService.create(userId, request.toCommand()), userId)
     }
 
-    /** 기록 수정. 작성자만 할 수 있다. */
+    /**
+     * 기록을 수정한다. 작성자만 할 수 있다.
+     *
+     * @param recordId 수정할 기록 id
+     * @param request 새 기록 내용
+     * @param principal 로그인 사용자. 비로그인이면 null
+     * @return 수정된 기록 상세
+     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 작성자가 아닐 때
+     */
     @PutMapping("/{recordId}")
     fun update(
         @PathVariable recordId: Long,
@@ -100,6 +141,15 @@ class TripRecordController(
     /**
      * 소속 여행 변경. 공개 범위를 바꾸는 수단은 기록에 없다 —
      * `PATCH /api/trips/{id}/visibility` 로 여행에서 바꾼다.
+     *
+     * @param recordId 옮길 기록 id
+     * @param request 옮겨 갈 여행 id
+     * @param principal 로그인 사용자. 비로그인이면 null
+     * @return 옮겨진 기록 상세
+     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 작성자가 아닐 때
+     * @throws ApiException `TRIP_NOT_FOUND` — 옮겨 갈 여행이 없거나 요청자의 여행이 아닐 때
      */
     @PatchMapping("/{recordId}/trip")
     fun changeTrip(
@@ -111,7 +161,16 @@ class TripRecordController(
         return TripRecordResponse.from(recordService.changeTrip(recordId, userId, request.tripId), userId)
     }
 
-    /** 기록 삭제. soft delete 라 행은 남고 조회에서만 사라진다. */
+    /**
+     * 기록을 삭제한다. soft delete 라 행은 남고 조회에서만 사라진다.
+     *
+     * @param recordId 삭제할 기록 id
+     * @param principal 로그인 사용자. 비로그인이면 null
+     * @return 본문 없는 `204`
+     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 작성자가 아닐 때
+     */
     @DeleteMapping("/{recordId}")
     fun delete(
         @PathVariable recordId: Long,

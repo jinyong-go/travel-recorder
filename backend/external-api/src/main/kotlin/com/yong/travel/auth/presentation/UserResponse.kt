@@ -13,7 +13,12 @@ data class UserResponse(
     val profileImageUrl: String?,
 ) {
     companion object {
-        /** 도메인 값 → 응답. 모양이 같아도 계층이 다르므로 변환을 거친다 ([User] 주석 참고). */
+        /**
+         * 도메인 값 → 응답. 모양이 같아도 계층이 다르므로 변환을 거친다 ([User] 주석 참고).
+         *
+         * @param user 타인에게 보이는 사용자 값
+         * @return 응답 DTO
+         */
         fun from(user: User) = UserResponse(user.id, user.name, user.profileImageUrl)
     }
 }
@@ -26,6 +31,12 @@ data class MeResponse(
     val profileImageUrl: String?,
 ) {
     companion object {
+        /**
+         * 본인 정보 → 응답.
+         *
+         * @param profile 이메일까지 담긴 본인 정보
+         * @return 응답 DTO
+         */
         fun from(profile: MyProfile) = MeResponse(profile.id, profile.name, profile.email, profile.profileImageUrl)
     }
 }

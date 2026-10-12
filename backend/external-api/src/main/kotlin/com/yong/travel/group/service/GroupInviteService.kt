@@ -7,18 +7,18 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.persistence.listPageRequest
 import com.yong.travel.common.persistence.toPageResult
-import com.yong.travel.group.persistence.GroupEntity
-import com.yong.travel.group.persistence.GroupInviteEntity
-import com.yong.travel.group.persistence.GroupMemberEntity
-import com.yong.travel.group.persistence.InviteHistoryEntity
 import com.yong.travel.group.domain.GroupInvite
 import com.yong.travel.group.domain.GroupRef
 import com.yong.travel.group.domain.InviteHistoryEntry
-import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.domain.InviteHistoryRole
+import com.yong.travel.group.domain.InviteOutcome
+import com.yong.travel.group.persistence.GroupEntity
+import com.yong.travel.group.persistence.GroupInviteEntity
 import com.yong.travel.group.persistence.GroupInviteRepository
+import com.yong.travel.group.persistence.GroupMemberEntity
 import com.yong.travel.group.persistence.GroupMemberRepository
 import com.yong.travel.group.persistence.GroupRepository
+import com.yong.travel.group.persistence.InviteHistoryEntity
 import com.yong.travel.group.persistence.InviteHistoryRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -42,7 +42,16 @@ class GroupInviteService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /** 그 그룹의 대기 중인 초대 목록. 소유자만 볼 수 있다. */
+    /**
+     * 그 그룹의 대기 중인 초대 목록을 조회한다. 소유자만 볼 수 있다.
+     *
+     * @param groupId 대상 그룹 id
+     * @param ownerId 요청자의 사용자 id. 소유자여야 한다
+     * @param page 0부터 시작하는 페이지 번호
+     * @return 오래된 순의 대기 초대 한 페이지
+     * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
+     * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
+     */
     fun listPending(groupId: Long, ownerId: Long, page: Int): PageResult<GroupInvite> {
         requireOwner(findGroup(groupId), ownerId)
         return inviteRepository.findByGroupIdOrderByCreatedAtAsc(groupId, listPageRequest(page))
@@ -54,6 +63,15 @@ class GroupInviteService(
      *
      * 정원은 여기서 보지 않는다. 대기 중인 초대는 자리를 차지하지 않으므로 정원을 넘겨 보낼 수 있고,
      * 판정은 수락 시점에만 한다.
+     *
+     * @param groupId 초대할 그룹 id
+     * @param ownerId 요청자의 사용자 id. 소유자여야 한다
+     * @param email 초대 대상 이메일. 앞뒤 공백을 지우고 대소문자 구분 없이 찾는다
+     * @return 초대와 새로 만들었는지 여부. 기존 대기 초대를 돌려줬으면 `created = false`
+     * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
+     * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
+     * @throws ApiException `USER_NOT_FOUND` — 그 이메일의 가입자가 없을 때
+     * @throws ApiException `ALREADY_MEMBER` — 대상이 이미 그룹 멤버일 때
      */
     @Transactional
     fun invite(groupId: Long, ownerId: Long, email: String): InviteResult {
@@ -64,7 +82,7 @@ class GroupInviteService(
         val invitee = userRepository.findByEmailIgnoreCase(email.trim())
             ?: run {
                 // 이메일 자체는 남기지 않는다. 응답에서 가리는 값을 로그가 대신 보관하지 않는다.
-                log.debug("초대 실패 groupId={} ownerId={} 사유=가입되지_않은_이메일", groupId, ownerId)
+                log.debug("초대 실패: 가입되지 않은 이메일 groupId={} ownerId={}", groupId, ownerId)
                 throw ApiException(ErrorCode.USER_NOT_FOUND)
             }
         val inviteeId = requireNotNull(invitee.id)
@@ -86,24 +104,45 @@ class GroupInviteService(
         return InviteResult(saved.toDomain(), created = true)
     }
 
+    /**
+     * 소유자가 대기 중인 초대를 철회한다.
+     *
+     * @param groupId 경로의 그룹 id. 초대의 그룹과 같아야 한다
+     * @param inviteId 철회할 초대 id
+     * @param ownerId 요청자의 사용자 id. 초대를 보낸 소유자여야 한다
+     * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나, 보낸 소유자가 아니거나, 경로의 그룹과
+     *         어긋날 때. 당사자가 아니면 초대의 존재도 드러내지 않는다
+     */
     @Transactional
     fun revoke(groupId: Long, inviteId: Long, ownerId: Long) {
         val invite = findInvite(inviteId)
         // 보낸 소유자가 아니면 그 초대의 존재도 드러내지 않는다. 경로의 그룹과 어긋나는 id 도 같은 응답이다.
         if (invite.group.id != groupId || invite.group.owner.id != ownerId) {
             // 당사자가 아니면 없는 초대와 같은 응답이라, 막힌 이유는 이 로그에만 남는다.
-            log.debug("초대 철회 차단 inviteId={} 요청groupId={} ownerId={}", inviteId, groupId, ownerId)
+            log.debug("초대 철회 차단 inviteId={} groupId={} ownerId={}", inviteId, groupId, ownerId)
             throw ApiException(ErrorCode.INVITE_NOT_FOUND)
         }
         resolve(invite, InviteOutcome.REVOKED)
     }
 
-    /** 내 앞으로 온 대기 초대. */
+    /**
+     * 내 앞으로 온 대기 초대를 조회한다.
+     *
+     * @param userId 요청자의 사용자 id
+     * @param page 0부터 시작하는 페이지 번호
+     * @return 오래된 순의 받은 초대 한 페이지
+     */
     fun listReceived(userId: Long, page: Int): PageResult<GroupInvite> =
         inviteRepository.findByInviteeIdOrderByCreatedAtAsc(userId, listPageRequest(page))
             .toPageResult().map { it.toDomain() }
 
-    /** 내가 보낸 대기 초대. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다. */
+    /**
+     * 내가 보낸 대기 초대를 그룹을 가로질러 조회한다. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다.
+     *
+     * @param userId 요청자의 사용자 id
+     * @param page 0부터 시작하는 페이지 번호
+     * @return 오래된 순의 보낸 초대 한 페이지
+     */
     fun listSent(userId: Long, page: Int): PageResult<GroupInvite> =
         inviteRepository.findByInvitedByIdOrderByCreatedAtAsc(userId, listPageRequest(page))
             .toPageResult().map { it.toDomain() }
@@ -113,6 +152,11 @@ class GroupInviteService(
      *
      * 그룹의 생존 여부는 **페이지 전체의 그룹 id 를 모아 한 번에** 확인한다. 항목마다 조회하면
      * 페이지 크기만큼 쿼리가 늘고, 이력은 지워지지 않아 목록이 계속 길어지는 자리다.
+     *
+     * @param userId 요청자의 사용자 id
+     * @param role 받은 관점인지 보낸 관점인지
+     * @param page 0부터 시작하는 페이지 번호
+     * @return 끝난 시각의 최신순 이력 한 페이지
      */
     fun listHistory(
         userId: Long,
@@ -127,7 +171,6 @@ class GroupInviteService(
         val aliveGroupIds = groupRepository.findAllById(entries.content.map { it.groupId })
             .mapNotNull { it.id }
             .toSet()
-        log.debug("초대 이력 role={} userId={} 건수={}", role, userId, entries.totalElements)
         return entries.toPageResult().map { it.toDomain(role, it.groupId in aliveGroupIds) }
     }
 
@@ -136,6 +179,11 @@ class GroupInviteService(
      *
      * 정원이 차 있으면 거부하되 **초대 행은 지우지 않는다.** 자리가 난 뒤 같은 초대로 다시 수락할 수
      * 있어야 하기 때문이다.
+     *
+     * @param inviteId 수락할 초대 id
+     * @param userId 요청자의 사용자 id. 초대받은 본인이어야 한다
+     * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나 받은 본인이 아닐 때
+     * @throws ApiException `GROUP_MEMBER_LIMIT_EXCEEDED` — 그룹 정원이 가득 찼을 때
      */
     @Transactional
     fun accept(inviteId: Long, userId: Long) {
@@ -146,7 +194,7 @@ class GroupInviteService(
         val group = groupRepository.findByIdForUpdate(groupId) ?: throw ApiException(ErrorCode.INVITE_NOT_FOUND)
         if (groupMemberRepository.countByGroupId(groupId) >= GroupEntity.MEMBER_LIMIT) {
             // 초대 행은 남는다. 자리가 나면 같은 초대로 다시 수락한다.
-            log.debug("초대 수락 거부 inviteId={} groupId={} userId={} 사유=정원초과", inviteId, groupId, userId)
+            log.debug("초대 수락 거부: 정원 초과 inviteId={} groupId={} userId={}", inviteId, groupId, userId)
             throw ApiException(ErrorCode.GROUP_MEMBER_LIMIT_EXCEEDED)
         }
 
@@ -160,6 +208,10 @@ class GroupInviteService(
      * 거절은 이력에 남고 **보낸 사람도 본다**. 감춰도 보낸 목록에서 항목이
      * 사라진 것으로 추론되므로, 절반만 가린 이력을 만들지 않는다. 거절한 상대를 다시 초대하는
      * 것은 그대로 허용된다 — 대기 초대 행이 사라져 유니크 제약이 비기 때문이다.
+     *
+     * @param inviteId 거절할 초대 id
+     * @param userId 요청자의 사용자 id. 초대받은 본인이어야 한다
+     * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나 받은 본인이 아닐 때
      */
     @Transactional
     fun reject(inviteId: Long, userId: Long) {
@@ -182,10 +234,12 @@ class GroupInviteService(
         )
     }
 
+    /** 그룹 단건 조회. 없으면 GROUP_NOT_FOUND 다. */
     private fun findGroup(groupId: Long): GroupEntity =
         groupRepository.findById(groupId)
             .orElseThrow { ApiException(ErrorCode.GROUP_NOT_FOUND) }
 
+    /** 그룹 소유자만 통과시킨다. 아니면 FORBIDDEN 이다. */
     private fun requireOwner(group: GroupEntity, userId: Long) {
         if (group.owner.id != userId) {
             log.debug("그룹 소유자 아님 groupId={} userId={} ownerId={}", group.id, userId, group.owner.id)
@@ -193,6 +247,7 @@ class GroupInviteService(
         }
     }
 
+    /** 초대 단건 조회. 없으면 INVITE_NOT_FOUND 이고, 당사자 판정은 부르는 쪽이 이어서 한다. */
     private fun findInvite(inviteId: Long): GroupInviteEntity =
         inviteRepository.findById(inviteId)
             .orElseThrow { ApiException(ErrorCode.INVITE_NOT_FOUND) }
@@ -231,5 +286,6 @@ class GroupInviteService(
         resolvedAt = resolvedAt,
     )
 
+    /** 그룹 엔티티 → 초대에 실리는 최소 그룹 정보. */
     private fun GroupEntity.toDomain() = GroupRef(requireNotNull(id), name)
 }

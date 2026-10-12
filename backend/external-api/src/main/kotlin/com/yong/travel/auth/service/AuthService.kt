@@ -8,6 +8,7 @@ import com.yong.travel.common.error.ErrorCode
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
+/** 로그인한 본인의 정보 조회. 이메일까지 담기는 유일한 조회 경로다. */
 @Service
 class AuthService(
     private val userRepository: UserRepository,
@@ -26,7 +27,7 @@ class AuthService(
         userRepository.findById(userId)
             .orElseThrow {
                 // 세션은 살아 있는데 사용자 행이 없는 경우다. 개발 중 DB 를 새로 만들면 자주 마주친다.
-                log.debug("본인 정보 조회 실패 userId={} 사유=사용자_없음", userId)
+                log.debug("본인 정보 조회 실패: 사용자 없음 userId={}", userId)
                 ApiException(ErrorCode.UNAUTHENTICATED)
             }
             .toProfile()

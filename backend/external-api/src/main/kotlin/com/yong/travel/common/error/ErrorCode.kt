@@ -2,6 +2,7 @@ package com.yong.travel.common.error
 
 import org.springframework.http.HttpStatus
 
+/** 실패 상황별 HTTP 상태와 기본 문구. 새 항목을 더하면 명세의 오류 표에도 함께 적는다. */
 enum class ErrorCode(val status: HttpStatus, val defaultMessage: String) {
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다."),

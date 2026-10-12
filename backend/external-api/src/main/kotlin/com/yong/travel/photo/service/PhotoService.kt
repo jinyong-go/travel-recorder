@@ -16,8 +16,8 @@ import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 /**
- * 사진은 기록에 종속되며, 올리고 지울 수 있는 사람은 기록 작성자뿐이다.
- * 기록이 개인 데이터가 되면서 "업로더 또는 등록자" 라는 구분 자체가 사라졌다.
+ * 기록에 딸린 사진의 업로드와 삭제. 사진은 기록에 종속되며, 올리고 지울 수 있는 사람은 소속
+ * 여행의 소유자뿐이다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -30,16 +30,23 @@ class PhotoService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 기록에 사진 여러 장을 올린다.
+     *
+     * 검증은 파일마다 저장 직전에 하며, 한 장이라도 실패하면 트랜잭션이 통째로 되돌아간다.
+     *
+     * @param recordId 사진을 붙일 기록 id
+     * @param requesterId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
+     * @param files 올릴 이미지 파일들
+     * @return 저장된 사진들. 올린 순서 그대로다
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 요청자의 기록이 아닐 때 (존재 은닉)
+     * @throws ApiException `INVALID_FILE` — 형식·용량·파일 시그니처 중 하나라도 맞지 않을 때
+     */
     @Transactional
     fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<Photo> {
         val record = findOwnRecord(recordId, requesterId)
-        // 원본 파일명과 바이너리는 남기지 않는다. 건수와 크기면 업로드 추적에 충분하다.
-        log.debug(
-            "사진 업로드 recordId={} requesterId={} 건수={} 총크기={}bytes",
-            recordId, requesterId, files.size, files.sumOf { it.size },
-        )
 
-        return files.map { file ->
+        val photos = files.map { file ->
             if (file.contentType !in uploadProperties.allowedContentTypes ||
                 file.size > uploadProperties.maxPhotoSize.toBytes() ||
                 !hasSignatureOf(file, requireNotNull(file.contentType))
@@ -59,8 +66,23 @@ class PhotoService(
             val id = requireNotNull(photo.id)
             Photo(id, photoDatabaseService.urlOf(id))
         }
+        // 원본 파일명과 바이너리는 남기지 않는다. 건수와 크기면 업로드 추적에 충분하다.
+        log.debug(
+            "사진 업로드 recordId={} requesterId={} count={} totalBytes={}",
+            recordId, requesterId, files.size, files.sumOf { it.size },
+        )
+        return photos
     }
 
+    /**
+     * 사진을 지운다. 그 사진이 여행 커버였다면 지정도 푼다.
+     *
+     * @param recordId 사진이 달린 기록 id
+     * @param photoId 지울 사진 id
+     * @param requesterId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 요청자의 기록이 아닐 때 (존재 은닉)
+     * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없거나 그 기록의 사진이 아닐 때
+     */
     @Transactional
     fun delete(recordId: Long, photoId: UUID, requesterId: Long) {
         val record = findOwnRecord(recordId, requesterId)
@@ -113,6 +135,7 @@ class PhotoService(
         }
     }
 
+    /** 바이트 배열이 주어진 접두 바이트로 시작하는지. */
     private fun ByteArray.startsWith(prefix: ByteArray) =
         size >= prefix.size && copyOfRange(0, prefix.size).contentEquals(prefix)
 

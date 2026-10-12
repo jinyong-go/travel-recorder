@@ -4,13 +4,12 @@ import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
 import com.yong.travel.group.persistence.GroupEntity
-import com.yong.travel.trip.record.domain.Category
-import com.yong.travel.trip.record.persistence.TripRecordEntity
-import com.yong.travel.trip.record.domain.RecordScope
 import com.yong.travel.tag.persistence.TagEntity
+import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripShareEntity
-import com.yong.travel.trip.domain.TripVisibility
+import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.RecordScope
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Join
@@ -18,6 +17,7 @@ import jakarta.persistence.criteria.Predicate
 import jakarta.persistence.criteria.Subquery
 import org.springframework.data.jpa.domain.Specification
 
+/** 기록 목록의 동적 조회 조건. 공개 범위 판정이 소속 여행 조인과 함께 여기서 쿼리에 실린다. */
 object TripRecordSpecifications {
 
     /**
@@ -32,8 +32,10 @@ object TripRecordSpecifications {
      * 조인 자체가 삭제 필터 역할도 한다 — TripEntity 의 @SQLRestriction 덕에 삭제된 여행의 기록은
      * 조인 단계에서 함께 사라진다.
      *
-     * @param userId 비로그인이면 null. 이 경우 PUBLIC 만 조회된다.
+     * @param scope 조회 범위
+     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
      * @param groupIds 요청자가 속한 그룹 id 목록
+     * @return 범위 조건
      */
     fun withScope(scope: RecordScope, userId: Long?, groupIds: List<Long>): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
@@ -65,6 +67,12 @@ object TripRecordSpecifications {
      *
      * `tripId` 는 여행 상세 화면이 하위 기록을 가져올 때 쓴다. 범위 조건과 AND 로 묶이므로,
      * 볼 수 없는 여행의 id 를 넣어도 결과가 새지 않고 빈 목록이 된다.
+     *
+     * @param tripId 이 여행의 하위 기록으로 한정한다. null 이면 걸지 않는다
+     * @param category 카테고리. null 이면 걸지 않는다
+     * @param tag 태그 이름 완전 일치. 비었으면 걸지 않는다
+     * @param keyword 이름·주소 부분 일치 검색어. 비었으면 걸지 않는다
+     * @return 주어진 필터를 AND 로 묶은 조건
      */
     fun withFilters(
         tripId: Long?,

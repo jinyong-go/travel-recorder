@@ -10,6 +10,10 @@ import com.yong.travel.common.error.ErrorCode
  * 사용자 PK 획득 경로로 그대로 쓰인다.
  *
  * 로그인 수단(인메모리·네이버 OAuth)과 무관하게 동작하도록 principal 은 LoginUser 로 받는다.
+ *
+ * @param principal 로그인 사용자. 비로그인이면 null
+ * @return 로그인 사용자의 DB 사용자 id
+ * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
  */
 fun requireLogin(principal: LoginUser?): Long =
     principal?.userId ?: throw ApiException(ErrorCode.UNAUTHENTICATED)

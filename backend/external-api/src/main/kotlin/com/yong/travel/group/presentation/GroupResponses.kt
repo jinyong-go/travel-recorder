@@ -8,7 +8,7 @@ import com.yong.travel.group.domain.InviteHistoryEntry
 import com.yong.travel.group.domain.InviteOutcome
 import java.time.Instant
 
-/** 목록·기록 응답에 붙는 최소 정보. 멤버 목록은 그룹 상세에서만 내려준다. */
+/** 그룹 목록 항목. 멤버 명단 대신 인원수만 담으며, 명단은 그룹 상세에서만 내려준다. */
 data class GroupSummaryResponse(
     val id: Long,
     val name: String,
@@ -18,7 +18,13 @@ data class GroupSummaryResponse(
     val isOwner: Boolean,
 ) {
     companion object {
-        /** 그룹 요약 → 응답. `isOwner` 를 여기서 정하는 이유는 [GroupResponse.from] 과 같다. */
+        /**
+         * 그룹 요약 → 응답. `isOwner` 를 여기서 정하는 이유는 [GroupResponse.from] 과 같다.
+         *
+         * @param group 그룹
+         * @param requesterId 요청자의 사용자 id
+         * @return 응답 DTO
+         */
         fun from(group: Group, requesterId: Long) = GroupSummaryResponse(
             id = group.id,
             name = group.name,
@@ -30,6 +36,7 @@ data class GroupSummaryResponse(
     }
 }
 
+/** 그룹 상세에 담기는 멤버 한 명. */
 data class GroupMemberResponse(
     val id: Long,
     val name: String,
@@ -37,6 +44,12 @@ data class GroupMemberResponse(
     val joinedAt: Instant,
 ) {
     companion object {
+        /**
+         * 멤버 → 응답. 이메일은 담지 않는다.
+         *
+         * @param member 그룹 멤버 한 명
+         * @return 응답 DTO
+         */
         fun from(member: Group.Member) = GroupMemberResponse(
             id = member.user.id,
             name = member.user.name,
@@ -46,6 +59,7 @@ data class GroupMemberResponse(
     }
 }
 
+/** 그룹 상세. 멤버 명단까지 담는다. */
 data class GroupResponse(
     val id: Long,
     val name: String,
@@ -62,6 +76,10 @@ data class GroupResponse(
          *
          * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 그래서 `requesterId`
          * 를 받는다 — 서비스가 아니라 컨트롤러가 요청자를 알고 있는 계층이다.
+         *
+         * @param group 멤버 명단까지 담긴 그룹
+         * @param requesterId 요청자의 사용자 id
+         * @return 응답 DTO
          */
         fun from(group: Group, requesterId: Long) = GroupResponse(
             id = group.id,
@@ -76,12 +94,18 @@ data class GroupResponse(
     }
 }
 
-/** 받은 초대에 담기는 그룹 정보. 수락 전에는 멤버 목록도 공유된 기록도 보이지 않는다. */
+/** 받은 초대에 담기는 그룹 정보. 수락 전에는 멤버 목록도 공유된 여행도 보이지 않는다. */
 data class GroupBriefResponse(
     val id: Long,
     val name: String,
 ) {
     companion object {
+        /**
+         * 그룹 참조 → 응답.
+         *
+         * @param group 그룹 id 와 이름
+         * @return 응답 DTO
+         */
         fun from(group: GroupRef) = GroupBriefResponse(group.id, group.name)
     }
 }
@@ -98,6 +122,12 @@ data class PendingInviteResponse(
     val createdAt: Instant,
 ) {
     companion object {
+        /**
+         * 대기 초대 → 소유자가 보는 응답.
+         *
+         * @param invite 대기 초대
+         * @return 응답 DTO
+         */
         fun from(invite: GroupInvite) = PendingInviteResponse(
             id = invite.id,
             invitee = UserResponse.from(invite.invitee),
@@ -114,6 +144,12 @@ data class ReceivedInviteResponse(
     val createdAt: Instant,
 ) {
     companion object {
+        /**
+         * 대기 초대 → 받은 사람이 보는 응답.
+         *
+         * @param invite 대기 초대
+         * @return 응답 DTO
+         */
         fun from(invite: GroupInvite) = ReceivedInviteResponse(
             id = invite.id,
             group = GroupBriefResponse.from(invite.group),
@@ -136,6 +172,12 @@ data class SentInviteResponse(
     val createdAt: Instant,
 ) {
     companion object {
+        /**
+         * 대기 초대 → 보낸 사람이 보는 응답.
+         *
+         * @param invite 대기 초대
+         * @return 응답 DTO
+         */
         fun from(invite: GroupInvite) = SentInviteResponse(
             id = invite.id,
             group = GroupBriefResponse.from(invite.group),
@@ -166,6 +208,12 @@ data class InviteHistoryResponse(
     val resolvedAt: Instant,
 ) {
     companion object {
+        /**
+         * 끝난 초대 → 응답.
+         *
+         * @param entry 끝난 초대 한 건
+         * @return 응답 DTO
+         */
         fun from(entry: InviteHistoryEntry) = InviteHistoryResponse(
             id = entry.id,
             group = HistoryGroupResponse(id = entry.group.id, name = entry.group.name, deleted = entry.groupDeleted),
