@@ -348,7 +348,9 @@ export default function RecordDetailPage() {
           onConfirm={handleDelete}
           onCancel={closeDeleteConfirm}
         >
-          삭제하면 목록과 공유 대상 모두에게서 사라집니다. 되돌릴 수 없어요.
+          {/* 여행 삭제는 하위 기록을 함께 지우므로, 반대로 기록 하나를 지우면 여행도 사라지는지 헷갈리기 쉽다. */}
+          이 기록은 나와 공유받은 사람 모두에게서 사라지지만, &apos;{record.trip.name}&apos; 여행과 다른
+          여행지는 그대로 남아요. 되돌릴 수 없어요.
         </ConfirmDialog>
       )}
 
