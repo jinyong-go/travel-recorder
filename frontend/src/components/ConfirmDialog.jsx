@@ -1,3 +1,4 @@
+import useModal from '../hooks/useModal.js'
 import '../styles/confirmPanel.css'
 
 /**
@@ -18,9 +19,11 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }) {
+  const panelRef = useModal(onCancel)
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div
+        ref={panelRef}
         className="modal-panel confirm-panel"
         role="dialog"
         aria-modal="true"

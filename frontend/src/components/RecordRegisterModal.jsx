@@ -3,6 +3,7 @@ import { errorMessage } from '../api/client.js'
 import { createRecord, uploadPhotos } from '../api/records.js'
 import { recordPayload } from '../data/records.js'
 import { visibilityMeta } from '../data/visibility.js'
+import useModal from '../hooks/useModal.js'
 import RecordForm from './RecordForm.jsx'
 import { CloseIcon } from './icons.jsx'
 import './RecordRegisterModal.css'
@@ -24,6 +25,8 @@ const CREATE_ERROR = {
 export default function RecordRegisterModal({ trip, reference, onClose, onCreated }) {
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // 바깥 클릭과 같은 이유로 제출 중에는 Esc 로도 닫지 않는다.
+  const panelRef = useModal(submitting ? undefined : onClose)
 
   const handleSubmit = async (values) => {
     setSubmitting(true)
@@ -60,6 +63,7 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
     // 제출 중에는 바깥 클릭으로 닫지 않는다. 기록이 만들어진 뒤 사진을 올리는 도중일 수 있다.
     <div className="modal-overlay" onClick={submitting ? undefined : onClose}>
       <div
+        ref={panelRef}
         className="modal-panel record-register-panel"
         role="dialog"
         aria-modal="true"

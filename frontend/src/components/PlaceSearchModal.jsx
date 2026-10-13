@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import useModal from '../hooks/useModal.js'
 import { CloseIcon, SearchIcon } from './icons.jsx'
 import { PLACE_SEARCH_RESULTS } from '../data/placeSearchResults.js'
 import { haversineDistanceKm } from '../utils/geo.js'
@@ -19,6 +20,7 @@ const REFERENCE_LOCATION_LABEL = {
 // 프록시 API(거리 계산·페이지네이션까지 처리된 응답)를 호출해야 한다.
 export default function PlaceSearchModal({ reference, onSelect, onClose }) {
   const { location: referenceLocation, source, status, setManualLocation } = reference
+  const panelRef = useModal(onClose)
   // true 면 고른 장소를 기록에 넣지 않고 기준 위치로 저장한다.
   const [pickingReference, setPickingReference] = useState(false)
   const title = pickingReference ? '내 위치 지정' : '장소 검색'
@@ -81,6 +83,7 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
+        ref={panelRef}
         className="modal-panel search-modal-panel"
         role="dialog"
         aria-modal="true"

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { createGroup as createGroupApi, fetchGroups, fetchReceivedInvites } from '../api/groups.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import useLatestRequest from '../hooks/useLatestRequest.js'
+import useModal from '../hooks/useModal.js'
 import AppHeader from '../components/AppHeader.jsx'
 import RequiredNote from '../components/RequiredNote.jsx'
 import { ArrowLeftIcon, PlusIcon } from '../components/icons.jsx'
@@ -70,6 +71,8 @@ export default function GroupsPage() {
     setMemo('')
     setError('')
   }
+  // 생성 모달은 조건부로 붙으므로 훅은 늘 부르고 열림 여부로 켜고 끈다.
+  const createPanelRef = useModal(closeCreate, creating)
 
   // 클라이언트 검증은 서버 검증을 대신하지 않는다. 같은 규칙을 먼저 걸러 왕복을 줄일 뿐이다.
   const handleCreate = async (e) => {
@@ -170,6 +173,7 @@ export default function GroupsPage() {
       {creating && (
         <div className="modal-overlay" onClick={closeCreate}>
           <div
+            ref={createPanelRef}
             className="modal-panel group-form-panel"
             role="dialog"
             aria-modal="true"
