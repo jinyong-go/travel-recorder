@@ -1,15 +1,9 @@
-# 테스트 전용. local 과 같은 인메모리 H2 를 쓰되 이름을 나눠 다른 컨텍스트와 섞이지 않게 한다.
+# 테스트 전용. Testcontainers 가 PostGIS 컨테이너를 띄우고, 빌드가 external-api 에서 복사해 온
+# 마이그레이션(db/migration)을 Flyway 가 적용한다. 배치가 마이그레이션을 직접 돌리는 것은 테스트뿐이다.
 spring:
   datasource:
-    url: jdbc:h2:mem:travel-recorder-batch-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
+    url: jdbc:tc:postgis:17-3.5:///travel
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
 
   batch:
     job:

@@ -10,15 +10,7 @@ spring:
     hibernate:
       ddl-auto: validate
 
-  sql:
-    init:
-      # schema.sql 은 IF NOT EXISTS 기반이라 재기동해도 안전하다.
-      mode: always
-      schema-locations: classpath:schema.sql
-
-  h2:
-    console:
-      enabled: false
+  # 마이그레이션은 기동 시 Flyway 가 적용한다 (기본값). 초기 데이터는 넣지 않는다.
 
 app:
   cors:

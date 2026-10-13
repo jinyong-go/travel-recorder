@@ -1,0 +1,35 @@
+# 로컬 실행. `docker compose up` 이면 DB 와 API 서버가 함께 뜬다.
+# DB 만 띄우고 IDE·bootRun 으로 API 서버를 돌리려면 `docker compose up db`.
+# 데이터는 db-data 볼륨에 남는다. 처음 상태로 되돌리려면 `docker compose down -v`.
+services:
+  db:
+    # 공식 이미지는 amd64 전용이라 arm64 Mac 에서는 에뮬레이션으로 돈다.
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: travel
+      POSTGRES_USER: travel
+      POSTGRES_PASSWORD: travel
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      # TCP 로 확인한다. 첫 기동 때 이미지가 확장을 설치하는 동안에는 임시 서버가 유닉스 소켓으로만 떠 있어,
+      # 소켓으로 확인하면 아직 외부 접속을 받지 못하는데도 준비됐다고 나온다.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U travel -d travel"]
+      interval: 2s
+      retries: 30
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_URL: jdbc:postgresql://db:5432/travel
+    ports:
+      - "8080:8080"
+
+volumes:
+  db-data:

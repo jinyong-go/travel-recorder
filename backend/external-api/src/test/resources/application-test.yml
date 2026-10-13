@@ -1,20 +1,14 @@
-# 테스트 전용. local 과 같은 인메모리 H2 를 쓰되 초기 데이터(data-local.sql)는 넣지 않는다.
+# 테스트 전용. Testcontainers 가 PostGIS 컨테이너를 띄운다 (jdbc:tc URL). 테스트 JVM 하나에 컨테이너 하나다.
+# 초기 데이터(db/seed/local)는 넣지 않는다 — Flyway 기본 위치가 db/migration 뿐이다.
 # 테스트는 각자 필요한 행을 직접 만든다. 초기 데이터가 섞이면 건수·이메일 유니크 조건이 어긋난다.
 spring:
   datasource:
-    url: jdbc:h2:mem:travel-recorder-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:tc:postgis:17-3.5:///travel
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
 
   jpa:
     hibernate:
       ddl-auto: validate
-
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
 
 app:
   cors:

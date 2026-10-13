@@ -1,12 +1,15 @@
 -- 로컬 전용 초기 데이터. 프론트엔드 목업(frontend/src/data)을 옮긴 것이다.
--- application-local.yml 에서만 읽는다. dev·prod 에는 적재하지 않는다.
--- 로컬 DB 는 인메모리 H2 라 기동마다 새로 만들어지므로 재실행을 고려하지 않는다.
+-- application-local.yml 의 Flyway locations 에만 들어 있다. dev·prod 에는 적재하지 않는다.
+--
+-- Flyway 반복 마이그레이션(R__)이라 이 파일이 바뀌면 다시 돈다. 로컬 DB 는 compose 볼륨에 남으므로
+-- 몇 번을 돌아도 결과가 같아야 한다. 그래서 모든 INSERT 는 이미 있는 행을 건너뛴다(ON CONFLICT DO NOTHING).
+-- 앱에서 고치거나 지운 행을 되돌리지는 않는다 — 처음 상태가 필요하면 볼륨째 지운다.
 --
 -- id 는 목업과 같은 값을 쓴다. 목업끼리의 참조(여행 → 기록, 그룹 → 멤버)를 그대로 옮기기 위해서다.
--- 파일 끝에서 IDENTITY 시퀀스를 다시 시작시킨다.
+-- 파일 끝에서 IDENTITY 시퀀스를 초기 데이터가 쓴 범위 밖으로 옮긴다.
 
 -- 사용자
--- LocalLoginConfig 의 계정 시더는 SQL 초기화 뒤에 돈다. 여행·그룹이 참조할 행이 먼저 있어야 하므로
+-- LocalLoginConfig 의 계정 시더는 Flyway 마이그레이션 뒤에 돈다. 여행·그룹이 참조할 행이 먼저 있어야 하므로
 -- 여기서 넣고, 시더는 provider + provider_id 로 이 행을 찾아 이름·이메일을 덮어쓴다.
 -- user4 는 로그인 계정이 없다. 여행 소유자·그룹 멤버로만 등장한다.
 INSERT INTO users (id, provider, provider_id, email, name, created_at)
@@ -14,14 +17,16 @@ VALUES
     (1, 'local', 'user1', 'user1@example.com', '사용자1', TIMESTAMP WITH TIME ZONE '2026-08-01 12:00:00+09:00'),
     (2, 'local', 'user2', 'user2@example.com', '사용자2', TIMESTAMP WITH TIME ZONE '2026-08-01 12:00:00+09:00'),
     (3, 'local', 'user3', 'user3@example.com', '사용자3', TIMESTAMP WITH TIME ZONE '2026-08-01 12:00:00+09:00'),
-    (4, 'local', 'user4', 'user4@example.com', '사용자4', TIMESTAMP WITH TIME ZONE '2026-08-01 12:00:00+09:00');
+    (4, 'local', 'user4', 'user4@example.com', '사용자4', TIMESTAMP WITH TIME ZONE '2026-08-01 12:00:00+09:00')
+ON CONFLICT DO NOTHING;
 
 -- 공유 그룹. created_at 은 소유자의 참여일이다.
 INSERT INTO share_group (id, owner_id, name, memo, created_at)
 VALUES
     (1, 1, '가족', '설 연휴 사진 공유용', TIMESTAMP WITH TIME ZONE '2026-08-01 12:00:00+09:00'),
     (2, 2, '제주 동행', '2026 여름 제주 같이 간 사람들', TIMESTAMP WITH TIME ZONE '2026-08-10 12:00:00+09:00'),
-    (3, 2, '회사 동료', NULL, TIMESTAMP WITH TIME ZONE '2026-09-01 12:00:00+09:00');
+    (3, 2, '회사 동료', NULL, TIMESTAMP WITH TIME ZONE '2026-09-01 12:00:00+09:00')
+ON CONFLICT DO NOTHING;
 
 -- 그룹 멤버 (소유자 포함)
 -- 목업에서는 여행 5(소유자 user3)가 그룹 2 에 공유되어 있지만 user3 이 멤버가 아니다.
@@ -35,12 +40,14 @@ VALUES
     (5, 2, 4, TIMESTAMP WITH TIME ZONE '2026-08-15 12:00:00+09:00'),
     (6, 2, 3, TIMESTAMP WITH TIME ZONE '2026-08-20 12:00:00+09:00'),
     (7, 3, 2, TIMESTAMP WITH TIME ZONE '2026-09-01 12:00:00+09:00'),
-    (8, 3, 4, TIMESTAMP WITH TIME ZONE '2026-09-02 12:00:00+09:00');
+    (8, 3, 4, TIMESTAMP WITH TIME ZONE '2026-09-02 12:00:00+09:00')
+ON CONFLICT DO NOTHING;
 
 -- 대기 중인 초대. user1 로 로그인하면 받은 초대 배지가 바로 보이도록 넣는다.
 INSERT INTO group_invite (id, group_id, invitee_id, invited_by, created_at)
 VALUES
-    (1, 3, 1, 2, TIMESTAMP WITH TIME ZONE '2026-09-10 12:00:00+09:00');
+    (1, 3, 1, 2, TIMESTAMP WITH TIME ZONE '2026-09-10 12:00:00+09:00')
+ON CONFLICT DO NOTHING;
 
 -- 여행
 INSERT INTO trips (id, owner_id, name, start_date, end_date, headcount, budget, memo, visibility, created_at, updated_at)
@@ -52,7 +59,8 @@ VALUES
     (5, 3, '먹고 걷는 제주', DATE '2026-08-30', DATE '2026-08-30', 2, NULL, '근고기 하나 먹으러 간 당일치기.', 'GROUP', TIMESTAMP WITH TIME ZONE '2026-08-30 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-30 12:00:00+09:00'),
     (6, 2, '제주 동굴 탐방', DATE '2026-08-25', DATE '2026-08-29', 2, 900000, '동굴과 오름을 번갈아 다닌 일정. 만장굴은 여름에 가도 서늘하니 겉옷을 챙기는 편이 좋다.', 'PUBLIC', TIMESTAMP WITH TIME ZONE '2026-08-29 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-29 12:00:00+09:00'),
     (7, 3, '제주 소품샵 산책', DATE '2026-08-26', DATE '2026-08-29', 1, 350000, '해변 근처 소품샵만 골라 다녔다.', 'PUBLIC', TIMESTAMP WITH TIME ZONE '2026-08-29 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-29 12:00:00+09:00'),
-    (8, 4, '제주 미식 여행', DATE '2026-08-27', DATE '2026-08-28', 4, 1100000, '흑우와 해산물 위주.', 'PUBLIC', TIMESTAMP WITH TIME ZONE '2026-08-28 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-28 12:00:00+09:00');
+    (8, 4, '제주 미식 여행', DATE '2026-08-27', DATE '2026-08-28', 4, 1100000, '흑우와 해산물 위주.', 'PUBLIC', TIMESTAMP WITH TIME ZONE '2026-08-28 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-28 12:00:00+09:00')
+ON CONFLICT DO NOTHING;
 
 -- 여행 ↔ 그룹 공유 (GROUP 여행만)
 INSERT INTO trip_shares (id, trip_id, group_id)
@@ -60,7 +68,8 @@ VALUES
     (1, 1, 1),
     (2, 1, 2),
     (3, 4, 2),
-    (4, 5, 2);
+    (4, 5, 2)
+ON CONFLICT DO NOTHING;
 
 -- 여행 기록. 주소·좌표는 장소 검색 목업(placeSearchResults.js)의 값이다.
 INSERT INTO trip_records (id, trip_id, name, category, address, latitude, longitude, rating, memo, created_at, updated_at)
@@ -87,14 +96,16 @@ VALUES
     (20, 8, '제주 흑우 명가', 'FOOD', '제주특별자치도 서귀포시 태평로 401', 33.2541, 126.5601, 4.5, '흑우 스테이크', TIMESTAMP WITH TIME ZONE '2026-08-28 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-28 12:00:00+09:00'),
     (21, 8, '섭지코지', 'SIGHT', '제주특별자치도 서귀포시 성산읍 섭지코지로 107', 33.4238, 126.9275, 5, '유채꽃, 드라마 촬영지', TIMESTAMP WITH TIME ZONE '2026-08-27 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-27 12:00:00+09:00'),
     (22, 7, '표선 민속촌 기념품점', 'SHOPPING', '제주특별자치도 서귀포시 표선면 민속해안로 631', 33.3255, 126.833, 4, '전통 공예품', TIMESTAMP WITH TIME ZONE '2026-08-26 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-26 12:00:00+09:00'),
-    (23, 6, '성산일출봉', 'SIGHT', '제주특별자치도 서귀포시 성산읍 성산리 1', 33.4587, 126.9425, 4.5, '흐려서 일출은 못 봤지만 경치는 좋았어요', TIMESTAMP WITH TIME ZONE '2026-08-25 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-25 12:00:00+09:00');
+    (23, 6, '성산일출봉', 'SIGHT', '제주특별자치도 서귀포시 성산읍 성산리 1', 33.4587, 126.9425, 4.5, '흐려서 일출은 못 봤지만 경치는 좋았어요', TIMESTAMP WITH TIME ZONE '2026-08-25 12:00:00+09:00', TIMESTAMP WITH TIME ZONE '2026-08-25 12:00:00+09:00')
+ON CONFLICT DO NOTHING;
 
 -- id 를 직접 넣으면 IDENTITY 시퀀스가 따라 올라가지 않는다. 앱이 새 행을 만들 때 1번부터
--- 발급해 충돌하므로, 초기 데이터가 쓴 범위 밖에서 다시 시작하게 한다.
-ALTER TABLE users ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE share_group ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE group_member ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE group_invite ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE trips ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE trip_shares ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE trip_records ALTER COLUMN id RESTART WITH 1000;
+-- 발급해 충돌하므로, 초기 데이터가 쓴 범위 밖에서 발급하게 한다. 다시 돌 때 앱이 이미 1000번 이후를
+-- 발급했을 수 있어 고정값으로 되돌리지 않고 현재 최댓값과 비교한다.
+SELECT setval(pg_get_serial_sequence('users', 'id'), GREATEST(999, (SELECT max(id) FROM users)));
+SELECT setval(pg_get_serial_sequence('share_group', 'id'), GREATEST(999, (SELECT max(id) FROM share_group)));
+SELECT setval(pg_get_serial_sequence('group_member', 'id'), GREATEST(999, (SELECT max(id) FROM group_member)));
+SELECT setval(pg_get_serial_sequence('group_invite', 'id'), GREATEST(999, (SELECT max(id) FROM group_invite)));
+SELECT setval(pg_get_serial_sequence('trips', 'id'), GREATEST(999, (SELECT max(id) FROM trips)));
+SELECT setval(pg_get_serial_sequence('trip_shares', 'id'), GREATEST(999, (SELECT max(id) FROM trip_shares)));
+SELECT setval(pg_get_serial_sequence('trip_records', 'id'), GREATEST(999, (SELECT max(id) FROM trip_records)));

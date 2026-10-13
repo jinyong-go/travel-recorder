@@ -70,9 +70,8 @@ class TripEntity(
      *
      * 생성자 파라미터가 아닌 이유는 생성 시점에 고를 사진이 아직 존재할 수 없기 때문이다.
      *
-     * **DB 에 외래키를 두지 않는다.** trips → photos → trip_records → trips 로 순환 참조가
-     * 생기는데, schema.sql 은 인라인 FK 만 쓰고 ALTER TABLE 에는 IF NOT EXISTS 가 없어
-     * 재기동 시 실패한다. 대신 사진을 지울 때 애플리케이션이 커버 지정을 해제한다.
+     * **DB 에 외래키를 두지 않는다.** 사진이 이 여행에서 사라질 때의 커버 해제는 DB 가 아니라
+     * 애플리케이션이 [clearCoverIfAmong] 으로 한다.
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cover_photo_id")

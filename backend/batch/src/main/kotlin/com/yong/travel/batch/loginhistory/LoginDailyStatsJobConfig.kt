@@ -50,7 +50,7 @@ class LoginDailyStatsJobConfig(
      * 집계 태스크릿을 트랜잭션 하나로 도는 스텝.
      *
      * @param jobRepository 잡 실행 저장소
-     * @param transactionManager 지우고 넣기를 하나로 묶을 트랜잭션 관리자
+     * @param transactionManager 집계를 묶을 트랜잭션 관리자
      * @param loginDailyStatsTasklet 집계 태스크릿
      * @return 스텝
      */
@@ -65,7 +65,7 @@ class LoginDailyStatsJobConfig(
             .build()
 
     /**
-     * 하루치 합계를 지우고 다시 넣는 태스크릿. 잡 파라미터 `targetDate` 를 읽어야 하므로 스텝이 실행될 때 만든다.
+     * 하루치 합계를 넣거나 덮어쓰는 태스크릿. 잡 파라미터 `targetDate` 를 읽어야 하므로 스텝이 실행될 때 만든다.
      *
      * @param targetDate 집계할 날짜(`yyyy-MM-dd`). 없으면 한국 시간 기준 어제다
      * @return 태스크릿. 거부한 날짜면 실행 중에 `IllegalArgumentException` 을 던진다
@@ -78,16 +78,18 @@ class LoginDailyStatsJobConfig(
             val from = date.atStartOfDay(ZONE).toInstant()
             val to = date.plusDays(1).atStartOfDay(ZONE).toInstant()
 
-            // 덮어쓰기를 지우고 넣기로 한다. H2 는 PostgreSQL 모드에서도 ON CONFLICT DO UPDATE 를 받지 않는다.
-            // 스텝 트랜잭션 하나로 묶여 있어 지운 뒤 넣기 전 상태가 밖에서 보이지 않는다.
-            jdbcTemplate.update("DELETE FROM login_daily_stats WHERE stat_date = ?", date)
-            // 집계 함수만 쓰는 SELECT 는 대상 행이 없어도 한 행(0, 0)을 돌려준다. 로그인이 없던 날도 남는 이유다.
+            // 같은 날짜를 다시 돌리면 덮어쓴다. 집계 함수만 쓰는 SELECT 는 대상 행이 없어도 한 행(0, 0)을
+            // 돌려준다. 로그인이 없던 날도 남는 이유다.
             jdbcTemplate.update(
                 """
                 INSERT INTO login_daily_stats (stat_date, login_count, unique_user_count, aggregated_at)
                 SELECT ?, COUNT(*), COUNT(DISTINCT user_id), ?
                 FROM login_history
                 WHERE logged_in_at >= ? AND logged_in_at < ?
+                ON CONFLICT (stat_date) DO UPDATE
+                    SET login_count = EXCLUDED.login_count,
+                        unique_user_count = EXCLUDED.unique_user_count,
+                        aggregated_at = EXCLUDED.aggregated_at
                 """.trimIndent(),
                 date,
                 Timestamp.from(Instant.now()),

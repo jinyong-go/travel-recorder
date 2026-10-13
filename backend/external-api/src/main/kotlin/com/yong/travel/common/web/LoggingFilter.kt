@@ -64,14 +64,13 @@ class LoggingFilter : OncePerRequestFilter() {
     }
 
     /**
-     * 로그를 남기지 않을 요청인지. 사진 서빙과 H2 콘솔은 건당 한 줄을 남길 값어치가 없다.
+     * 로그를 남기지 않을 요청인지. 사진 서빙은 건당 한 줄을 남길 값어치가 없다.
      *
      * @param request 들어온 요청
      * @return 건너뛸 요청이면 true
      */
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
-        request.requestURI.startsWith(PhotoDatabaseService.PHOTO_URL_PREFIX) ||
-            request.requestURI.startsWith("/h2-console")
+        request.requestURI.startsWith(PhotoDatabaseService.PHOTO_URL_PREFIX)
 
     /**
      * 쿼리 문자열. 두 가지를 걸러 낸다.
