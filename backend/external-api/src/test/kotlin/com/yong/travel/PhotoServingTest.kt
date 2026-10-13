@@ -23,13 +23,14 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
  * DB 에 저장한 사진 바이너리의 서빙 검증.
  *
  * 응답의 `url` 을 그대로 요청해 올린 바이트가 그대로 나오는지, 사진을 지우면 바이너리도 함께
- * 사라지는지(ON DELETE CASCADE) 확인한다.
+ * 사라지는지(ON DELETE CASCADE), 기록·여행을 지우면 사진 행은 남고 바이너리만 사라지는지 확인한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -75,11 +76,52 @@ class PhotoServingTest {
     }
 
     @Test
+    fun `기록을 지우면 그 기록 사진만 404 가 되고 사진 행은 남는다`() {
+        val owner = newUser()
+        val tripId = newTrip(owner)
+        val deleted = newRecord(tripId, owner)
+        val kept = newRecord(tripId, owner)
+        val gone = photoService.upload(deleted, owner, listOf(jpeg(JPEG_HEAD + byteArrayOf(1)))).single()
+        val alive = photoService.upload(kept, owner, listOf(jpeg(JPEG_HEAD + byteArrayOf(2)))).single()
+        flush()
+
+        recordService.delete(deleted, owner)
+        flush()
+
+        mockMvc.perform(get(gone.url))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("PHOTO_NOT_FOUND"))
+        mockMvc.perform(get(alive.url)).andExpect(status().isOk)
+        assertEquals(1L, count("SELECT count(*) FROM photos WHERE id = '${gone.id}'"))
+    }
+
+    @Test
+    fun `여행을 지우면 하위 기록 사진이 모두 404 가 된다`() {
+        val owner = newUser()
+        val tripId = newTrip(owner)
+        val photos = listOf(newRecord(tripId, owner), newRecord(tripId, owner)).map {
+            photoService.upload(it, owner, listOf(jpeg(JPEG_HEAD + byteArrayOf(3)))).single()
+        }
+        val otherTrip = newTrip(owner)
+        val other = photoService.upload(newRecord(otherTrip, owner), owner, listOf(jpeg(JPEG_HEAD))).single()
+        flush()
+
+        tripService.delete(tripId, owner)
+        flush()
+
+        photos.forEach { mockMvc.perform(get(it.url)).andExpect(status().isNotFound) }
+        mockMvc.perform(get(other.url)).andExpect(status().isOk)
+    }
+
+    @Test
     fun `UUID 형식이 아닌 id 는 400 VALIDATION_ERROR 다`() {
         mockMvc.perform(get("/api/files/photos/123"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
+
+    private fun count(sql: String): Long =
+        (entityManager.createNativeQuery(sql).singleResult as Number).toLong()
 
     private fun flush() {
         entityManager.flush()

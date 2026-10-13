@@ -15,7 +15,8 @@ import java.util.UUID
  * 사진 바이너리를 DB(photo_data)에 저장·조회하고 접근 URL 을 만든다.
  *
  * 구현이 하나뿐이라 인터페이스를 두지 않는다. 오브젝트 스토리지로 전환할 때 추상화한다.
- * 삭제 메서드가 없는 것은 의도다 — 사진 행을 지우면 ON DELETE CASCADE 가 바이너리를 함께 지운다.
+ * 사진 하나를 지울 때는 삭제 메서드를 쓰지 않는다 — 사진 행을 지우면 ON DELETE CASCADE 가 바이너리를
+ * 함께 지운다. 여기 있는 삭제는 사진 행을 남긴 채 바이너리만 지우는 기록·여행 삭제용이다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -53,6 +54,24 @@ class PhotoDatabaseService(
      * @return 서버 기준 상대 경로 URL
      */
     fun urlOf(photoId: UUID): String = "$PHOTO_URL_PREFIX/$photoId"
+
+    /**
+     * 기록이 지워질 때 그 기록에 달린 사진의 바이너리를 지운다. 사진 메타데이터는 남는다.
+     *
+     * @param recordId 지운 기록 id
+     * @return 지운 바이너리 수
+     */
+    @Transactional
+    fun deleteByRecord(recordId: Long): Int = photoDataRepository.deleteByRecordId(recordId)
+
+    /**
+     * 여행이 지워질 때 하위 기록 전부에 달린 사진의 바이너리를 지운다. 사진 메타데이터는 남는다.
+     *
+     * @param tripId 지운 여행 id
+     * @return 지운 바이너리 수
+     */
+    @Transactional
+    fun deleteByTrip(tripId: Long): Int = photoDataRepository.deleteByTripId(tripId)
 
     companion object {
         const val PHOTO_URL_PREFIX = "/api/files/photos"

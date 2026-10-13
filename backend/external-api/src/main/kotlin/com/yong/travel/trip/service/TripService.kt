@@ -222,6 +222,8 @@ class TripService(
      * 공유 행은 물리 삭제한다. 여행이 조회에서 사라지므로 당장 새는 것은 아니지만, 남아 있는
      * 공유 행이 권한 판정에 끼어들 여지를 만들지 않는다.
      *
+     * 하위 기록의 사진은 메타데이터를 남기고 바이너리를 지운다. 기록 하나를 지울 때와 같은 이유다.
+     *
      * @param tripId 삭제할 여행 id
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때
@@ -240,7 +242,9 @@ class TripService(
         tripRepository.saveAndFlush(trip)
 
         recordRepository.softDeleteByTripId(tripId, Instant.now())
-        log.debug("여행 삭제 tripId={} ownerId={}", tripId, ownerId)
+        // 하위 기록의 사진 바이너리도 지운다. 메타데이터는 기록과 함께 남는다.
+        val purged = photoDatabaseService.deleteByTrip(tripId)
+        log.debug("여행 삭제 tripId={} ownerId={} photos={}", tripId, ownerId, purged)
     }
 
     /**

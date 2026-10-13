@@ -45,12 +45,12 @@ class TripRecordController(
      * @param tag 태그 이름 완전 일치 필터
      * @param keyword 이름·주소 부분 일치 검색어
      * @param sort 정렬
-     * @param lat 기준 위도. 거리 계산에만 쓴다
-     * @param lng 기준 경도. 거리 계산에만 쓴다
+     * @param lat 기준 위도. 거리 계산·거리순 정렬에만 쓴다. 거리순이면 필수
+     * @param lng 기준 경도. 거리 계산·거리순 정렬에만 쓴다. 거리순이면 필수
      * @param page 0부터 시작하는 페이지 번호
      * @param principal 로그인 사용자. 비로그인이면 null
      * @return 기록 요약 한 페이지
-     * @throws ApiException `VALIDATION_ERROR` — `scope` 와 `tripId` 가 모두 없을 때
+     * @throws ApiException `VALIDATION_ERROR` — `scope` 와 `tripId` 가 모두 없을 때, 거리순인데 `lat`·`lng` 가 없을 때
      * @throws ApiException `UNAUTHENTICATED` — MINE·SHARED 를 비로그인으로 요청했을 때
      * @throws ApiException `TRIP_NOT_FOUND` — `tripId` 의 여행이 없거나 볼 권한이 없을 때
      */
@@ -69,6 +69,10 @@ class TripRecordController(
     ): PageResponse<TripRecordSummaryResponse> {
         if (scope == null && tripId == null) {
             throw ApiException(ErrorCode.VALIDATION_ERROR, "scope 와 tripId 중 하나는 있어야 합니다.")
+        }
+        // 거리순은 DB 가 기준 위치로 정렬하므로 좌표 없이는 정렬할 기준이 없다.
+        if (sort == RecordSort.DISTANCE && (lat == null || lng == null)) {
+            throw ApiException(ErrorCode.VALIDATION_ERROR, "거리순 정렬에는 lat 과 lng 가 필요합니다.")
         }
         val userId = when (scope) {
             RecordScope.MINE, RecordScope.SHARED -> requireLogin(principal)

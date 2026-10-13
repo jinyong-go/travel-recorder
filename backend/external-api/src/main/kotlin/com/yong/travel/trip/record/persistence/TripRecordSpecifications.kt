@@ -1,6 +1,7 @@
 package com.yong.travel.trip.record.persistence
 
 import com.yong.travel.auth.persistence.UserEntity
+import com.yong.travel.common.persistence.PostgisFunctions
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
 import com.yong.travel.tag.persistence.TagEntity
@@ -12,7 +13,9 @@ import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.Predicate
 import jakarta.persistence.criteria.Root
+import org.hibernate.query.criteria.HibernateCriteriaBuilder
 import org.springframework.data.jpa.domain.Specification
+import java.time.Instant
 
 /** 기록 목록의 동적 조회 조건. 공개 범위 판정이 소속 여행 조인과 함께 여기서 쿼리에 실린다. */
 object TripRecordSpecifications {
@@ -95,6 +98,33 @@ object TripRecordSpecifications {
             }
 
             cb.and(*predicates.toTypedArray())
+        }
+
+    /**
+     * 기준 위치에서 가까운 순 정렬. 같은 거리면 최신순이다.
+     *
+     * 거리는 저장된 값이 아니라 요청 좌표에 따라 매번 달라져 Sort 로 표현할 수 없으므로 조건과 함께 둔다.
+     * 페이지 요청의 정렬은 비워 둬야 한다 — 정렬이 있으면 Spring Data 가 이 정렬을 덮어쓴다.
+     * 건수 쿼리에서는 Spring Data 가 정렬을 지운다.
+     *
+     * @param lat 기준 위도
+     * @param lng 기준 경도
+     * @return 걸러 내는 조건 없이 정렬만 거는 조건
+     */
+    fun orderByDistanceFrom(lat: Double, lng: Double): Specification<TripRecordEntity> =
+        Specification { root, query, cb ->
+            // cb.literal 은 SQL 에 값을 그대로 박는다. 요청 좌표가 매번 달라 문장이 매번 달라지므로 바인딩한다.
+            val hcb = cb as HibernateCriteriaBuilder
+            val distance = cb.function(
+                PostgisFunctions.KNN_DISTANCE,
+                Double::class.java,
+                root.get<Double>("latitude"),
+                root.get<Double>("longitude"),
+                hcb.value(lat),
+                hcb.value(lng),
+            )
+            requireNotNull(query).orderBy(cb.asc(distance), cb.desc(root.get<Instant>("createdAt")))
+            cb.conjunction()
         }
 
     /**

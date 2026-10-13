@@ -51,8 +51,8 @@ class TripRecordService(
     /**
      * 요청자가 볼 수 있는 기록을 조건에 맞춰 페이지로 돌려준다.
      *
-     * 범위 판정은 조회 쿼리 단계에서 한다. 거리순만은 요청 좌표에 따라 달라지는 값이라 페이지 안에서
-     * 재정렬한다.
+     * 범위 판정과 정렬은 모두 조회 쿼리 단계에서 한다. 거리순도 DB 가 기준 위치로 정렬하므로 페이지를
+     * 넘어 이어진다.
      *
      * @param query 범위·여행·카테고리·태그·검색어·정렬·기준 좌표
      * @param userId 요청자의 사용자 id. 비로그인이면 null
@@ -71,16 +71,22 @@ class TripRecordService(
 
         // scope 가 없으면 tripId 가 있다는 뜻이고(컨트롤러가 보장), 그 여행을 볼 수 있음은 위에서
         // 확인했다. 볼 수 있는 여행의 하위 기록은 전부 보이므로 범위 조건 없이 여행 조인만 한다.
-        val spec = TripRecordSpecifications.withScope(query.scope, userId)
+        val filtered = TripRecordSpecifications.withScope(query.scope, userId)
             .and(TripRecordSpecifications.withFilters(query.tripId, query.category, query.tag, query.keyword))
 
-        // 평점은 기록의 컬럼이라 DB 에서 그대로 정렬된다.
-        // 거리만 저장된 값이 아니라 요청 좌표에 따라 매번 달라져 페이지 안에서 재정렬한다.
+        // 거리는 저장된 값이 아니라 요청 좌표에 따라 달라져 Sort 로 표현할 수 없다. DB 가 위치 인덱스로
+        // 정렬하도록 조건 쪽에 정렬을 싣고, 페이지 요청의 정렬은 비운다. 좌표는 컨트롤러가 보장한다.
+        val spec = if (query.sort == RecordSort.DISTANCE) {
+            filtered.and(TripRecordSpecifications.orderByDistanceFrom(requireNotNull(query.lat), requireNotNull(query.lng)))
+        } else {
+            filtered
+        }
         val sort = when (query.sort) {
-            RecordSort.RECENT, RecordSort.DISTANCE -> Sort.by(Sort.Direction.DESC, "createdAt")
+            RecordSort.RECENT -> Sort.by(Sort.Direction.DESC, "createdAt")
             // 여행 상세는 여행을 따라가며 읽으므로 등록순이다.
             RecordSort.OLDEST -> Sort.by(Sort.Direction.ASC, "createdAt")
             RecordSort.RATING -> Sort.by(Sort.Direction.DESC, "rating").and(Sort.by(Sort.Direction.DESC, "createdAt"))
+            RecordSort.DISTANCE -> Sort.unsorted()
         }
         val found = recordRepository.findAll(spec, listPageRequest(page, sort))
 
@@ -98,8 +104,7 @@ class TripRecordService(
             "기록 목록 scope={} tripId={} userId={} count={}",
             query.scope, query.tripId, userId, found.totalElements,
         )
-        if (query.sort != RecordSort.DISTANCE) return records
-        return records.copy(content = records.content.sortedBy { it.distanceKm ?: Double.MAX_VALUE })
+        return records
     }
 
     /**
@@ -224,8 +229,8 @@ class TripRecordService(
     }
 
     /**
-     * soft delete. 사진은 soft delete 대상이 아니라 파일과 메타데이터를 그대로 두는데,
-     * 기록이 보이지 않는 동안에는 어차피 조회 경로가 없다.
+     * soft delete. 사진 메타데이터는 남기고 바이너리는 지운다. 남겨 두면 지운 기록의 사진을 URL 로
+     * 계속 받아 갈 수 있고 저장 공간도 돌아오지 않는다. 그래서 기록을 되살려도 사진은 돌아오지 않는다.
      *
      * 다만 이 기록의 사진이 여행 커버였다면 지정을 푼다. 지워진 기록의 사진이 여행을 계속
      * 대표하게 두면 "커버는 그 여행의 하위 기록에 속한 사진" 이라는 불변식이 깨진다.
@@ -244,7 +249,8 @@ class TripRecordService(
 
         record.trip.clearCoverIfAmong(photoRepository.findIdsByRecordId(recordId))
         record.softDelete()
-        log.debug("기록 삭제 recordId={} tripId={} authorId={}", recordId, record.trip.id, authorId)
+        val purged = photoDatabaseService.deleteByRecord(recordId)
+        log.debug("기록 삭제 recordId={} tripId={} authorId={} photos={}", recordId, record.trip.id, authorId, purged)
     }
 
     /**
