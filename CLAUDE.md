@@ -179,10 +179,11 @@ backend/   Kotlin + Spring Boot 멀티 모듈 — external-api(API 서버), batc
 frontend/  React + Vite. components / context / config / utils / pages
 ```
 
-- 백엔드 실행: `cd backend && ./gradlew :external-api:bootRun` (기본 `local` 프로파일, H2 인메모리)
+- 백엔드 실행: `cd backend && docker compose up` (PostgreSQL + API 서버). DB 만 띄우고
+  `./gradlew :external-api:bootRun` 으로 돌려도 된다 (`docker compose up db`, 기본 `local` 프로파일)
 - 프론트엔드 실행: `cd frontend && npm run dev` (5173 포트)
 - 프론트엔드 린트: `cd frontend && npm run lint` (oxlint)
-- 백엔드 테스트: `cd backend && ./gradlew test` (모든 모듈)
+- 백엔드 테스트: `cd backend && ./gradlew test` (모든 모듈, Testcontainers 라 Docker 가 떠 있어야 한다)
 
 ### 5.1 현재 구현 상태
 
@@ -193,9 +194,10 @@ frontend/  React + Vite. components / context / config / utils / pages
   직접 조회하며, 전역 컨텍스트는 `AuthContext` 하나다. 장소 검색만 목업이다. 상세는 frontend §10.
 - **`SecurityConfig` 가 `permitAll()` 로 열려 있다.** 인증은 컨트롤러가 `requireLogin` 으로
   직접 막는다 (backend §8.1).
-- **스키마 마이그레이션 도구가 없다.** `schema.sql` 을 새로 써서 여행 계층을 반영했으므로
-  **기존 개발·dev DB 는 재생성해야 한다.** `trips.cover_photo_id` 에 외래키가 없는 것도 같은
-  제약 탓이며, 커버 해제를 애플리케이션이 직접 한다 (backend §3, §8.1).
+- **스키마는 Flyway 마이그레이션으로 관리한다** (`external-api/src/main/resources/db/migration`).
+  DB 는 모든 환경에서 PostgreSQL + PostGIS 다. 이미 적용된 마이그레이션은 고치지 않고 다음 버전을
+  추가한다. Flyway 도입 전에 만든 개발·dev DB 는 재생성해야 한다.
+- **`trips.cover_photo_id` 에 외래키가 없다.** 커버 해제를 애플리케이션이 직접 한다 (backend §3).
 
 `REFERENCE.md` 의 초기 스케치와 `backend/README.md` 의 구조 설명에는 `VisitRecord`·`Place`·
 `Review` 등 이전 모델의 이름이 남아 있다. **코드와 명세가 기준이다.**

@@ -15,13 +15,14 @@
 | 언어 | Kotlin (JVM) | 2.3.21 |
 | 프레임워크 | Spring Boot (Spring MVC) | 4.1.1 |
 | 영속성 | Spring Data JPA / Hibernate | Boot 관리 |
-| 데이터베이스 | H2 (local, in-memory) / PostgreSQL (dev·prod) | Boot 관리 |
+| 데이터베이스 | PostgreSQL + PostGIS (모든 환경). 로컬은 Docker Compose | 이미지 `postgis/postgis:17-3.5` |
+| 스키마 관리 | Flyway | Boot 관리 |
 | 인증 | Spring Security (현재 임시 폼 로그인, 네이버 OAuth2 Client 복구 예정) | Boot 관리 |
 | 직렬화 | Jackson (`jackson-module-kotlin`) | Boot 관리 |
 | 입력 검증 | Bean Validation | Boot 관리 |
-| 배치 | Spring Batch (JDBC 메타데이터 저장소) | Boot 관리 |
+| 배치 | Spring Batch (메타데이터 테이블 없는 `ResourcelessJobRepository`) | Boot 관리 |
 | 빌드 도구 | Gradle (Kotlin DSL, Wrapper 포함) | 9.7.1 |
-| 테스트 | JUnit 5, `kotlin-test-junit5`, Spring Boot Test | — |
+| 테스트 | JUnit 5, `kotlin-test-junit5`, Spring Boot Test, Testcontainers (PostGIS) | Boot 관리 |
 
 - 요구 JDK 버전: **17 이상** (루트 `build.gradle.kts`의 toolchain이 17로 고정)
 - 세션 쿠키(`JSESSIONID`) 기반 인증. JWT 미사용
@@ -35,6 +36,8 @@ Gradle 멀티 모듈. 두 모듈은 서로 의존하지 않음.
 backend/
 ├─ settings.gradle.kts     # 모듈 목록
 ├─ build.gradle.kts        # 공통 빌드 설정 (플러그인 버전, Kotlin 옵션, Java 17, JUnit)
+├─ Dockerfile              # API 서버 이미지
+├─ compose.yml             # 로컬 실행 (PostgreSQL + API 서버)
 ├─ external-api/           # API 서버 — 아래 디렉터리 구조 참고
 ├─ batch/                  # 정기 정리 작업 (Spring Batch). 웹 서버 없이 잡 실행 후 종료
 │  ├─ build.gradle.kts
@@ -57,8 +60,8 @@ backend/
   java -jar $JAR --spring.profiles.active=prod --spring.batch.job.name=loginDailyStatsJob targetDate=2026-10-01
   ```
 - 배치 메타데이터 테이블 없이 동작(`ResourcelessJobRepository`)하므로 DB에 추가할 테이블 없음
-- `dev`·`prod`는 API 서버와 같은 `DB_URL`·`DB_USERNAME`·`DB_PASSWORD` 사용. 스키마는 API 쪽 절차로 적용
-- `local`·`test`는 빌드 시 `external-api`의 `schema.sql`을 받아 인메모리 H2를 같은 구조로 생성
+- `local`·`dev`·`prod`는 API 서버와 같은 DB 사용(`local`은 compose의 DB). 스키마는 API 서버의 Flyway가 만듦
+- `test`는 빌드 시 `external-api`의 마이그레이션(`db/migration`)을 받아 Testcontainers DB에 Flyway로 적용
 
 ## 디렉터리 구조 (`external-api`)
 
@@ -134,10 +137,12 @@ external-api/
 │     └─ presentation/PageResponse.kt  # 공통 페이지 응답
 ├─ src/main/resources/
 │  ├─ application.yml             # 공통 설정
-│  ├─ application-local.yml       # 로컬 (H2 in-memory, PostgreSQL 호환 모드)
+│  ├─ application-local.yml       # 로컬 (compose 의 PostgreSQL, 초기 데이터 포함)
 │  ├─ application-dev.yml         # 개발 서버 (PostgreSQL)
-│  ├─ application-prod.yml        # 운영 (PostgreSQL)
-│  └─ schema.sql                  # 엔티티 기준 DDL
+│  ├─ application-prod.yml        # 운영 (PostgreSQL, Flyway 끔)
+│  ├─ db/migration/               # Flyway 마이그레이션 (V1__init.sql …)
+│  ├─ db/seed/local/              # local 전용 초기 데이터 (R__local_seed.sql)
+│  └─ META-INF/services/          # Hibernate 함수 등록 (PostGIS 거리 연산)
 ├─ src/test/kotlin/com/yong/travel/
 └─ build.gradle.kts               # 이 모듈의 의존성
 ```
@@ -165,7 +170,7 @@ external-api/
 | `NAVER_SEARCH_CLIENT_ID` | 장소 검색 사용 시 | 지역 검색 오픈API Client ID |
 | `NAVER_SEARCH_CLIENT_SECRET` | 장소 검색 사용 시 | 지역 검색 오픈API Client Secret |
 
-`dev` / `prod` 프로파일은 아래 값이 추가로 필요. (`local`은 인메모리 H2라 불필요)
+`dev` / `prod` 프로파일은 아래 값이 추가로 필요. (`local`은 compose의 DB 접속 정보가 기본값이라 불필요)
 
 | 변수 | 필수 | 설명 |
 |---|---|---|
@@ -187,12 +192,23 @@ export NAVER_SEARCH_CLIENT_SECRET=...
 
 ### 3. 개발 서버 실행
 
+Docker 필요. DB와 API 서버를 함께 띄우는 방법과, DB만 띄우고 API 서버는 Gradle로 돌리는 방법이 있음.
+
 ```bash
 cd backend
+docker compose up                  # PostgreSQL(PostGIS) + API 서버
+
+# 또는 DB 만 띄우고 API 서버는 IDE·Gradle 로
+docker compose up db
 ./gradlew :external-api:bootRun
 ```
 
 기본 주소는 http://localhost:8080. (Windows는 `./gradlew` 대신 `gradlew.bat`)
+
+- 기동 시 Flyway가 스키마와 초기 데이터(사용자·그룹·여행·기록 목업)를 적용
+- 데이터는 `db-data` 볼륨에 남음. 처음 상태로 되돌리려면 `docker compose down -v`
+- DB 접속: `localhost:5432`, DB·사용자·비밀번호 모두 `travel`
+- 공식 PostGIS 이미지는 amd64 전용이라 Apple Silicon에서는 에뮬레이션으로 실행됨
 
 프로파일 미지정 시 `local` 적용. 다른 프로파일은 다음과 같이 지정.
 
@@ -205,10 +221,6 @@ cd backend
 - API: `http://localhost:8080/api/...`
 - 임시 로그인: `POST /api/auth/login` — `local`·`dev` 전용 고정 계정 `user1`·`user2`·`user3`, 비밀번호 `password`
   (계정이 셋이라 그룹 공유·초대를 직접 주고받기 가능)
-- H2 콘솔: `http://localhost:8080/h2-console`
-  (JDBC URL `jdbc:h2:mem:travel-recorder`, 사용자 `sa`, 비밀번호 없음)
-
-> `local` 프로파일의 H2는 인메모리라 **서버 재시작 시 데이터 전부 소멸.**
 
 ## 사용 가능한 명령
 
@@ -217,7 +229,7 @@ cd backend
 | `./gradlew :external-api:bootRun` | API 서버 실행 (기본 포트 8080) |
 | `./gradlew :batch:bootRun` | 배치 실행 (잡을 돌리고 종료) |
 | `./gradlew build` | 컴파일 + 테스트 + 실행 가능한 JAR 생성 → `<모듈>/build/libs/` |
-| `./gradlew test` | 모든 모듈 테스트 실행 |
+| `./gradlew test` | 모든 모듈 테스트 실행 (Testcontainers가 PostGIS 컨테이너를 띄우므로 Docker 필요) |
 | `./gradlew clean` | 빌드 산출물 삭제 |
 
 ## 빌드 및 배포
@@ -231,37 +243,42 @@ java -jar external-api/build/libs/external-api-0.0.1-SNAPSHOT.jar  # 빌드 결�
 java -jar external-api/build/libs/external-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
-`prod` 프로파일 배포 시 위 [환경 변수](#2-환경-변수-설정) 표의 값 전부 주입 필요. `spring.sql.init.mode`가 `never`라 **`schema.sql`은 배포 절차에서 직접 적용.**
+`prod` 프로파일 배포 시 위 [환경 변수](#2-환경-변수-설정) 표의 값 전부 주입 필요. `prod`는 Flyway가 꺼져 있어
+**마이그레이션은 배포 절차에서 Flyway CLI로 직접 적용.** 앱은 `ddl-auto: validate`로 적용 여부만 확인.
 
 > `prod`에는 임시 로그인 구성이 없고 OAuth도 꺼져 있어 **현재 로그인 수단 없음.**
 
 ```bash
-psql "$DB_URL" -f external-api/src/main/resources/schema.sql
+docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sql" flyway/flyway \
+  -url="$DB_URL" -user="$DB_USERNAME" -password="$DB_PASSWORD" migrate
 ```
+
+- 운영 DB에 `postgis`·`pg_trgm` 확장이 설치 가능해야 함. V1이 `CREATE EXTENSION`을 실행하므로
+  마이그레이션 계정에 확장 생성 권한이 필요(또는 DBA가 미리 생성)
 
 ## 프로파일
 
-공통 설정은 `application.yml`, 환경별로 달라지는 값(데이터소스, 스키마 초기화, CORS, 로깅)만 프로파일 파일로 분리. 미지정 시 `local` 사용.
+공통 설정은 `application.yml`, 환경별로 달라지는 값(데이터소스, 마이그레이션, CORS, 로깅)만 프로파일 파일로 분리. 미지정 시 `local` 사용.
 
-| 프로파일 | 데이터베이스 | `ddl-auto` | `schema.sql` 실행 | 비고 |
+| 프로파일 | 데이터베이스 | `ddl-auto` | Flyway | 비고 |
 |---|---|---|---|---|
-| `local` (기본) | H2 in-memory (`MODE=PostgreSQL`) | `validate` | 기동 시마다 | H2 콘솔 활성화, 앱 로그 `DEBUG`, 임시 로그인 |
-| `dev` | PostgreSQL | `validate` | 기동 시마다 | 앱 로그 `DEBUG`, 임시 로그인 |
-| `prod` | PostgreSQL | `validate` | 실행하지 않음 | 로그 `INFO`, HikariCP 풀 크기 조정 가능 |
+| `local` (기본) | compose의 PostgreSQL | `validate` | 기동 시 적용 + 초기 데이터 | 앱 로그 `DEBUG`, 임시 로그인 |
+| `dev` | PostgreSQL | `validate` | 기동 시 적용 | 앱 로그 `DEBUG`, 임시 로그인 |
+| `prod` | PostgreSQL | `validate` | 꺼짐 (배포 절차에서 CLI) | 로그 `INFO`, HikariCP 풀 크기 조정 가능 |
+| `test` | Testcontainers PostGIS | `validate` | 기동 시 적용 | 테스트 전용 |
 
 ## 데이터베이스 스키마
 
-`external-api/src/main/resources/schema.sql`이 스키마의 기준. 엔티티(`com.yong.travel.*.persistence`)로부터 Hibernate가 생성하는 DDL에 맞춰 작성.
+`external-api/src/main/resources/db/migration`의 Flyway 마이그레이션이 스키마의 기준. 엔티티(`com.yong.travel.*.persistence`)로부터 Hibernate가 생성하는 DDL에 맞춰 작성.
 
-- 모든 프로파일이 `ddl-auto: validate`라 **엔티티와 `schema.sql`이 어긋나면 기동 실패.** 엔티티 변경 시 `schema.sql`도 함께 수정.
-- 스크립트는 `CREATE TABLE IF NOT EXISTS` 기반이고 외래키를 `CREATE TABLE` 안에 인라인으로 선언해 **재실행해도 안전.** 이 때문에 테이블은 참조 순서(`users` → `tags` → `share_group` → `trips` → `trip_records` → 나머지)로 정의.
-- **`trips.cover_photo_id`에는 외래키 없음.** `trips` → `photos` → `trip_records` → `trips` 순환이라 인라인 선언 불가, `ALTER TABLE ADD CONSTRAINT`는 PostgreSQL에 `IF NOT EXISTS`가 없어 재실행 시 실패. 대신 사진이 여행에서 사라지는 경로(사진 삭제·기록 삭제·기록의 소속 여행 변경)에서 애플리케이션이 커버 지정을 직접 해제. 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3 참고.
-- `local`은 H2를 `MODE=PostgreSQL`로 띄워 dev/prod와 같은 스크립트를 그대로 사용.
-- `prod`는 `spring.sql.init.mode: never`라 애플리케이션이 DDL을 실행하지 않음. 스키마 적용은 배포 절차에서 별도 수행.
+- 모든 프로파일이 `ddl-auto: validate`라 **엔티티와 스키마가 어긋나면 기동 실패.** 엔티티 변경 시 마이그레이션도 함께 추가.
+- **이미 적용된 마이그레이션 파일은 수정하지 않음.** 변경은 다음 버전(`V2__…`) 파일로 추가.
+- Flyway 도입 전에 `schema.sql`로 만든 개발·dev DB에는 이력 테이블이 없어 **재생성 필요.**
+- **`trips.cover_photo_id`에는 외래키 없음.** 사진이 여행에서 사라지는 경로(사진 삭제·기록 삭제·기록의 소속 여행 변경)에서 애플리케이션이 커버 지정을 직접 해제. 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3 참고.
 - PostgreSQL은 외래키에 인덱스를 자동 생성하지 않으므로, 조회·삭제에 쓰이는 FK 컬럼에 인덱스를 명시.
-- `trips`와 `trip_records`는 **soft delete.** `deleted_at`이 `NULL`인 행만 유효하며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동 제외. 여행 삭제 시 하위 기록도 같은 시각으로 함께 삭제. 그룹·멤버·초대·공유 관계는 반대로 물리 삭제 — 탈퇴와 공유 해제는 즉시 조회 권한을 없애야 하기 때문. 정책과 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2 참고.
+- `trips`와 `trip_records`는 **soft delete.** `deleted_at`이 `NULL`인 행만 유효하며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동 제외. 두 테이블의 인덱스는 `WHERE deleted_at IS NULL` 부분 인덱스. 여행 삭제 시 하위 기록도 같은 시각으로 함께 삭제하고, 하위 사진의 바이너리(`photo_data`)는 물리 삭제. 그룹·멤버·초대·공유 관계는 반대로 물리 삭제 — 탈퇴와 공유 해제는 즉시 조회 권한을 없애야 하기 때문. 정책과 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2 참고.
 - **`trip_records`에는 `visibility`와 `author_id` 컬럼 없음.** 둘 다 소속 여행에서 파생되며, 같은 사실을 두 곳에 적으면 어긋나는 순간 어느 쪽이 맞는지 알 수 없기 때문. 그래서 기록 조회는 **항상 `trip_id`로 여행을 조인해** 공개 범위 판정.
-- `CREATE TABLE IF NOT EXISTS`는 **기존 테이블에 컬럼 추가 불가.** 여행 계층 전환, 사진 DB 저장 전환(사진 id UUID화, `photo_data` 추가), 초대 이력(`invite_history`) 추가를 `schema.sql`을 새로 써서 반영했으므로 **기존 개발·dev 데이터베이스는 재생성 필요.** 실제 데이터가 쌓이기 전에 마이그레이션 도구 도입 필요.
+- 확장: `postgis`(기록 거리순 정렬의 KNN 위치 인덱스), `pg_trgm`(이름·주소·태그 부분 일치 검색 인덱스).
 
 ## 설정 값
 
@@ -353,7 +370,7 @@ psql "$DB_URL" -f external-api/src/main/resources/schema.sql
 미구현 / 예정 (상세는 SPECIFICATION.md 8장)
 - **네이버 OAuth 로그인 복구** — `SecurityConfig`의 `oauth2Login` 블록이 주석 처리된 상태. 복구 시 `LocalLoginConfig`·`LocalLoginController` 제거
 - **인가 정책 적용** — `SecurityConfig`가 개발 편의를 위해 `anyRequest().permitAll()`로 열린 상태. 인증은 컨트롤러가 `requireLogin`으로 직접 차단하며, SPECIFICATION.md 2.2의 정책대로 필터체인의 `authenticated()`로 복원 필요
-- 스키마 마이그레이션 도구 도입 (Flyway/Liquibase) — 현재는 `schema.sql` 단일 파일이라 기존 테이블의 변경 이력 관리 불가. 도입 시 `trips.cover_photo_id`에 외래키 복원 가능
+- `trips.cover_photo_id` 외래키 복원 — Flyway 도입으로 가능해짐. 복원 시 `ON DELETE SET NULL`로 사진 삭제 경로의 커버 해제를 DB에 맡길 수 있음
 - 사진 저장소의 AWS S3 전환 — 현재는 DB 저장, 저장 추상화는 전환 시점에 도입
 - 사진 서빙에 공개 범위 미적용 — URL을 아는 사람은 비공개 여행의 사진도 열람 가능하며, 현재는 추측 불가능한 사진 id(UUID)에만 의존
 - 장소 검색 후보 풀 확대 — 원본 API가 검색어당 최대 5건만 반환하므로, 검색어 변형으로 추가 호출해 집계하는 로직 필요

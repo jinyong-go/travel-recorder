@@ -9,18 +9,28 @@
 ## 명령
 
 ```bash
-./gradlew :external-api:bootRun   # API 서버 실행 (기본 local 프로파일, H2 인메모리)
+docker compose up                 # PostgreSQL(PostGIS) + API 서버 (local 프로파일)
+docker compose up db              # DB 만. 이어서 bootRun 으로 API 서버를 돌릴 때
+docker compose down -v            # 로컬 DB 를 처음 상태로 (볼륨 삭제)
+./gradlew :external-api:bootRun   # API 서버 실행 (기본 local 프로파일, compose 의 DB 에 붙는다)
 ./gradlew :batch:bootRun --args='--spring.batch.job.name=<잡 이름>'   # 배치 실행 (잡 하나를 돌리고 종료)
-./gradlew test                    # 모든 모듈 테스트
+./gradlew test                    # 모든 모듈 테스트 (Testcontainers — Docker 가 떠 있어야 한다)
 ./gradlew build                   # 빌드 (테스트 포함)
 ```
 
 - **모듈을 지정하지 않은 `./gradlew bootRun` 은 쓰지 않는다.** 두 모듈의 `bootRun` 이 함께 잡히고,
   API 서버가 프로세스를 붙잡아 배치는 돌지 않는다.
 
-- 프로파일: `local`(H2, `MODE=PostgreSQL`) / `dev` / `prod`(PostgreSQL)
-- **세 프로파일 모두 `ddl-auto: validate`** 다. 엔티티와 `schema.sql` 이 어긋나면 기동조차 되지
-  않으므로, **엔티티를 고치면 `schema.sql` 도 같이 고친다.**
+- 프로파일: `local`(compose 의 PostgreSQL) / `dev` / `prod`. 테스트는 `test` 프로파일이며
+  Testcontainers 가 PostGIS 컨테이너를 띄운다(`jdbc:tc:` URL). 모든 환경이 PostgreSQL + PostGIS 다.
+- **스키마는 Flyway 마이그레이션이 만든다** (`external-api/src/main/resources/db/migration`).
+  `local`·`dev`·`test` 는 기동 시 적용하고, `prod` 는 애플리케이션이 DDL 을 날리지 않도록 꺼 두고
+  배포 절차에서 Flyway CLI 로 적용한다.
+  - **이미 적용된 마이그레이션 파일은 고치지 않는다.** 바꿀 것이 있으면 다음 버전(`V2__…`)을 추가한다.
+  - local 초기 데이터는 `db/seed/local/R__local_seed.sql`(반복 마이그레이션)이며 local 에서만 돈다.
+    파일이 바뀌면 다시 돌므로 몇 번을 돌아도 결과가 같게 쓴다.
+- **모든 프로파일이 `ddl-auto: validate`** 다. 엔티티와 스키마가 어긋나면 기동조차 되지 않으므로,
+  **엔티티를 고치면 마이그레이션도 같이 추가한다.**
 
 ## 모듈
 
@@ -35,9 +45,9 @@
 - **배치는 메타데이터 테이블(`BATCH_*`) 없이 돈다** (`ResourcelessJobRepository`). 잡은 몇 번을
   돌려도 결과가 같게(멱등) 만든다 — 재시작 정보가 남지 않으므로 실패하면 처음부터 다시 돌린다.
   재시작이 필요한 잡이 생기면 JDBC 저장소와 그 테이블의 관리 방식을 함께 정한다.
-- **배치는 엔티티 없이 SQL 로 다룬다.** 스키마의 기준은 `external-api` 의 `schema.sql` 하나이며,
-  배치는 빌드 시 이 파일을 리소스로 받아 local·test DB 를 만든다. 테이블을 바꾸면 배치의 SQL 도
-  함께 확인한다.
+- **배치는 엔티티 없이 SQL 로 다룬다.** 스키마의 기준은 `external-api` 의 마이그레이션 하나이며,
+  배치는 테스트 빌드 때만 이 스크립트를 받아 테스트 DB 를 만든다. local·dev·prod 에서는 API 서버가
+  만든 스키마를 그대로 쓴다. 테이블을 바꾸면 배치의 SQL 도 함께 확인한다.
 - **잡이 둘 이상이라 실행할 잡 이름(`--spring.batch.job.name`)을 반드시 넘긴다.** 빠뜨리면 기동이
   실패한다. 잡이 실패하면 종료 코드가 0 이 아니다 — 스케줄러가 실패를 알아차리는 수단이다.
 - 잡 목록 (매일 이 순서로 실행)
@@ -53,7 +63,8 @@
 
 ## 스택
 
-Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client / Bean Validation / Spring Batch 6
+Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client / Bean Validation / Spring Batch 6 /
+PostgreSQL + PostGIS / Flyway / Testcontainers
 
 ## 패키지 구조
 
@@ -140,7 +151,9 @@ com.yong.travel
 - **목록 서비스는 페이지 번호(`page: Int`)를 받아 `PageResult<도메인 객체>` 를 돌려준다.**
   Spring Data 의 `Page`·`Pageable` 은 서비스와 리포지토리 사이에서만 쓴다 — 컨트롤러는 이를
   만들지도 받지도 않는다. 서비스는 `listPageRequest(page, sort)` 로 요청을 만들고, 조회 결과를
-  `toPageResult()` 로 바꾼다. 페이지 안에서 재정렬한 목록은 `copy(content = …)` 로 바꿔 담는다.
+  `toPageResult()` 로 바꾼다. 정렬은 페이지 안에서 다시 하지 않고 조회 쿼리에서 끝낸다 — 페이지 안에서만
+  정렬하면 다음 페이지에 앞 페이지보다 앞서야 할 항목이 섞인다. `Sort` 로 표현할 수 없는 정렬(거리순)은
+  `XxxSpecifications` 가 쿼리에 싣는다.
   응답은 컨트롤러가 `PageResponse.of(result).map { XxxResponse.from(it) }` 로 만든다.
 
 ## 인가 — 가장 조심할 자리
@@ -149,6 +162,10 @@ com.yong.travel
 
 - **판정은 조회 쿼리 단계에서 한다.** 전부 읽어 온 뒤 애플리케이션에서 거르면 페이지 건수가
   어긋나고, 한 번 빠뜨리면 그대로 샌다.
+- **조회 조건으로서의 판정식은 `TripVisibilityPredicates` 하나뿐이다.** 여행 목록·기록 목록·태그
+  자동완성이 모두 이것을 쓴다. 새 조회 경로도 판정식을 다시 쓰지 말고 이것을 가져다 쓴다. 메모리 판정은
+  `TripService.canView` 한 곳이다.
+- 요청자가 속한 그룹은 id 를 미리 읽어 넘기지 않고 `group_member` 를 서브쿼리로 붙여 판정한다.
 - **기록 조회는 항상 소속 여행을 조인한다.** 판정 근거가 기록에 없으므로 조인 없는 조회 경로를
   만들면 그 경로가 곧 우회로가 된다. 목록·상세·태그 자동완성 모두 해당한다.
 - **열람 권한이 없으면 `403` 이 아니라 `404`** 다. 없는 것과 응답 본문·메시지가 구분되지 않아야
@@ -196,6 +213,11 @@ com.yong.travel
   시점에 돌아서, 그냥 `save` 하면 갱신 전 값이 나간다.
 - 값 규칙 중 **평점 단위와 여행 기간 역전은 Bean Validation과 DB `CHECK` 양쪽**에서 막는다.
 - 동적 조회 조건은 `XxxSpecifications` 에 모은다. 서비스에 쿼리 문자열을 흩지 않는다.
+- soft delete 대상(`trips`, `trip_records`)의 인덱스는 `WHERE deleted_at IS NULL` 부분 인덱스다.
+  조회에 `@SQLRestriction` 이 같은 술어를 붙여 주므로 인덱스가 쓰인다. 네이티브 SQL 로 조회할 때는
+  이 술어를 직접 적어야 인덱스를 탄다.
+- 위치 인덱스는 `latitude`·`longitude` 표현식 인덱스다. 거리 정렬은 `PostgisFunctions` 의
+  `knn_distance` 로 하며, 그 식은 인덱스 표현식과 같아야 한다.
 
 ## 테스트
 

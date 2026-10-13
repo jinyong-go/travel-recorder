@@ -25,7 +25,7 @@
 
 | 모듈 | 기술 | 문서 |
 |---|---|---|
-| [`backend/`](./backend) | Kotlin 2.3 / Spring Boot 4.1 / JPA / PostgreSQL(H2) | [README](./backend/README.md) · [명세](./backend/SPECIFICATION.md) |
+| [`backend/`](./backend) | Kotlin 2.3 / Spring Boot 4.1 / JPA / PostgreSQL + PostGIS / Flyway | [README](./backend/README.md) · [명세](./backend/SPECIFICATION.md) |
 | [`frontend/`](./frontend) | React 19 / Vite / react-router | [README](./frontend/README.md) · [명세](./frontend/SPECIFICATION.md) |
 
 모듈 README는 실행 방법·환경 변수·디렉터리 구조, 모듈 명세는 요구사항과 설계 결정을 다룸.
@@ -33,11 +33,11 @@
 ## 빠르게 실행하기
 
 두 모듈을 각각 기동. 백엔드는 8080, 프론트엔드는 5173 포트 사용. 백엔드 CORS에
-`http://localhost:5173`이 허용되어 있어 별도 프록시 설정 불필요.
+`http://localhost:5173`이 허용되어 있어 별도 프록시 설정 불필요. 백엔드는 Docker 필요.
 
 ```bash
-# 터미널 1 — 백엔드 (local 프로파일, 인메모리 H2)
-cd backend && ./gradlew :external-api:bootRun
+# 터미널 1 — 백엔드 (PostgreSQL + API 서버, local 프로파일)
+cd backend && docker compose up
 
 # 터미널 2 — 프론트엔드
 cd frontend && npm install && npm run dev
@@ -50,7 +50,7 @@ cd frontend && npm install && npm run dev
 
 | 작업 | 명령 |
 |---|---|
-| 백엔드 테스트 | `cd backend && ./gradlew test` |
+| 백엔드 테스트 | `cd backend && ./gradlew test` (Testcontainers, Docker 필요) |
 | 프론트엔드 린트 | `cd frontend && npm run lint` |
 
 ## 현재 상태
@@ -69,7 +69,7 @@ cd frontend && npm install && npm run dev
 - **임시 조치**
     - 네이버 OAuth 대신 임시 인메모리 로그인 사용
     - 시큐리티 인가 정책이 `permitAll()`로 열려 있어, 인증이 필요한 엔드포인트는 컨트롤러가 직접 차단
-    - 스키마 마이그레이션 도구 부재로 `schema.sql`을 새로 작성해 구조 변경. **기존 개발용 DB는 재생성 필요**
-- **다음 단계**: 네이버 OAuth 복구, 시큐리티 인가 정책 복원, 마이그레이션 도구 도입, 장소 검색 API 연동.
+- **스키마**: Flyway 마이그레이션으로 관리. Flyway 도입 전에 만든 개발용 DB는 재생성 필요
+- **다음 단계**: 네이버 OAuth 복구, 시큐리티 인가 정책 복원, 장소 검색 API 연동.
   상세는 [backend/SPECIFICATION.md §8](./backend/SPECIFICATION.md)과
   [frontend/SPECIFICATION.md §10](./frontend/SPECIFICATION.md) 참고

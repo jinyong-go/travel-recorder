@@ -19,8 +19,11 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
 
 ### 1.2 실행 환경
 - Kotlin 2.3 / Spring Boot 4.1 / Spring Data JPA / Spring Security OAuth2 Client
-- 데이터베이스는 `local` 프로파일이 H2 인메모리(`MODE=PostgreSQL`), `dev`/`prod` 가 PostgreSQL 이다.
-  세 프로파일 모두 `ddl-auto: validate` 라 엔티티와 `schema.sql` 이 어긋나면 기동 시점에 실패한다.
+- 데이터베이스는 모든 환경에서 PostgreSQL + PostGIS 다. `local` 은 Docker Compose 로, 테스트는
+  Testcontainers 로 띄운다. 기록 거리순 정렬이 PostGIS 를, 부분 일치 검색 인덱스가 `pg_trgm` 을 쓴다.
+- 스키마는 Flyway 마이그레이션으로 관리한다. `local`·`dev`·`test` 는 기동 시 적용하고, `prod` 는
+  애플리케이션이 DDL 을 실행하지 않도록 끄고 배포 절차에서 적용한다. 모든 프로파일이 `ddl-auto: validate`
+  라 엔티티와 스키마가 어긋나면 기동 시점에 실패한다.
 - OAuth2 클라이언트는 **네이버만 등록되어 있다** (§2.1).
 
 > ⚠️ **여행 계층은 구현되어 있다.** 다만 **인가의 첫 관문이 아직 필터체인이 아니다** —
@@ -261,13 +264,13 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 ```
 
 `Trip.coverPhoto` 와 `Photo.record` 는 `Trip → TripRecord → Photo → Trip` 순환 참조를 만든다.
-`cover_photo_id` 컬럼은 `trips` 에 두되 **외래키는 선언하지 않는다.** 순환 때문에 인라인 FK 로는
-어떤 테이블 순서로도 선언할 수 없고, `ALTER TABLE ADD CONSTRAINT` 는 PostgreSQL 에 `IF NOT EXISTS`
-가 없어 `schema.sql` 을 재실행하는 기동에서 실패하기 때문이다 (§8.1).
+`cover_photo_id` 컬럼은 `trips` 에 두되 **외래키는 선언하지 않는다.** 마이그레이션 도구가 없던 때
+순환 참조 FK 를 재실행 가능한 스크립트로 선언할 수 없어 생긴 결정이며, Flyway 를 도입한 지금은
+되돌릴 수 있다 (§8.1).
 
 따라서 **사진이 지워질 때 커버 지정을 푸는 것은 애플리케이션의 책임**이다. 사진이 사라져도 여행은
-남아야 하므로 이 처리를 빠뜨리면 여행 조회가 깨진다. 마이그레이션 도구를 도입하면 FK 와
-`ON DELETE SET NULL` 로 되돌린다.
+남아야 하므로 이 처리를 빠뜨리면 여행 조회가 깨진다. FK 를 복원하면 사진 삭제 경로는
+`ON DELETE SET NULL` 로 대신할 수 있다.
 
 ### 3.1 제약 조건
 
@@ -355,12 +358,10 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 
 - 테이블명은 `login_daily_stats` 이고 PK 는 `stat_date` 다. 날짜당 한 행이다.
 - 엔티티가 없다. `external-api` 는 이 테이블을 읽지도 쓰지도 않으며, `batch` 의
-  `loginDailyStatsJob` 만 SQL 로 쓴다. DDL 은 스키마의 단일 출처인 `external-api` 의 `schema.sql` 에 둔다.
+  `loginDailyStatsJob` 만 SQL 로 쓴다. DDL 은 스키마의 단일 출처인 `external-api` 의 Flyway 마이그레이션에 둔다.
 - **집계 대상 날짜는 잡 파라미터 `targetDate`(`yyyy-MM-dd`)** 이며, 없으면 한국 시간 기준 **어제**다.
   범위는 그 날짜의 한국 시간 0시 이상, 다음 날 0시 미만이다.
-- **같은 날짜를 다시 집계하면 덮어쓴다.** 그 날짜의 행을 지우고 새로 넣으며, 한 트랜잭션이다.
-  `INSERT … ON CONFLICT DO UPDATE` 를 쓰지 않는 이유는 local·test 의 H2 가 PostgreSQL 모드에서도
-  이 문법의 갱신 형태를 지원하지 않아서다.
+- **같은 날짜를 다시 집계하면 덮어쓴다.** `INSERT … ON CONFLICT (stat_date) DO UPDATE` 한 문장이다.
 - **다음 날짜는 거부하고 잡을 실패로 끝낸다.** 오늘 이후(아직 끝나지 않은 날)와, 원본 이력의 보관
   기간이 이미 지났을 수 있는 날짜(오늘 − 보관 기간 이전)다. 후자를 집계하면 원본이 지워진 만큼
   실제 값이 작게 덮인다.
@@ -396,8 +397,8 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - **초대는 수락·거절·철회·그룹 삭제 어느 쪽으로 끝나든 `group_invite` 행을 지우고, 같은 트랜잭션에서
   `InviteHistory` 를 남긴다** (공통 명세 §3.7). 상태 컬럼을 달아 같은 행에 두지 않는 이유는
   `unique(group_id, invitee_id)` 때문이다 — 끝난 초대가 그 자리에 남아 있으면 같은 상대를
-  다시 초대할 수 없다. 부분 유니크 인덱스로 우회할 수는 있으나 H2(local)와 PostgreSQL 의
-  문법이 갈리고 마이그레이션 도구가 없다 (§8.1).
+  다시 초대할 수 없다. 부분 유니크 인덱스로 우회할 수는 있으나, 그러면 대기 초대를 읽는 모든 쿼리에
+  상태 조건이 붙는다.
 - **`InviteHistory` 는 지우지 않는다.** soft delete 대상도 아니다. 보관 기간을 두지 않으며,
   사용자 탈퇴 시의 처리는 탈퇴 자체와 함께 범위 밖이다 (공통 명세 §3.1).
 - **`LoginHistory` 는 `loggedInAt` 이 보관 기간(공통 명세 §3.10)을 넘긴 행을 물리 삭제한다.**
@@ -998,7 +999,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
     수 MB 가 함께 읽힌다. Hibernate 의 컬럼 단위 지연 로딩은 바이트코드 enhancement 없이는
     동작하지 않으므로 테이블을 나누는 것으로 막는다.
   - `@Lob` 을 쓰지 않는다. PostgreSQL 에서 `@Lob ByteArray` 는 `oid`(large object)로 매핑되어
-    행을 지워도 본체가 남고, H2 와도 동작이 달라진다.
+    행을 지워도 본체가 남는다.
 - **사진 id 는 무작위 UUID(v4)다.** 사진 URL 에 id 가 그대로 실리고 서빙에 공개 범위가 적용되지
   않으므로(§4.6), 순번 id 면 차례로 넣어 보는 것만으로 모든 사진을 받아 갈 수 있다. 시각이 앞에
   오는 v7 은 추측의 단서를 늘리므로 쓰지 않는다. 사진 외 엔티티의 id 는 그대로 `Long` 이다.
@@ -1128,16 +1129,11 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 - **`SecurityConfig` 의 `permitAll()` 을 §2.2 정책으로 되돌린다.** 공개 범위 판정은 서비스·조회
   계층에 구현되어 있으나, 인증 자체는 아직 컨트롤러가 `requireLogin` 으로 막는다. 인가의 첫
   관문을 필터체인으로 되돌리는 작업이 남아 있다.
-- **스키마 마이그레이션 도구(Flyway/Liquibase)가 없다.** `schema.sql` 이
-  `CREATE TABLE IF NOT EXISTS` 기반이라 이미 만들어진 테이블에 컬럼을 추가하지 못한다. 여행 계층
-  전환은 이 스크립트를 새로 써서 반영했으므로 **기존 개발·dev DB 는 재생성해야 한다.**
-  이 제약의 대가를 두 곳에서 치르고 있다.
-    - `trips.cover_photo_id` 에 외래키가 없다. 순환 참조라 인라인 선언이 불가능하고
-      `ALTER TABLE ADD CONSTRAINT` 는 재실행되지 않기 때문이다 (§3). 도구를 도입하면
-      FK 와 `ON DELETE SET NULL` 로 되돌리고, 커버 해제를 애플리케이션에서 뺄 수 있다.
-    - 구조가 바뀔 때마다 DB 재생성이 필요하다.
-
-  **운영 데이터가 생기기 전에** 도입해야 한다.
+- **`trips.cover_photo_id` 의 외래키를 복원할 수 있다** (§3). 마이그레이션 도구가 없어 생긴 제약이었고
+  Flyway 를 도입해 풀렸다. 복원하면 사진 삭제 경로의 커버 해제를 `ON DELETE SET NULL` 이 대신한다.
+  기록 삭제·소속 여행 변경 경로는 사진 행이 남으므로 애플리케이션의 해제가 계속 필요하다.
+- **Flyway 도입 전에 만든 개발·dev DB 는 재생성해야 한다.** 마이그레이션 이력 테이블이 없어 V1 을
+  적용할 수 없다. 운영 DB 는 확장(`postgis`, `pg_trgm`) 생성 권한을 갖춘 뒤 배포 절차에서 적용한다.
 - **태그 API(`/api/tags`)는 구현되어 있으나 호출하는 화면이 없다.** 현재 등록 요청은 항상 빈
   태그 목록으로 들어온다 (frontend §10).
 
