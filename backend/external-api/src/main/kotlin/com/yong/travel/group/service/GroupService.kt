@@ -190,15 +190,6 @@ class GroupService(
     }
 
     /**
-     * 사용자가 속한 그룹 id 목록을 조회한다. 기록·여행 조회 권한 판정의 출발점이라 다른 도메인에서도 쓴다.
-     *
-     * @param userId 사용자 id. 비로그인 요청을 그대로 넘길 수 있도록 `null` 을 받는다
-     * @return 속한 그룹 id 목록. `userId` 가 `null` 이면 빈 목록
-     */
-    fun groupIdsOf(userId: Long?): List<Long> =
-        userId?.let { groupMemberRepository.findGroupIdsByUserId(it) } ?: emptyList()
-
-    /**
      * 여행을 이 그룹들에 공유해도 되는지 확인하고 그룹 엔티티를 돌려준다.
      *
      * 여기만 도메인 객체가 아니라 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 `TripService`
@@ -222,6 +213,14 @@ class GroupService(
         }
         return groupRepository.findAllById(distinct)
     }
+
+    /**
+     * 사용자가 속한 그룹 id 목록을 조회한다. 공유 대상 그룹 검증이 쓴다.
+     *
+     * @param userId 사용자 id
+     * @return 속한 그룹 id 목록
+     */
+    private fun groupIdsOf(userId: Long): List<Long> = groupMemberRepository.findGroupIdsByUserId(userId)
 
     /** 그룹 단건 조회. 없으면 GROUP_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다. */
     private fun findGroup(groupId: Long): GroupEntity =

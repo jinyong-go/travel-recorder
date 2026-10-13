@@ -65,8 +65,7 @@ class TripService(
         userId: Long?,
         page: Int,
     ): PageResult<Trip> {
-        val groupIds = groupService.groupIdsOf(userId)
-        val spec = TripSpecifications.withScope(query.scope, userId, groupIds)
+        val spec = TripSpecifications.withScope(query.scope, userId)
             .and(TripSpecifications.withKeyword(query.keyword))
 
         val sort = when (query.sort) {
@@ -273,9 +272,7 @@ class TripService(
         if (trip.visibility == TripVisibility.PUBLIC) return true
         if (trip.visibility != TripVisibility.GROUP || userId == null) return false
 
-        val groupIds = groupService.groupIdsOf(userId)
-        return groupIds.isNotEmpty() &&
-            tripShareRepository.existsByTripIdAndGroupIdIn(requireNotNull(trip.id), groupIds)
+        return tripShareRepository.existsSharedWithMember(requireNotNull(trip.id), userId)
     }
 
     /**

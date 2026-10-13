@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
-/** 그룹 멤버 행의 조회와 삭제. 사용자가 속한 그룹 id 는 조회 권한 판정의 출발점이다. */
+/** 그룹 멤버 행의 조회와 삭제. */
 interface GroupMemberRepository : JpaRepository<GroupMemberEntity, Long> {
 
     /**
@@ -64,7 +64,7 @@ interface GroupMemberRepository : JpaRepository<GroupMemberEntity, Long> {
     fun deleteByGroupId(@Param("groupId") groupId: Long): Int
 
     /**
-     * 사용자가 소유자이든 초대로 들어왔든, 속한 그룹 id 전부를 읽는다. 조회 권한 판정의 출발점이다.
+     * 사용자가 소유자이든 초대로 들어왔든, 속한 그룹 id 전부를 읽는다. 공유 대상 그룹 검증이 쓴다.
      *
      * @param userId 사용자 id
      * @return 속한 그룹 id 목록

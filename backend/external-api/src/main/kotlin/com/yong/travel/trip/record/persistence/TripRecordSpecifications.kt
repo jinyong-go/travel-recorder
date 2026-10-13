@@ -3,18 +3,15 @@ package com.yong.travel.trip.record.persistence
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
-import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.tag.persistence.TagEntity
-import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.persistence.TripEntity
-import com.yong.travel.trip.persistence.TripShareEntity
+import com.yong.travel.trip.persistence.TripVisibilityPredicates
 import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.trip.record.domain.RecordScope
-import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.Predicate
-import jakarta.persistence.criteria.Subquery
+import jakarta.persistence.criteria.Root
 import org.springframework.data.jpa.domain.Specification
 
 /** 기록 목록의 동적 조회 조건. 공개 범위 판정이 소속 여행 조인과 함께 여기서 쿼리에 실린다. */
@@ -24,41 +21,33 @@ object TripRecordSpecifications {
      * 조회 범위 조건.
      *
      * **판정 대상은 기록이 아니라 소속 여행이다**. 기록에는 공개 범위도 작성자도
-     * 없으므로 여행을 조인하지 않으면 판정할 근거가 없다.
+     * 없으므로 여행을 조인하지 않으면 판정할 근거가 없다. 판정식 자체는 [TripVisibilityPredicates] 에 있다.
      *
      * 공개 범위 판정을 조회 쿼리에 실어 보내는 것이 핵심이다. 전부 읽어 온 뒤 애플리케이션에서
      * 걸러 내면 페이지네이션 건수가 어긋나고, 거르는 걸 한 번 빠뜨리는 순간 곧바로 정보 유출이 된다.
      *
+     * 범위와 상관없이 소속 여행을 조인하며, 목록 쿼리에서는 그 조인으로 여행과 소유자를 함께 읽는다
+     * (응답에 여행 이름과 작성자가 실린다). 범위 조건과 fetch 가 조인을 따로 만들면 trips 가 두 번 붙는다.
      * 조인 자체가 삭제 필터 역할도 한다 — TripEntity 의 @SQLRestriction 덕에 삭제된 여행의 기록은
      * 조인 단계에서 함께 사라진다.
      *
-     * @param scope 조회 범위
+     * @param scope 조회 범위. null 이면 범위 조건 없이 조인만 한다 — 볼 수 있는지 이미 확인한 여행 하나로
+     *        좁힐 때다
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
-     * @param groupIds 요청자가 속한 그룹 id 목록
      * @return 범위 조건
      */
-    fun withScope(scope: RecordScope, userId: Long?, groupIds: List<Long>): Specification<TripRecordEntity> =
+    fun withScope(scope: RecordScope?, userId: Long?): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
-            val trip = root.join<TripRecordEntity, TripEntity>("trip")
+            val trip = joinTrip(root, requireNotNull(query))
             when (scope) {
-                RecordScope.MINE ->
-                    if (userId == null) cb.disjunction() else cb.equal(ownerId(trip), userId)
-
-                RecordScope.PUBLIC ->
-                    cb.equal(trip.get<TripVisibility>("visibility"), TripVisibility.PUBLIC)
-
-                RecordScope.SHARED -> {
-                    if (userId == null || groupIds.isEmpty()) {
-                        cb.disjunction()
-                    } else {
-                        // 내 여행의 기록은 MINE 에서 전부 보이므로 여기서 빼 중복 노출을 막는다.
-                        cb.and(
-                            cb.equal(trip.get<TripVisibility>("visibility"), TripVisibility.GROUP),
-                            cb.notEqual(ownerId(trip), userId),
-                            cb.exists(sharedWithGroups(trip, query, cb, groupIds)),
-                        )
-                    }
-                }
+                null -> cb.conjunction()
+                RecordScope.MINE -> TripVisibilityPredicates.ownedBy(trip, cb, userId)
+                RecordScope.PUBLIC -> TripVisibilityPredicates.isPublic(trip, cb)
+                // 내 여행의 기록은 MINE 에서 전부 보이므로 여기서 빼 중복 노출을 막는다.
+                RecordScope.SHARED -> cb.and(
+                    TripVisibilityPredicates.sharedWith(trip, query, cb, userId),
+                    cb.not(TripVisibilityPredicates.ownedBy(trip, cb, userId)),
+                )
             }
         }
 
@@ -97,31 +86,27 @@ object TripRecordSpecifications {
                 )
             }
 
+            // 조인으로 거르면 태그 행만큼 기록이 불어나 DISTINCT 가 필요해진다. EXISTS 는 기록 행을 늘리지 않는다.
             tag?.takeIf { it.isNotBlank() }?.let {
-                query?.distinct(true)
-                val tagJoin = root.join<TripRecordEntity, TagEntity>("tags")
-                predicates.add(cb.equal(tagJoin.get<String>("name"), it.trim()))
+                val sub = requireNotNull(query).subquery(Long::class.java)
+                val tagged = sub.correlate(root).join<TripRecordEntity, TagEntity>("tags")
+                sub.select(cb.literal(1L)).where(cb.equal(tagged.get<String>("name"), it.trim()))
+                predicates.add(cb.exists(sub))
             }
 
             cb.and(*predicates.toTypedArray())
         }
 
-    private fun ownerId(trip: Join<TripRecordEntity, TripEntity>) =
-        trip.get<UserEntity>("owner").get<Long>("id")
-
-    private fun sharedWithGroups(
-        trip: Join<TripRecordEntity, TripEntity>,
-        query: CriteriaQuery<*>?,
-        cb: CriteriaBuilder,
-        groupIds: List<Long>,
-    ): Subquery<Long> {
-        val sub = requireNotNull(query).subquery(Long::class.java)
-        val share = sub.from(TripShareEntity::class.java)
-        sub.select(cb.literal(1L))
-        sub.where(
-            cb.equal(share.get<TripEntity>("trip"), trip),
-            share.get<GroupEntity>("group").get<Long>("id").`in`(groupIds),
-        )
-        return sub
+    /**
+     * 소속 여행 조인. 목록 쿼리에서는 여행과 소유자를 함께 읽는 fetch 조인이다.
+     *
+     * 건수 쿼리에서는 fetch 를 걸 수 없어(select 에 기록이 없다) 일반 조인으로 둔다.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun joinTrip(root: Root<TripRecordEntity>, query: CriteriaQuery<*>): Join<TripRecordEntity, TripEntity> {
+        if (query.resultType == Long::class.javaObjectType) return root.join("trip")
+        val trip = root.fetch<TripRecordEntity, TripEntity>("trip")
+        trip.fetch<TripEntity, UserEntity>("owner")
+        return trip as Join<TripRecordEntity, TripEntity>
     }
 }

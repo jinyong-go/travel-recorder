@@ -8,7 +8,6 @@ import com.yong.travel.common.persistence.listPageRequest
 import com.yong.travel.common.persistence.toPageResult
 import com.yong.travel.common.util.haversineKm
 import com.yong.travel.common.util.roundTo2Decimals
-import com.yong.travel.group.service.GroupService
 import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
@@ -28,7 +27,6 @@ import com.yong.travel.trip.record.persistence.TripRecordSpecifications
 import com.yong.travel.trip.service.TripService
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
-import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -45,7 +43,6 @@ class TripRecordService(
     private val tagService: TagService,
     private val photoRepository: PhotoRepository,
     private val photoDatabaseService: PhotoDatabaseService,
-    private val groupService: GroupService,
     private val tripService: TripService,
 ) {
 
@@ -73,19 +70,9 @@ class TripRecordService(
         query.tripId?.let { tripService.requireViewable(it, userId) }
 
         // scope 가 없으면 tripId 가 있다는 뜻이고(컨트롤러가 보장), 그 여행을 볼 수 있음은 위에서
-        // 확인했다. 볼 수 있는 여행의 하위 기록은 전부 보이므로 범위 조건을 더하지 않는다.
-        val scopeSpec = query.scope
-            ?.let { TripRecordSpecifications.withScope(it, userId, groupService.groupIdsOf(userId)) }
-            ?: Specification.unrestricted()
-        val spec = scopeSpec
-            .and(
-                TripRecordSpecifications.withFilters(
-                    query.tripId,
-                    query.category,
-                    query.tag,
-                    query.keyword,
-                ),
-            )
+        // 확인했다. 볼 수 있는 여행의 하위 기록은 전부 보이므로 범위 조건 없이 여행 조인만 한다.
+        val spec = TripRecordSpecifications.withScope(query.scope, userId)
+            .and(TripRecordSpecifications.withFilters(query.tripId, query.category, query.tag, query.keyword))
 
         // 평점은 기록의 컬럼이라 DB 에서 그대로 정렬된다.
         // 거리만 저장된 값이 아니라 요청 좌표에 따라 매번 달라져 페이지 안에서 재정렬한다.

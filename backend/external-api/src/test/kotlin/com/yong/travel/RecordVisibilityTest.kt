@@ -8,6 +8,7 @@ import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.GroupInviteService
 import com.yong.travel.group.persistence.GroupRepository
+import com.yong.travel.tag.service.TagService
 import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.trip.record.domain.RecordListQuery
 import com.yong.travel.trip.record.domain.RecordScope
@@ -51,6 +52,7 @@ class RecordVisibilityTest {
     @Autowired private lateinit var groupRepository: GroupRepository
     @Autowired private lateinit var tripRepository: TripRepository
     @Autowired private lateinit var tripShareRepository: TripShareRepository
+    @Autowired private lateinit var tagService: TagService
 
     @Test
     fun `공개 범위를 지정하지 않은 여행의 기록은 비공개다`() {
@@ -443,6 +445,54 @@ class RecordVisibilityTest {
     }
 
     /** 목록 검증은 첫 페이지만 본다. 페이지 크기는 서버가 정하므로 테스트도 그 값을 그대로 쓴다. */
+    @Test
+    fun `태그 자동완성은 볼 수 있는 여행의 기록에 쓰인 태그만 내준다`() {
+        val owner = newUser()
+        val member = newUser()
+        val stranger = newUser()
+        val groupId = newGroupWith(owner, member)
+        newRecord(newTrip(owner), tags = listOf("가림태그비공개"))
+        newRecord(newTrip(owner, TripVisibility.GROUP, listOf(groupId)), tags = listOf("가림태그그룹"))
+        newRecord(newTrip(owner, TripVisibility.PUBLIC), tags = listOf("가림태그공개"))
+        flush()
+
+        fun tags(userId: Long?) = tagService.search("가림태그", userId).map { it.name }
+
+        assertEquals(listOf("가림태그공개", "가림태그그룹", "가림태그비공개"), tags(owner))
+        assertEquals(listOf("가림태그공개", "가림태그그룹"), tags(member))
+        assertEquals(listOf("가림태그공개"), tags(stranger))
+        assertEquals(listOf("가림태그공개"), tags(null))
+    }
+
+    @Test
+    fun `지워진 기록에만 쓰인 태그는 자동완성에 나오지 않는다`() {
+        val owner = newUser()
+        val recordId = newRecord(newTrip(owner, TripVisibility.PUBLIC), tags = listOf("지운기록태그"))
+        flush()
+        assertEquals(listOf("지운기록태그"), tagService.search("지운기록태그", null).map { it.name })
+
+        recordService.delete(recordId, owner)
+        flush()
+
+        assertTrue(tagService.search("지운기록태그", owner).isEmpty())
+    }
+
+    @Test
+    fun `태그로 거른 목록은 기록이 중복되지 않고 건수도 맞다`() {
+        val owner = newUser()
+        val tripId = newTrip(owner, TripVisibility.PUBLIC)
+        // 한 페이지(10건)를 넘겨야 건수 쿼리가 따로 나간다. 태그가 여럿인 기록도 한 번만 나와야 한다.
+        repeat(11) { newRecord(tripId, tags = listOf("필터태그", "다른태그$it")) }
+        newRecord(tripId, tags = listOf("다른태그"))
+        flush()
+
+        val page = recordService.list(RecordListQuery(RecordScope.PUBLIC, tripId, tag = "필터태그"), null, 0)
+
+        assertEquals(11L, page.totalElements)
+        assertEquals(10, page.content.size)
+        assertEquals(10, page.content.map { it.id }.distinct().size)
+    }
+
     private fun firstPage() = 0
 
     private fun list(
@@ -513,12 +563,14 @@ class RecordVisibilityTest {
         tripId: Long,
         name: String = "테스트 기록",
         authorId: Long = requireNotNull(tripRepository.findById(tripId).orElseThrow().owner.id),
+        tags: List<String> = emptyList(),
     ): Long = recordService.create(
         authorId,
         TripRecordCreateRequest(
             tripId = tripId,
             name = name,
             category = Category.FOOD,
+            tags = tags,
             address = "서울시 어딘가",
             latitude = 37.5,
             longitude = 127.0,

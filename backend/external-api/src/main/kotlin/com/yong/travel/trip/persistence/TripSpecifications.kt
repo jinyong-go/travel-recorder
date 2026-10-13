@@ -1,15 +1,8 @@
 package com.yong.travel.trip.persistence
 
-import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
-import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.trip.domain.TripScope
-import com.yong.travel.trip.domain.TripVisibility
-import jakarta.persistence.criteria.CriteriaBuilder
-import jakarta.persistence.criteria.CriteriaQuery
-import jakarta.persistence.criteria.Root
-import jakarta.persistence.criteria.Subquery
 import org.springframework.data.jpa.domain.Specification
 
 /** 여행 목록의 동적 조회 조건. 공개 범위 판정이 여기서 쿼리에 실린다. */
@@ -20,33 +13,22 @@ object TripSpecifications {
      *
      * 공개 범위 판정을 조회 쿼리에 실어 보내는 것이 핵심이다. 전부 읽어 온 뒤 애플리케이션에서
      * 걸러 내면 페이지네이션 건수가 어긋나고, 거르는 걸 한 번 빠뜨리는 순간 곧바로 정보 유출이 된다.
+     * 판정식 자체는 [TripVisibilityPredicates] 에 있다.
      *
      * @param scope 조회 범위
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
-     * @param groupIds 요청자가 속한 그룹 id 목록
      * @return 범위 조건
      */
-    fun withScope(scope: TripScope, userId: Long?, groupIds: List<Long>): Specification<TripEntity> =
+    fun withScope(scope: TripScope, userId: Long?): Specification<TripEntity> =
         Specification { root, query, cb ->
             when (scope) {
-                TripScope.MINE ->
-                    if (userId == null) cb.disjunction() else cb.equal(ownerId(root), userId)
-
-                TripScope.PUBLIC ->
-                    cb.equal(root.get<TripVisibility>("visibility"), TripVisibility.PUBLIC)
-
-                TripScope.SHARED -> {
-                    if (userId == null || groupIds.isEmpty()) {
-                        cb.disjunction()
-                    } else {
-                        // 내 여행은 MINE 에서 전부 보이므로 여기서 빼 중복 노출을 막는다.
-                        cb.and(
-                            cb.equal(root.get<TripVisibility>("visibility"), TripVisibility.GROUP),
-                            cb.notEqual(ownerId(root), userId),
-                            cb.exists(sharedWithGroups(root, query, cb, groupIds)),
-                        )
-                    }
-                }
+                TripScope.MINE -> TripVisibilityPredicates.ownedBy(root, cb, userId)
+                TripScope.PUBLIC -> TripVisibilityPredicates.isPublic(root, cb)
+                // 내 여행은 MINE 에서 전부 보이므로 여기서 빼 중복 노출을 막는다.
+                TripScope.SHARED -> cb.and(
+                    TripVisibilityPredicates.sharedWith(root, requireNotNull(query), cb, userId),
+                    cb.not(TripVisibilityPredicates.ownedBy(root, cb, userId)),
+                )
             }
         }
 
@@ -62,22 +44,4 @@ object TripSpecifications {
                 ?: return@Specification cb.conjunction()
             cb.like(root.get("name"), containsPattern(trimmed), LIKE_ESCAPE)
         }
-
-    private fun ownerId(root: Root<TripEntity>) = root.get<UserEntity>("owner").get<Long>("id")
-
-    private fun sharedWithGroups(
-        root: Root<TripEntity>,
-        query: CriteriaQuery<*>?,
-        cb: CriteriaBuilder,
-        groupIds: List<Long>,
-    ): Subquery<Long> {
-        val sub = requireNotNull(query).subquery(Long::class.java)
-        val share = sub.from(TripShareEntity::class.java)
-        sub.select(cb.literal(1L))
-        sub.where(
-            cb.equal(share.get<TripEntity>("trip"), root),
-            share.get<GroupEntity>("group").get<Long>("id").`in`(groupIds),
-        )
-        return sub
-    }
 }
