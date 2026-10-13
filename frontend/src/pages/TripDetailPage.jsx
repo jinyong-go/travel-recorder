@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { categoryIcon, categoryLabel, placeOf } from '../data/records.js'
-import { DEFAULT_VISIBILITY } from '../data/visibility.js'
+import { DEFAULT_VISIBILITY, isWideningVisibility } from '../data/visibility.js'
 import { formatDate } from '../utils/date.js'
 import { TRIP_STATUS_MESSAGE, budgetLabel, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
 import { errorMessage, fileUrl } from '../api/client.js'
@@ -78,6 +78,7 @@ function TripDetailView({ trip, onTripChange }) {
   const [groupDraft, setGroupDraft] = useState(sharedGroups.map((g) => g.id))
   const [savedMessage, setSavedMessage] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [confirmingWiden, setConfirmingWiden] = useState(false)
   // 요청이 나가 있는 동안 같은 버튼을 다시 누르지 못하게 한다.
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
@@ -86,6 +87,10 @@ function TripDetailView({ trip, onTripChange }) {
   const visibilityChanged =
     visibilityDraft !== trip.visibility ||
     (visibilityDraft === 'GROUP' && groupKey(groupDraft) !== groupKey(sharedGroups.map((g) => g.id)))
+  const widening = isWideningVisibility(
+    { visibility: trip.visibility, groupIds: sharedGroups.map((g) => g.id) },
+    { visibility: visibilityDraft, groupIds: groupDraft },
+  )
 
   const handleMapButtonClick = (record) => {
     const place = placeOf(record)
@@ -120,6 +125,13 @@ function TripDetailView({ trip, onTripChange }) {
     }
   }
 
+  /** 넓히는 변경은 확인 모달을 거친다. 좁히는 변경은 바로 저장하고 결과만 알린다. */
+  const handleVisibilitySaveClick = () => {
+    setSavedMessage('')
+    if (widening) setConfirmingWiden(true)
+    else handleVisibilitySave()
+  }
+
   /** 범위를 바꾸면 하위 기록이 전부 함께 영향을 받으므로 몇 곳이 영향받는지 함께 알린다. */
   const handleVisibilitySave = async () => {
     setBusy(true)
@@ -137,6 +149,7 @@ function TripDetailView({ trip, onTripChange }) {
       setSavedMessage(errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했습니다.'))
     } finally {
       setBusy(false)
+      setConfirmingWiden(false)
     }
   }
 
@@ -285,7 +298,7 @@ function TripDetailView({ trip, onTripChange }) {
                     type="button"
                     className="btn-primary"
                     disabled={!visibilityChanged || busy}
-                    onClick={handleVisibilitySave}
+                    onClick={handleVisibilitySaveClick}
                   >
                     {/* 삭제 모달 뒤에 비치는 동안에는 바꾸지 않는다. 그때 나가 있는 요청은 삭제다. */}
                     {busy && !confirmingDelete ? '저장하는 중…' : '저장'}
@@ -340,6 +353,23 @@ function TripDetailView({ trip, onTripChange }) {
         >
           {/* 하위 기록이 함께 지워진다는 사실과 건수를 반드시 문구에 담는다. */}
           이 여행과 여행지 {recordCount}곳의 기록이 함께 삭제됩니다. 되돌릴 수 없어요.
+        </ConfirmDialog>
+      )}
+
+      {confirmingWiden && (
+        <ConfirmDialog
+          title="공개 범위를 넓힐까요?"
+          confirmLabel="공개 범위 변경"
+          busyLabel="변경하는 중…"
+          busy={busy}
+          safe
+          onConfirm={handleVisibilitySave}
+          onCancel={() => setConfirmingWiden(false)}
+        >
+          {/* 여행을 넓히면 하위 기록과 예산이 전부 함께 보인다. 일부만 공유된다고 오해하지 않게 건수와 함께 말한다. */}
+          {visibilityDraft === 'PUBLIC'
+            ? `여행지 ${recordCount}곳${trip.budget != null ? '과 예산' : ''}이 누구에게나 공개됩니다. 로그인하지 않은 사람도 둘러보기에서 볼 수 있어요.`
+            : `선택한 그룹 ${groupDraft.length}곳의 멤버가 여행지 ${recordCount}곳${trip.budget != null ? '과 예산' : ''}을 볼 수 있게 됩니다.`}
         </ConfirmDialog>
       )}
 

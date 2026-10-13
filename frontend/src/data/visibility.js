@@ -29,3 +29,20 @@ export const DEFAULT_VISIBILITY = 'PRIVATE'
 export const visibilityMeta = (key) =>
   VISIBILITIES.find((v) => v.key === key) ?? VISIBILITIES[0]
 
+
+/**
+ * 공개 범위 변경이 여행을 볼 수 있는 사람을 새로 늘리는지 판정한다. 각 인자는 `{ visibility, groupIds }` 다.
+ *
+ * 그룹을 하나도 고르지 않은 "그룹 공유" 는 실제로 나만 보기와 같으므로 그렇게 친다. 그룹 공유끼리는
+ * 새로 더해진 그룹이 하나라도 있으면 넓히는 변경이다 — 다른 그룹을 빼더라도 새로 보게 되는 사람이 생긴다.
+ */
+export const isWideningVisibility = (from, to) => {
+  const audience = ({ visibility, groupIds }) =>
+    visibility === 'GROUP' && groupIds.length === 0 ? 'PRIVATE' : visibility
+  const before = audience(from)
+  const after = audience(to)
+
+  if (after === 'PRIVATE' || before === 'PUBLIC') return false
+  if (after === 'PUBLIC' || before === 'PRIVATE') return true
+  return to.groupIds.some((id) => !from.groupIds.includes(id))
+}
