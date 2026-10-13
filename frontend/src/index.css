@@ -29,10 +29,11 @@
   --error: #c0453c;
   --error-border: #e0685f;
   --error-bg: rgba(224, 104, 95, 0.1);
-  /* 성사된 결과 표시용. 브랜드가 연두라 초록을 성공색으로 쓰면 액센트와 섞인다.
-     --danger 와 같은 규칙으로 테마별 재정의를 두지 않는다. */
-  --info: #4a78b8;
+  /* 성공·완료 표시용 파랑. 브랜드가 연두라 초록을 성공색으로 쓰면 액센트와 섞인다.
+     테두리는 --danger 와 같은 규칙으로 테마별 재정의를 두지 않지만, 글자는 같은 값으로는
+     어두운 배경에서 대비가 4.5:1 에 못 미쳐 --error 처럼 테마별로 둔다. */
   --info-border: #7ba0d1;
+  --info-text: #416ca8;
   --shadow: 0 6px 20px -8px rgba(76, 130, 58, 0.28);
   --shadow-sm: 0 2px 8px -2px rgba(76, 130, 58, 0.18);
   --thumb-grad-a: var(--green-100);
@@ -70,6 +71,7 @@
   --accent-strong: #b9e3a8;
   --accent-contrast: #0b0b0b;
   --error: #ff9a92;
+  --info-text: #7ba0d1;
   --shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.75);
   --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
   --thumb-grad-a: #161a14;

@@ -76,7 +76,8 @@ function TripDetailView({ trip, onTripChange }) {
   const [mapModalRecord, setMapModalRecord] = useState(null)
   const [visibilityDraft, setVisibilityDraft] = useState(trip.visibility ?? DEFAULT_VISIBILITY)
   const [groupDraft, setGroupDraft] = useState(sharedGroups.map((g) => g.id))
-  const [savedMessage, setSavedMessage] = useState('')
+  // 공개 범위 저장 결과. 성공과 실패를 같은 색으로 보이면 실패가 성공처럼 읽힌다.
+  const [visibilityMessage, setVisibilityMessage] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [confirmingWiden, setConfirmingWiden] = useState(false)
   // 요청이 나가 있는 동안 같은 버튼을 다시 누르지 못하게 한다.
@@ -125,9 +126,19 @@ function TripDetailView({ trip, onTripChange }) {
     }
   }
 
+  /** 범위나 그룹을 다시 고르기 시작하면 지난 저장 결과는 지금 고른 값과 맞지 않으므로 지운다. */
+  const changeVisibilityDraft = (next) => {
+    setVisibilityDraft(next)
+    setVisibilityMessage(null)
+  }
+  const changeGroupDraft = (next) => {
+    setGroupDraft(next)
+    setVisibilityMessage(null)
+  }
+
   /** 넓히는 변경은 확인 모달을 거친다. 좁히는 변경은 바로 저장하고 결과만 알린다. */
   const handleVisibilitySaveClick = () => {
-    setSavedMessage('')
+    setVisibilityMessage(null)
     if (widening) setConfirmingWiden(true)
     else handleVisibilitySave()
   }
@@ -144,9 +155,12 @@ function TripDetailView({ trip, onTripChange }) {
           : updated.visibility === 'GROUP' && updated.sharedGroups.length > 0
             ? '선택한 그룹에만 보입니다'
             : '이제 나만 볼 수 있습니다'
-      setSavedMessage(`여행지 ${recordCount}곳이 ${where}.`)
+      setVisibilityMessage({ type: 'success', text: `여행지 ${recordCount}곳이 ${where}.` })
     } catch (err) {
-      setSavedMessage(errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했습니다.'))
+      setVisibilityMessage({
+        type: 'error',
+        text: errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했습니다.'),
+      })
     } finally {
       setBusy(false)
       setConfirmingWiden(false)
@@ -288,9 +302,9 @@ function TripDetailView({ trip, onTripChange }) {
                 {/* 범위는 여행에만 있다. 기록 화면에는 바꾸는 수단을 두지 않는다. */}
                 <VisibilitySelect
                   value={visibilityDraft}
-                  onChange={setVisibilityDraft}
+                  onChange={changeVisibilityDraft}
                   selectedGroupIds={groupDraft}
-                  onChangeGroups={setGroupDraft}
+                  onChangeGroups={changeGroupDraft}
                   onCreateGroupClick={() => navigate('/groups')}
                 />
                 <div className="detail-visibility-actions">
@@ -303,7 +317,18 @@ function TripDetailView({ trip, onTripChange }) {
                     {/* 삭제 모달 뒤에 비치는 동안에는 바꾸지 않는다. 그때 나가 있는 요청은 삭제다. */}
                     {busy && !confirmingDelete ? '저장하는 중…' : '저장'}
                   </button>
-                  {savedMessage && <span className="detail-saved-msg">{savedMessage}</span>}
+                  {/* 영역은 항상 두고 안의 문구만 바꾼다. 그래야 결과가 바뀔 때마다 스크린리더가 읽어 준다. */}
+                  <span aria-live="polite">
+                    {visibilityMessage && (
+                      <span
+                        className={
+                          visibilityMessage.type === 'error' ? 'field-error' : 'detail-saved-msg'
+                        }
+                      >
+                        {visibilityMessage.text}
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
             </details>

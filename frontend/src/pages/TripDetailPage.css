@@ -247,7 +247,7 @@
 
 .detail-saved-msg {
   font-size: 0.85rem;
-  color: var(--accent-strong);
+  color: var(--info-text);
 }
 
 /* 반응형 */

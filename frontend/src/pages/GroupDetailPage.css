@@ -66,7 +66,7 @@
 .invite-info {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--accent-strong);
+  color: var(--info-text);
 }
 
 /* 초대 폼 위의 정원 안내. 정원이 차도 초대를 막지 않는 대신 결과를 먼저 알린다. */

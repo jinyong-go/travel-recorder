@@ -50,7 +50,7 @@
 /* 성사된 결과. 브랜드가 연두라 수락을 초록으로 칠하면 액센트와 섞여 파랑을 쓴다. */
 .invite-outcome-accepted {
   border-color: var(--info-border);
-  color: var(--info);
+  color: var(--info-text);
 }
 
 /* 성사되지 않고 끝난 결과 — 거절·취소·그룹 삭제. "거절" 버튼과 같은 색 토큰이지만
