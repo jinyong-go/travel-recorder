@@ -9,6 +9,8 @@ import './TripForm.css'
 // 백엔드 요청 검증과 같은 값이다.
 const NAME_MAX_LENGTH = 50
 const MEMO_MAX_LENGTH = 1000
+// 제출 검증과 즉시 표시가 같은 문구를 쓴다.
+const DATE_ORDER_ERROR = '종료일은 시작일 이후여야 합니다.'
 
 const EMPTY = {
   name: '',
@@ -54,9 +56,13 @@ export default function TripForm({
   const [sharedGroupIds, setSharedGroupIds] = useState(initial.sharedGroupIds)
   const [errors, setErrors] = useState({})
 
+  // 두 날짜가 다 있고 순서가 뒤집혔으면 제출 전에도 바로 알린다. 달력의 min 만으로는 직접 입력과
+  // "종료일을 정한 뒤 시작일을 뒤로 옮기는" 경우를 막지 못한다.
+  const dateOrderInvalid = Boolean(startDate && endDate && endDate < startDate)
+
   // 날짜를 잘못 골랐을 때 저장 전에 알아차리도록 즉시 계산해 보여준다.
   const durationLabel =
-    startDate && endDate && endDate >= startDate ? tripDurationLabel({ startDate, endDate }) : ''
+    startDate && endDate && !dateOrderInvalid ? tripDurationLabel({ startDate, endDate }) : ''
 
   const validate = () => {
     const next = {}
@@ -64,7 +70,7 @@ export default function TripForm({
     else if (name.trim().length > NAME_MAX_LENGTH) next.name = `여행 이름은 ${NAME_MAX_LENGTH}자 이하로 입력해주세요.`
     if (!startDate) next.startDate = '시작일을 선택해주세요.'
     if (!endDate) next.endDate = '종료일을 선택해주세요.'
-    else if (startDate && endDate < startDate) next.endDate = '종료일은 시작일 이후여야 합니다.'
+    else if (dateOrderInvalid) next.endDate = DATE_ORDER_ERROR
     if (!headcount || Number(headcount) < 1) next.headcount = '인원은 1명 이상이어야 합니다.'
     if (budget !== '' && Number(budget) < 0) next.budget = '예산은 0 이상이어야 합니다.'
     if (memo.length > MEMO_MAX_LENGTH) next.memo = `여행 설명은 ${MEMO_MAX_LENGTH}자 이하로 입력해주세요.`
@@ -123,10 +129,15 @@ export default function TripForm({
           id="trip-end"
           aria-required="true"
           type="date"
+          // 달력에서 시작일 이전 날짜를 처음부터 고를 수 없게 한다.
+          min={startDate || undefined}
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
         />
-        {errors.endDate && <p className="field-error">{errors.endDate}</p>}
+        {/* 순서 오류는 제출 전에도 보인다. 그 밖의 오류(미입력)는 제출할 때만 보인다. */}
+        {(dateOrderInvalid ? DATE_ORDER_ERROR : errors.endDate) && (
+          <p className="field-error">{dateOrderInvalid ? DATE_ORDER_ERROR : errors.endDate}</p>
+        )}
         <p className="field-hint" aria-live="polite">
           {durationLabel}
         </p>
