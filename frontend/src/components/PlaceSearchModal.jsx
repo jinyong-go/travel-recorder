@@ -44,8 +44,7 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
     return matched
       .map((p) => ({ ...p, distanceKm: haversineDistanceKm(referenceLocation, p.location) }))
       .sort((a, b) => a.distanceKm - b.distanceKm)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submittedQuery, referenceLocation.lat, referenceLocation.lng])
+  }, [submittedQuery, referenceLocation])
 
   const totalCount = results?.length ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))

@@ -212,6 +212,7 @@ export default function RecordForm({
             id="record-memo"
             rows={4}
             value={memo}
+            maxLength={MEMO_MAX_LENGTH}
             onChange={(e) => setMemo(e.target.value)}
             placeholder="이 방문에 대한 메모를 남겨보세요"
           />

@@ -59,6 +59,8 @@ export default function TripForm({
   // 두 날짜가 다 있고 순서가 뒤집혔으면 제출 전에도 바로 알린다. 달력의 min 만으로는 직접 입력과
   // "종료일을 정한 뒤 시작일을 뒤로 옮기는" 경우를 막지 못한다.
   const dateOrderInvalid = Boolean(startDate && endDate && endDate < startDate)
+  // 순서 오류는 제출 전에도 보인다. 그 밖의 오류(미입력)는 제출할 때만 보인다.
+  const endDateError = dateOrderInvalid ? DATE_ORDER_ERROR : errors.endDate
 
   // 날짜를 잘못 골랐을 때 저장 전에 알아차리도록 즉시 계산해 보여준다.
   const durationLabel =
@@ -134,10 +136,7 @@ export default function TripForm({
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
         />
-        {/* 순서 오류는 제출 전에도 보인다. 그 밖의 오류(미입력)는 제출할 때만 보인다. */}
-        {(dateOrderInvalid ? DATE_ORDER_ERROR : errors.endDate) && (
-          <p className="field-error">{dateOrderInvalid ? DATE_ORDER_ERROR : errors.endDate}</p>
-        )}
+        {endDateError && <p className="field-error">{endDateError}</p>}
         <p className="field-hint" aria-live="polite">
           {durationLabel}
         </p>

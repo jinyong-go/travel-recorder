@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { errorMessage } from '../api/client.js'
 import { createTrip } from '../api/trips.js'
 import TripForm from '../components/TripForm.jsx'
@@ -33,9 +33,9 @@ export default function TripRegisterPage() {
     <div className="register-page">
       <div className="register-page-inner">
         <div className="register-page-header">
-          <button type="button" className="back-link" onClick={() => navigate('/trips')}>
+          <Link to="/trips" className="back-link">
             <ArrowLeftIcon /> 여행 목록으로
-          </button>
+          </Link>
           <h1>여행 만들기</h1>
         </div>
 
