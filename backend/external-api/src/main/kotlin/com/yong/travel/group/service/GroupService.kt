@@ -147,7 +147,8 @@ class GroupService(
      * @param groupId 대상 그룹 id
      * @param targetUserId 내보낼 멤버의 사용자 id
      * @param requesterId 요청자의 사용자 id. 소유자여야 한다
-     * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없거나, 지목한 사용자가 이 그룹의 멤버가 아닐 때
+     * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
+     * @throws ApiException `MEMBER_NOT_FOUND` — 지목한 사용자가 이 그룹의 멤버가 아닐 때
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
      * @throws ApiException `VALIDATION_ERROR` — 소유자 자신을 지목했을 때.
      *         주인 없는 그룹이 남으므로 허용하지 않는다 — 없애려면 그룹을 삭제해야 한다
@@ -160,7 +161,7 @@ class GroupService(
             throw ApiException(ErrorCode.VALIDATION_ERROR, "소유자는 그룹에서 제외할 수 없습니다.")
         }
         val member = groupMemberRepository.findByGroupIdAndUserId(groupId, targetUserId)
-            ?: throw ApiException(ErrorCode.GROUP_NOT_FOUND)
+            ?: throw ApiException(ErrorCode.MEMBER_NOT_FOUND)
         groupMemberRepository.delete(member)
         log.debug("그룹 멤버 제외 groupId={} targetUserId={} requesterId={}", groupId, targetUserId, requesterId)
     }

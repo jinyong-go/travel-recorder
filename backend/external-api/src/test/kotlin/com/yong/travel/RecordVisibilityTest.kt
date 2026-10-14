@@ -488,6 +488,20 @@ class RecordVisibilityTest {
         )
     }
 
+    @Test
+    fun `멤버가 아닌 사용자를 제외하려 하면 그룹 없음이 아니라 MEMBER_NOT_FOUND 다`() {
+        val owner = newUser()
+        val member = newUser()
+        val stranger = newUser()
+        val groupId = newGroupWith(owner, member)
+
+        // 그룹은 존재를 숨기지 않는다. 그룹은 있는데 "그룹이 없다"고 답하지 않는다.
+        assertEquals(
+            ErrorCode.MEMBER_NOT_FOUND,
+            assertThrows<ApiException> { groupService.removeMember(groupId, stranger, owner) }.errorCode,
+        )
+    }
+
     /** 목록 검증은 첫 페이지만 본다. 페이지 크기는 서버가 정하므로 테스트도 그 값을 그대로 쓴다. */
     @Test
     fun `태그 자동완성은 볼 수 있는 여행의 기록에 쓰인 태그만 내준다`() {

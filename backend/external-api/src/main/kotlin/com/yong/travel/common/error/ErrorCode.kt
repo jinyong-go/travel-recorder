@@ -22,6 +22,12 @@ enum class ErrorCode(val status: HttpStatus, val defaultMessage: String) {
      */
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 그룹입니다."),
 
+    /**
+     * 그룹에 속하지 않은 사용자를 제외하려 할 때. 그룹은 존재를 숨기지 않으므로 그룹이 없는 경우
+     * (`GROUP_NOT_FOUND`)와 구분해 알린다.
+     */
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹 멤버가 아닙니다."),
+
     /** 없는 초대와 "당사자가 아닌 초대" 가 같은 코드·같은 문구를 쓴다. 보낸 소유자와 받은 사람 외에는 존재도 드러나지 않아야 한다. */
     INVITE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 초대입니다."),
 

@@ -299,7 +299,7 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   같은 사실을 두 곳에 적으면 어긋나는 순간 어느 쪽이 맞는지 알 수 없기 때문이다
   (`deletedAt` 단일화와 같은 이유, §3.2). 응답 DTO 의 `author` 필드는 `trip.owner` 로 채운다.
 - 기록을 다른 여행으로 옮기는 것은 **`trip` FK 변경**으로 처리한다. 옮길 대상 여행은
-  **요청자가 소유한 여행**이어야 하며, 아니면 `404 TRIP_NOT_FOUND` 다. 옮기는 순간 그 기록의
+  **요청자가 소유한 여행**이어야 한다 (실패 응답은 §2.2.2). 옮기는 순간 그 기록의
   공개 범위는 새 여행의 것이 된다.
 - `TripRecord.category` 는 `SIGHT`(관광지) / `SHOPPING`(쇼핑) / `FOOD`(맛집) 중 하나만 허용한다.
 - `TripRecord.latitude`, `longitude` 는 필수이며 WGS84 위경도(소수점 6자리 이상)로 저장한다.
@@ -714,8 +714,8 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 }
 ```
 
-- **`tripId` 는 필수다.** 생략하면 `400 VALIDATION_ERROR`, 요청자가 소유하지 않은 여행이면
-  `404 TRIP_NOT_FOUND` 다 (존재 은닉, §2.2).
+- **`tripId` 는 필수다.** 생략하면 `400 VALIDATION_ERROR` 다. 요청자가 소유하지 않은 여행일 때의
+  응답은 §2.2.2 를 따른다.
 - **`visibility` 와 `groupIds` 는 이 요청에 없다.** 공개 범위는 여행이 이미 갖고 있다 (§4.3).
 - 장소명·주소·도로명주소·원본 링크의 길이, 원본 링크의 스킴, 태그 개수·길이 상한은 공통 명세
   §3.3 이 유일한 출처다. 위반하면 `400 VALIDATION_ERROR` 다. 수정 요청(`PUT`)도 같다.
@@ -754,8 +754,8 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 ```json
 { "tripId": 15 }
 ```
-- 기록을 다른 여행으로 옮긴다. 대상 여행은 **요청자가 소유한 여행**이어야 하며, 아니면
-  `404 TRIP_NOT_FOUND` 다.
+- 기록을 다른 여행으로 옮긴다. 대상 여행은 **요청자가 소유한 여행**이어야 하며, 실패 응답은
+  기록 등록과 같다 (§2.2.2).
 - 옮기는 즉시 그 기록의 공개 범위는 새 여행의 것이 된다. **범위를 넓히는 이동일 수 있으므로**
   프론트엔드가 결과를 확인시킨다 (공통 명세 §3.5).
 - 기록에 달린 사진이 이전 여행의 커버로 지정되어 있었다면 그 커버 지정은 해제된다 —
@@ -865,6 +865,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 - 멤버 정보는 이름과 프로필 사진까지만 내려준다. **이메일은 포함하지 않는다** (공통 명세 §3.1).
 - 멤버가 아닌 사용자의 상세 조회·탈퇴는 `403 FORBIDDEN` 이다. 존재하지 않는 그룹만 `404` 다 (§2.2.2).
 - 소유자 제외 요청(`DELETE .../members/{소유자 id}`)은 `400 VALIDATION_ERROR` 다.
+- 그룹에 속하지 않은 사용자를 제외하려 하면 `404 MEMBER_NOT_FOUND` 다.
 - POST·PUT 요청 본문은 `{ "name": "가족", "memo": "설 연휴 사진 공유용" }` 이다. `memo` 는 생략
   가능하며 생략하면 `null` 로 저장된다. PUT 은 두 값을 함께 덮어쓰므로 **`memo` 를 빼고 보내면
   기존 메모가 지워진다** — 이름만 고치는 경우에도 현재 메모를 함께 실어 보내야 한다.
@@ -1037,9 +1038,10 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 허용되지 않는 파일 형식/용량 초과 (멀티파트 단계 초과 포함) | 400 | `INVALID_FILE` |
 | 비로그인 사용자의 보호된 API 접근 | 401 | `UNAUTHENTICATED` |
 | 권한 없는 수정/삭제 시도 (열람은 가능한 경우), 멤버가 아닌 그룹의 조회·탈퇴 | 403 | `FORBIDDEN` |
-| 존재하지 않거나 **열람 권한이 없는** 여행 | 404 | `TRIP_NOT_FOUND` |
+| 존재하지 않거나 **열람 권한이 없는** 여행, 기록 등록·이동의 대상이 내 여행이 아님 (§2.2.2) | 404 | `TRIP_NOT_FOUND` |
 | 존재하지 않거나 **열람 권한이 없는** 기록 | 404 | `RECORD_NOT_FOUND` |
 | 존재하지 않는 그룹, 여행 공유 요청에 담긴 접근 불가 그룹 id | 404 | `GROUP_NOT_FOUND` |
+| 제외 대상이 그룹 멤버가 아님 | 404 | `MEMBER_NOT_FOUND` |
 | 존재하지 않는 사진 | 404 | `PHOTO_NOT_FOUND` |
 | 존재하지 않거나 **당사자가 아닌** 초대 | 404 | `INVITE_NOT_FOUND` |
 | 초대 대상 이메일의 가입자가 없음 | 404 | `USER_NOT_FOUND` |

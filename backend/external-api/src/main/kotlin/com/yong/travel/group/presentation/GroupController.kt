@@ -145,7 +145,8 @@ class GroupController(
      * @param principal 로그인 사용자. 비로그인이면 null
      * @return 본문 없는 `204`
      * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
-     * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없거나 대상이 멤버가 아닐 때
+     * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
+     * @throws ApiException `MEMBER_NOT_FOUND` — 대상이 이 그룹의 멤버가 아닐 때
      * @throws ApiException `FORBIDDEN` — 소유자가 아닐 때
      * @throws ApiException `VALIDATION_ERROR` — 소유자 자신을 지목했을 때
      */
