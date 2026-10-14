@@ -29,18 +29,25 @@ export const DEFAULT_VISIBILITY = 'PRIVATE'
 export const visibilityMeta = (key) =>
   VISIBILITIES.find((v) => v.key === key) ?? VISIBILITIES[0]
 
+/**
+ * 실제로 여행을 볼 수 있는 범위. 인자는 `{ visibility, groupIds }` 다.
+ *
+ * 그룹을 하나도 고르지 않은 "그룹 공유" 는 소유자 말고 아무도 볼 수 없으므로 나만 보기다. 화면이
+ * 범위를 말하는 자리(넓힘 판정, 저장 결과, 그룹 이름 표시, 선택 경고)는 모두 이 값으로 판정한다 —
+ * 한 곳만 저장값을 그대로 쓰면 같은 여행을 두고 화면끼리 다른 말을 한다.
+ */
+export const effectiveVisibility = ({ visibility, groupIds }) =>
+  visibility === 'GROUP' && groupIds.length === 0 ? 'PRIVATE' : visibility
 
 /**
  * 공개 범위 변경이 여행을 볼 수 있는 사람을 새로 늘리는지 판정한다. 각 인자는 `{ visibility, groupIds }` 다.
  *
- * 그룹을 하나도 고르지 않은 "그룹 공유" 는 실제로 나만 보기와 같으므로 그렇게 친다. 그룹 공유끼리는
- * 새로 더해진 그룹이 하나라도 있으면 넓히는 변경이다 — 다른 그룹을 빼더라도 새로 보게 되는 사람이 생긴다.
+ * 실제 범위(`effectiveVisibility`)로 비교한다. 그룹 공유끼리는 새로 더해진 그룹이 하나라도 있으면
+ * 넓히는 변경이다 — 다른 그룹을 빼더라도 새로 보게 되는 사람이 생긴다.
  */
 export const isWideningVisibility = (from, to) => {
-  const audience = ({ visibility, groupIds }) =>
-    visibility === 'GROUP' && groupIds.length === 0 ? 'PRIVATE' : visibility
-  const before = audience(from)
-  const after = audience(to)
+  const before = effectiveVisibility(from)
+  const after = effectiveVisibility(to)
 
   if (after === 'PRIVATE' || before === 'PUBLIC') return false
   if (after === 'PUBLIC' || before === 'PRIVATE') return true

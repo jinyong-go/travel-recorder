@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { categoryIcon, categoryLabel, placeOf } from '../data/records.js'
-import { DEFAULT_VISIBILITY, isWideningVisibility } from '../data/visibility.js'
+import { DEFAULT_VISIBILITY, effectiveVisibility, isWideningVisibility } from '../data/visibility.js'
 import { formatDate } from '../utils/date.js'
-import { TRIP_STATUS_MESSAGE, budgetLabel, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
+import { TRIP_STATUS_MESSAGE, budgetLabel, tripAudience, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
 import { errorMessage, fileUrl } from '../api/client.js'
 import { fetchTripRecords } from '../api/records.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
@@ -73,26 +73,13 @@ function TripDetailView({ trip, onTripChange }) {
   // 사진만 올리지 못한 채 등록된 기록. 재업로드하러 갈 수 있게 링크를 남긴다.
   const [photoFailedRecord, setPhotoFailedRecord] = useState(null)
 
-  const sharedGroups = trip.sharedGroups ?? []
   const [mapModalRecord, setMapModalRecord] = useState(null)
-  const [visibilityDraft, setVisibilityDraft] = useState(trip.visibility ?? DEFAULT_VISIBILITY)
-  const [groupDraft, setGroupDraft] = useState(sharedGroups.map((g) => g.id))
-  // 공개 범위 저장 결과. 성공과 실패를 같은 색으로 보이면 실패가 성공처럼 읽힌다.
-  const [visibilityMessage, setVisibilityMessage] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [confirmingWiden, setConfirmingWiden] = useState(false)
-  // 요청이 나가 있는 동안 같은 버튼을 다시 누르지 못하게 한다.
+  // 삭제 요청이 나가 있는 동안 같은 버튼을 다시 누르지 못하게 한다.
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
 
   const recordCount = trip.recordCount
-  const visibilityChanged =
-    visibilityDraft !== trip.visibility ||
-    (visibilityDraft === 'GROUP' && groupKey(groupDraft) !== groupKey(sharedGroups.map((g) => g.id)))
-  const widening = isWideningVisibility(
-    { visibility: trip.visibility, groupIds: sharedGroups.map((g) => g.id) },
-    { visibility: visibilityDraft, groupIds: groupDraft },
-  )
 
   const handleMapButtonClick = (record) => {
     const place = placeOf(record)
@@ -124,47 +111,6 @@ function TripDetailView({ trip, onTripChange }) {
     } catch (err) {
       setActionError(errorMessage(err, DELETE_ERROR, '여행을 삭제하지 못했습니다.'))
       setBusy(false)
-    }
-  }
-
-  /** 범위나 그룹을 다시 고르기 시작하면 지난 저장 결과는 지금 고른 값과 맞지 않으므로 지운다. */
-  const changeVisibilityDraft = (next) => {
-    setVisibilityDraft(next)
-    setVisibilityMessage(null)
-  }
-  const changeGroupDraft = (next) => {
-    setGroupDraft(next)
-    setVisibilityMessage(null)
-  }
-
-  /** 넓히는 변경은 확인 모달을 거친다. 좁히는 변경은 바로 저장하고 결과만 알린다. */
-  const handleVisibilitySaveClick = () => {
-    setVisibilityMessage(null)
-    if (widening) setConfirmingWiden(true)
-    else handleVisibilitySave()
-  }
-
-  /** 범위를 바꾸면 하위 기록이 전부 함께 영향을 받으므로 몇 곳이 영향받는지 함께 알린다. */
-  const handleVisibilitySave = async () => {
-    setBusy(true)
-    try {
-      const updated = await tripApi.changeTripVisibility(trip.id, visibilityDraft, groupDraft)
-      onTripChange(updated)
-      const where =
-        updated.visibility === 'PUBLIC'
-          ? '전체 공개됩니다'
-          : updated.visibility === 'GROUP' && updated.sharedGroups.length > 0
-            ? '선택한 그룹에만 보입니다'
-            : '이제 나만 볼 수 있습니다'
-      setVisibilityMessage({ type: 'success', text: `여행지 ${recordCount}곳이 ${where}.` })
-    } catch (err) {
-      setVisibilityMessage({
-        type: 'error',
-        text: errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했습니다.'),
-      })
-    } finally {
-      setBusy(false)
-      setConfirmingWiden(false)
     }
   }
 
@@ -259,58 +205,8 @@ function TripDetailView({ trip, onTripChange }) {
             {trip.memo && <p className="trip-detail-memo">{trip.memo}</p>}
           </section>
 
-          {/*
-            접기는 details/summary 로 만든다. 직접 만든 토글보다 짧고 키보드·스크린리더
-            동작이 기본으로 따라온다. 접혀 있어도 지금 누구에게 보이는지는 요약 줄에 남긴다.
-          */}
-          {isOwner && (
-            <details className="detail-section collapsible-section">
-              <summary className="collapsible-summary">
-                <span className="detail-section-title">공개 범위</span>
-                <span className="detail-visibility-current">
-                  <VisibilityBadge visibility={trip.visibility} />
-                  {trip.visibility === 'GROUP' && sharedGroups.length > 0 && (
-                    <span className="detail-shared-groups">
-                      {sharedGroups.map((g) => g.name).join(', ')}
-                    </span>
-                  )}
-                </span>
-              </summary>
-              <div className="collapsible-body">
-                {/* 범위는 여행에만 있다. 기록 화면에는 바꾸는 수단을 두지 않는다. */}
-                <VisibilitySelect
-                  value={visibilityDraft}
-                  onChange={changeVisibilityDraft}
-                  selectedGroupIds={groupDraft}
-                  onChangeGroups={changeGroupDraft}
-                  onCreateGroupClick={() => navigate('/groups')}
-                />
-                <div className="detail-visibility-actions">
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    disabled={!visibilityChanged || busy}
-                    onClick={handleVisibilitySaveClick}
-                  >
-                    {/* 삭제 모달 뒤에 비치는 동안에는 바꾸지 않는다. 그때 나가 있는 요청은 삭제다. */}
-                    {busy && !confirmingDelete ? '저장하는 중…' : '저장'}
-                  </button>
-                  {/* 영역은 항상 두고 안의 문구만 바꾼다. 그래야 결과가 바뀔 때마다 스크린리더가 읽어 준다. */}
-                  <span aria-live="polite">
-                    {visibilityMessage && (
-                      <span
-                        className={
-                          visibilityMessage.type === 'error' ? 'field-error' : 'detail-saved-msg'
-                        }
-                      >
-                        {visibilityMessage.text}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </div>
-            </details>
-          )}
+          {/* 범위는 여행에만 있다. 기록 화면에는 바꾸는 수단을 두지 않는다. */}
+          {isOwner && <TripVisibilitySection trip={trip} onTripChange={onTripChange} />}
 
           <section className="detail-section">
             <div className="trip-records-head">
@@ -363,23 +259,6 @@ function TripDetailView({ trip, onTripChange }) {
         </ConfirmDialog>
       )}
 
-      {confirmingWiden && (
-        <ConfirmDialog
-          title="공개 범위를 넓힐까요?"
-          confirmLabel="공개 범위 변경"
-          busyLabel="변경하는 중…"
-          busy={busy}
-          safe
-          onConfirm={handleVisibilitySave}
-          onCancel={() => setConfirmingWiden(false)}
-        >
-          {/* 여행을 넓히면 하위 기록과 예산이 전부 함께 보인다. 일부만 공유된다고 오해하지 않게 건수와 함께 말한다. */}
-          {visibilityDraft === 'PUBLIC'
-            ? `여행지 ${recordCount}곳${trip.budget != null ? '과 예산' : ''}이 누구에게나 공개됩니다. 로그인하지 않은 사람도 둘러보기에서 볼 수 있어요.`
-            : `선택한 그룹 ${groupDraft.length}곳의 멤버가 여행지 ${recordCount}곳${trip.budget != null ? '과 예산' : ''}을 볼 수 있게 됩니다.`}
-        </ConfirmDialog>
-      )}
-
       {mapModalRecord && (
         <PlaceMapModal place={mapModalRecord} onClose={() => setMapModalRecord(null)} />
       )}
@@ -391,6 +270,142 @@ function TripDetailView({ trip, onTripChange }) {
           onClose={() => setRegisterOpen(false)}
           onCreated={handleRecordCreated}
         />
+      )}
+    </>
+  )
+}
+
+/** 저장 결과 문구. 저장된 실제 범위(`effectiveVisibility`)로 고른다. */
+const SAVED_SCOPE_TEXT = {
+  PUBLIC: '전체 공개됩니다',
+  GROUP: '선택한 그룹에만 보입니다',
+  PRIVATE: '이제 나만 볼 수 있습니다',
+}
+
+/**
+ * 여행 상세의 공개 범위 섹션. 소유자에게만 그린다.
+ *
+ * 초안(범위·공유 그룹)을 고르고 저장한다. 넓히는 변경은 확인 모달을 거치고, 좁히는 변경은 바로
+ * 저장한 뒤 결과만 알린다. 범위를 바꾸면 하위 기록이 전부 함께 영향을 받으므로 확인·결과 문구에
+ * 여행지 수를 함께 말한다. 저장 응답은 `onTripChange` 로 올려 화면의 여행을 갈아 끼운다.
+ */
+function TripVisibilitySection({ trip, onTripChange }) {
+  const navigate = useNavigate()
+  const saved = tripAudience(trip)
+  const [visibilityDraft, setVisibilityDraft] = useState(trip.visibility ?? DEFAULT_VISIBILITY)
+  const [groupDraft, setGroupDraft] = useState(saved.groupIds)
+  // 저장 결과. 성공과 실패를 같은 색으로 보이면 실패가 성공처럼 읽힌다.
+  const [message, setMessage] = useState(null)
+  const [confirmingWiden, setConfirmingWiden] = useState(false)
+  // 요청이 나가 있는 동안 저장을 다시 누르지 못하게 한다.
+  const [saving, setSaving] = useState(false)
+
+  const recordCount = trip.recordCount
+  const sharedGroups = trip.sharedGroups ?? []
+  const changed =
+    visibilityDraft !== trip.visibility ||
+    (visibilityDraft === 'GROUP' && groupKey(groupDraft) !== groupKey(saved.groupIds))
+  const widening = isWideningVisibility(saved, { visibility: visibilityDraft, groupIds: groupDraft })
+
+  /** 범위나 그룹을 다시 고르기 시작하면 지난 저장 결과는 지금 고른 값과 맞지 않으므로 지운다. */
+  const changeVisibilityDraft = (next) => {
+    setVisibilityDraft(next)
+    setMessage(null)
+  }
+  const changeGroupDraft = (next) => {
+    setGroupDraft(next)
+    setMessage(null)
+  }
+
+  /** 넓히는 변경은 확인 모달을 거친다. 좁히는 변경은 바로 저장하고 결과만 알린다. */
+  const handleSaveClick = () => {
+    setMessage(null)
+    if (widening) setConfirmingWiden(true)
+    else handleSave()
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const updated = await tripApi.changeTripVisibility(trip.id, visibilityDraft, groupDraft)
+      onTripChange(updated)
+      const where = SAVED_SCOPE_TEXT[effectiveVisibility(tripAudience(updated))]
+      setMessage({ type: 'success', text: `여행지 ${recordCount}곳이 ${where}.` })
+    } catch (err) {
+      setMessage({ type: 'error', text: errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했습니다.') })
+    } finally {
+      setSaving(false)
+      setConfirmingWiden(false)
+    }
+  }
+
+  // 여행을 넓히면 하위 기록과 예산이 전부 함께 보인다. 일부만 공유된다고 오해하지 않게 건수와 함께 말한다.
+  const withBudget = trip.budget != null ? '과 예산' : ''
+  const widenText =
+    visibilityDraft === 'PUBLIC'
+      ? `여행지 ${recordCount}곳${withBudget}이 누구에게나 공개됩니다. 로그인하지 않은 사람도 둘러보기에서 볼 수 있어요.`
+      : `선택한 그룹 ${groupDraft.length}곳의 멤버가 여행지 ${recordCount}곳${withBudget}을 볼 수 있게 됩니다.`
+
+  return (
+    <>
+      {/*
+        접기는 details/summary 로 만든다. 직접 만든 토글보다 짧고 키보드·스크린리더
+        동작이 기본으로 따라온다. 접혀 있어도 지금 누구에게 보이는지는 요약 줄에 남긴다.
+      */}
+      <details className="detail-section collapsible-section">
+        <summary className="collapsible-summary">
+          <span className="detail-section-title">공개 범위</span>
+          <span className="detail-visibility-current">
+            <VisibilityBadge visibility={trip.visibility} />
+            {effectiveVisibility(saved) === 'GROUP' && (
+              <span className="detail-shared-groups">
+                {sharedGroups.map((g) => g.name).join(', ')}
+              </span>
+            )}
+          </span>
+        </summary>
+        <div className="collapsible-body">
+          <VisibilitySelect
+            value={visibilityDraft}
+            onChange={changeVisibilityDraft}
+            selectedGroupIds={groupDraft}
+            onChangeGroups={changeGroupDraft}
+            onCreateGroupClick={() => navigate('/groups')}
+          />
+          <div className="detail-visibility-actions">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={!changed || saving}
+              onClick={handleSaveClick}
+            >
+              {saving ? '저장하는 중…' : '저장'}
+            </button>
+            {/* 영역은 항상 두고 안의 문구만 바꾼다. 그래야 결과가 바뀔 때마다 스크린리더가 읽어 준다. */}
+            <span aria-live="polite">
+              {message && (
+                <span className={message.type === 'error' ? 'field-error' : 'detail-saved-msg'}>
+                  {message.text}
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+      </details>
+
+      {/* details 밖에 둔다. 섹션을 접어도 모달이 함께 가려지지 않게 한다. */}
+      {confirmingWiden && (
+        <ConfirmDialog
+          title="공개 범위를 넓힐까요?"
+          confirmLabel="공개 범위 변경"
+          busyLabel="변경하는 중…"
+          busy={saving}
+          safe
+          onConfirm={handleSave}
+          onCancel={() => setConfirmingWiden(false)}
+        >
+          {widenText}
+        </ConfirmDialog>
       )}
     </>
   )

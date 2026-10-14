@@ -46,9 +46,12 @@ src/
 ## 컴포넌트
 
 - **컴포넌트는 default export, 파일명은 PascalCase**다. 파일 하나에 컴포넌트 하나.
-  예외는 둘이다. 아이콘은 `components/icons.jsx` 한 파일에 named export 로 모은다. 화면이 조회
+  예외는 셋이다. 아이콘은 `components/icons.jsx` 한 파일에 named export 로 모은다. 화면이 조회
   상태를 가리는 바깥 컴포넌트와 불러온 데이터를 그리는 안쪽 `XxxView` 로 나뉘면(`TripDetailPage`)
   안쪽은 같은 파일에 둔다 — `key` 로 초안 상태를 새로 만드는 용도라 밖에서 쓰지 않는다.
+  화면 안에서 자기 상태를 따로 갖는 섹션도 그 화면만 쓰고 화면 CSS 를 쓰면 같은 파일에 둔다
+  (`TripDetailPage` 의 `TripVisibilitySection`) — `components/` 로 빼면 다른 화면의 CSS 를 가져다
+  쓰게 된다.
 
   ```jsx
   export default function VisibilityBadge({ visibility, size = 'md' }) { ... }

@@ -1,6 +1,6 @@
 import { fetchGroups } from '../api/groups.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
-import { VISIBILITIES } from '../data/visibility.js'
+import { VISIBILITIES, effectiveVisibility } from '../data/visibility.js'
 import useResource from '../hooks/useResource.js'
 import { GlobeIcon, LockIcon, UsersIcon } from './icons.jsx'
 import './VisibilitySelect.css'
@@ -81,7 +81,7 @@ export default function VisibilitySelect({
             </li>
           ))}
         </ul>
-        {selectedGroupIds.length === 0 && (
+        {effectiveVisibility({ visibility: value, groupIds: selectedGroupIds }) === 'PRIVATE' && (
           <p className="visibility-groups-warning" role="status">
             선택한 그룹이 없어 나만 볼 수 있습니다.
           </p>

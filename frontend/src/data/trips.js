@@ -48,6 +48,15 @@ export const tripPeriodLabel = (trip) => {
   return `${sy}.${sm}.${sd} – ${ey}.${em}.${ed}`
 }
 
+/**
+ * 여행 응답의 공개 범위를 `effectiveVisibility`·`isWideningVisibility` 가 받는 모양
+ * (`{ visibility, groupIds }`)으로 바꾼다. 공유 그룹은 소유자에게만 내려오므로 없으면 빈 목록이다.
+ */
+export const tripAudience = (trip) => ({
+  visibility: trip.visibility,
+  groupIds: (trip.sharedGroups ?? []).map((g) => g.id),
+})
+
 /** `1,200,000원` 처럼 쓴다. 예산이 없으면(`null`) 표기도 null 이다 — `0원` 과 구분한다. */
 export const budgetLabel = (budget) =>
   budget == null ? null : `${budget.toLocaleString('ko-KR')}원`
