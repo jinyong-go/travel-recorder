@@ -8,6 +8,7 @@ import com.yong.travel.tag.persistence.TagEntity
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripVisibilityPredicates
 import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.GeoPoint
 import com.yong.travel.trip.record.domain.RecordScope
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Join
@@ -57,8 +58,9 @@ object TripRecordSpecifications {
      * 조인 자체가 삭제 필터 역할도 한다 — TripEntity 의 @SQLRestriction 덕에 삭제된 여행의 기록은
      * 조인 단계에서 함께 사라진다.
      *
-     * @param scope 조회 범위. null 이면 범위 조건 없이 조인만 한다 — 볼 수 있는지 이미 확인한 여행 하나로
-     *        좁힐 때다
+     * @param scope 조회 범위. null 이면 요청자가 볼 수 있는 기록 전부다 — `tripId` 로 여행 하나를
+     *        좁힐 때 쓴다. 서비스가 그 여행을 볼 수 있는지 먼저 확인하더라도 판정을 쿼리에서 빼지 않는다.
+     *        사전 확인 한 줄에 안전을 맡기면, 그 줄이 빠지는 순간 남의 비공개 여행 기록이 전부 나간다
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
      * @return 범위 조건
      */
@@ -66,14 +68,10 @@ object TripRecordSpecifications {
         Specification { root, query, cb ->
             val trip = joinTrip(root, requireNotNull(query))
             when (scope) {
-                null -> cb.conjunction()
+                null -> TripVisibilityPredicates.visibleTo(trip, query, cb, userId)
                 RecordScope.MINE -> TripVisibilityPredicates.ownedBy(trip, cb, userId)
                 RecordScope.PUBLIC -> TripVisibilityPredicates.isPublic(trip, cb)
-                // 내 여행의 기록은 MINE 에서 전부 보이므로 여기서 빼 중복 노출을 막는다.
-                RecordScope.SHARED -> cb.and(
-                    TripVisibilityPredicates.sharedWith(trip, query, cb, userId),
-                    cb.not(TripVisibilityPredicates.ownedBy(trip, cb, userId)),
-                )
+                RecordScope.SHARED -> TripVisibilityPredicates.sharedByOthersWith(trip, query, cb, userId)
             }
         }
 
@@ -130,11 +128,10 @@ object TripRecordSpecifications {
      * 페이지 요청의 정렬은 비워 둬야 한다 — 정렬이 있으면 Spring Data 가 이 정렬을 덮어쓴다.
      * 건수 쿼리에서는 Spring Data 가 정렬을 지운다.
      *
-     * @param lat 기준 위도
-     * @param lng 기준 경도
+     * @param origin 기준 위치
      * @return 걸러 내는 조건 없이 정렬만 거는 조건
      */
-    fun orderByDistanceFrom(lat: Double, lng: Double): Specification<TripRecordEntity> =
+    fun orderByDistanceFrom(origin: GeoPoint): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
             // cb.literal 은 SQL 에 값을 그대로 박는다. 요청 좌표가 매번 달라 문장이 매번 달라지므로 바인딩한다.
             val hcb = cb as HibernateCriteriaBuilder
@@ -143,8 +140,8 @@ object TripRecordSpecifications {
                 Double::class.java,
                 root.get<Double>("latitude"),
                 root.get<Double>("longitude"),
-                hcb.value(lat),
-                hcb.value(lng),
+                hcb.value(origin.latitude),
+                hcb.value(origin.longitude),
             )
             requireNotNull(query).orderBy(cb.asc(distance), cb.desc(root.get<Instant>("createdAt")))
             cb.conjunction()

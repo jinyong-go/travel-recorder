@@ -41,6 +41,7 @@ data class RecordListQuery(
     val tag: String? = null,
     val keyword: String? = null,
     val sort: RecordSort = RecordSort.RECENT,
-    val lat: Double? = null,
-    val lng: Double? = null,
+
+    /** 기준 위치. 거리 계산에 쓰며, `sort = DISTANCE` 면 반드시 있다 (컨트롤러가 보장). */
+    val origin: GeoPoint? = null,
 )

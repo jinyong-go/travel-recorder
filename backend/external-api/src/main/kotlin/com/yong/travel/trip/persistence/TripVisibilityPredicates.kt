@@ -48,7 +48,7 @@ object TripVisibilityPredicates {
     /**
      * 요청자가 속한 그룹 중 하나 이상에 공유된 GROUP 여행.
      *
-     * 소유자 본인 여부는 따지지 않는다 — 목록의 SHARED 범위가 따로 뺀다.
+     * 소유자 본인 여부는 따지지 않는다 — 목록의 SHARED 범위는 [sharedByOthersWith] 가 본인 것을 뺀다.
      *
      * @param trip 판정할 여행 경로
      * @param query 서브쿼리를 붙일 쿼리. 바깥 쿼리든 서브쿼리든 된다
@@ -73,6 +73,26 @@ object TripVisibilityPredicates {
         )
         return cb.and(cb.equal(trip.get<TripVisibility>("visibility"), TripVisibility.GROUP), cb.exists(sub))
     }
+
+    /**
+     * 요청자가 속한 그룹에 공유된 **남의** 여행. 여행 목록과 기록 목록의 SHARED 범위다.
+     *
+     * 내 여행은 MINE 범위에서 전부 보이므로 여기서 빼 중복 노출을 막는다. 두 목록이 이 함수 하나를
+     * 써야 한쪽만 고쳐져 노출이 갈라지는 일이 없다.
+     *
+     * @param trip 판정할 여행 경로
+     * @param query 서브쿼리를 붙일 쿼리
+     * @param cb 조건 빌더
+     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 항상 거짓이다
+     * @return 남이 내 그룹에 공유한 여행 조건
+     */
+    fun sharedByOthersWith(
+        trip: Path<TripEntity>,
+        query: CommonAbstractCriteria,
+        cb: CriteriaBuilder,
+        userId: Long?,
+    ): Predicate =
+        cb.and(sharedWith(trip, query, cb, userId), cb.not(ownedBy(trip, cb, userId)))
 
     /**
      * 요청자가 볼 수 있는 여행 전부 — 내 여행이거나, 전체 공개이거나, 내 그룹에 공유됐거나 셋 중 하나다.

@@ -14,6 +14,8 @@ import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.trip.record.domain.RecordListQuery
 import com.yong.travel.trip.record.domain.RecordScope
 import com.yong.travel.trip.record.domain.RecordSort
+import com.yong.travel.trip.record.persistence.TripRecordRepository
+import com.yong.travel.trip.record.persistence.TripRecordSpecifications
 import com.yong.travel.trip.record.presentation.TripRecordCreateRequest
 import com.yong.travel.trip.record.service.TripRecordService
 import com.yong.travel.trip.persistence.TripEntity
@@ -57,6 +59,21 @@ class RecordVisibilityTest {
     @Autowired private lateinit var tripShareRepository: TripShareRepository
     @Autowired private lateinit var tagService: TagService
     @Autowired private lateinit var photoService: PhotoService
+    @Autowired private lateinit var recordRepository: TripRecordRepository
+
+    @Test
+    fun `scope 없이 tripId 로 좁혀도 쿼리 자체가 공개 범위를 판정한다`() {
+        val owner = newUser()
+        val stranger = newUser()
+        val tripId = newTrip(owner)
+        newRecord(tripId)
+        flush()
+
+        // 서비스의 사전 확인이 빠져도 남의 비공개 여행 기록이 나가지 않아야 한다.
+        val spec = TripRecordSpecifications.withScope(null, stranger)
+            .and(TripRecordSpecifications.withFilters(tripId, null, null, null))
+        assertTrue(recordRepository.findAll(spec).isEmpty())
+    }
 
     @Test
     fun `공유받은 기록은 볼 수 있어도 고치거나 사진을 올릴 수 없고 403 이다`() {

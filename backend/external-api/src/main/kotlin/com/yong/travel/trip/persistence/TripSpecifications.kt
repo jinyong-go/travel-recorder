@@ -51,11 +51,7 @@ object TripSpecifications {
             when (scope) {
                 TripScope.MINE -> TripVisibilityPredicates.ownedBy(root, cb, userId)
                 TripScope.PUBLIC -> TripVisibilityPredicates.isPublic(root, cb)
-                // 내 여행은 MINE 에서 전부 보이므로 여기서 빼 중복 노출을 막는다.
-                TripScope.SHARED -> cb.and(
-                    TripVisibilityPredicates.sharedWith(root, requireNotNull(query), cb, userId),
-                    cb.not(TripVisibilityPredicates.ownedBy(root, cb, userId)),
-                )
+                TripScope.SHARED -> TripVisibilityPredicates.sharedByOthersWith(root, requireNotNull(query), cb, userId)
             }
         }
 

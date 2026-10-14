@@ -5,6 +5,7 @@ import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.trip.domain.TripVisibility
 import com.yong.travel.trip.presentation.TripCreateRequest
 import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.GeoPoint
 import com.yong.travel.trip.record.domain.RecordListQuery
 import com.yong.travel.trip.record.domain.RecordSort
 import com.yong.travel.trip.record.presentation.TripRecordCreateRequest
@@ -50,7 +51,7 @@ class RecordDistanceSortTest {
         flush()
 
         fun page(n: Int) = recordService
-            .list(RecordListQuery(scope = null, tripId = tripId, sort = RecordSort.DISTANCE, lat = BASE_LAT, lng = BASE_LNG), owner, n)
+            .list(RecordListQuery(scope = null, tripId = tripId, sort = RecordSort.DISTANCE, origin = GeoPoint(BASE_LAT, BASE_LNG)), owner, n)
         val first = page(0)
         val second = page(1)
 

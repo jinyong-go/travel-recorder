@@ -6,6 +6,7 @@ import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.GeoPoint
 import com.yong.travel.trip.record.domain.RecordListQuery
 import com.yong.travel.trip.record.domain.RecordScope
 import com.yong.travel.trip.record.domain.RecordSort
@@ -70,8 +71,10 @@ class TripRecordController(
         if (scope == null && tripId == null) {
             throw ApiException(ErrorCode.VALIDATION_ERROR, "scope 와 tripId 중 하나는 있어야 합니다.")
         }
+        // 한쪽만 온 좌표는 쓸 수 없어 없는 것으로 본다.
+        val origin = if (lat != null && lng != null) GeoPoint(lat, lng) else null
         // 거리순은 DB 가 기준 위치로 정렬하므로 좌표 없이는 정렬할 기준이 없다.
-        if (sort == RecordSort.DISTANCE && (lat == null || lng == null)) {
+        if (sort == RecordSort.DISTANCE && origin == null) {
             throw ApiException(ErrorCode.VALIDATION_ERROR, "거리순 정렬에는 lat 과 lng 가 필요합니다.")
         }
         val userId = when (scope) {
@@ -79,7 +82,7 @@ class TripRecordController(
             RecordScope.PUBLIC, null -> principal?.userId
         }
         val records = recordService.list(
-            RecordListQuery(scope, tripId, category, tag, keyword, sort, lat, lng),
+            RecordListQuery(scope, tripId, category, tag, keyword, sort, origin),
             userId,
             page,
         )

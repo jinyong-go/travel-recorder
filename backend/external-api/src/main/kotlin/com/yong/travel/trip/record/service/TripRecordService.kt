@@ -15,6 +15,7 @@ import com.yong.travel.photo.storage.PhotoDatabaseService
 import com.yong.travel.tag.service.TagService
 import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.persistence.TripEntity
+import com.yong.travel.trip.record.domain.GeoPoint
 import com.yong.travel.trip.record.domain.RecordListQuery
 import com.yong.travel.trip.record.domain.RecordSort
 import com.yong.travel.trip.record.domain.TripRecord
@@ -64,18 +65,16 @@ class TripRecordService(
         page: Int,
     ): PageResult<TripRecord> {
         // tripId 로 좁히면 그 여행을 볼 수 있는지 먼저 판정한다. scope 유무와 무관하게 못 보면
-        // 없는 여행과 같은 404 다.
+        // 빈 목록이 아니라 없는 여행과 같은 404 다. 열람 판정 자체는 아래 쿼리에도 실려 있다.
         query.tripId?.let { tripService.requireViewable(it, userId) }
 
-        // scope 가 없으면 tripId 가 있다는 뜻이고(컨트롤러가 보장), 그 여행을 볼 수 있음은 위에서
-        // 확인했다. 볼 수 있는 여행의 하위 기록은 전부 보이므로 범위 조건 없이 여행 조인만 한다.
         val filtered = TripRecordSpecifications.withScope(query.scope, userId)
             .and(TripRecordSpecifications.withFilters(query.tripId, query.category, query.tag, query.keyword))
 
         // 거리는 저장된 값이 아니라 요청 좌표에 따라 달라져 Sort 로 표현할 수 없다. DB 가 위치 인덱스로
         // 정렬하도록 조건 쪽에 정렬을 싣고, 페이지 요청의 정렬은 비운다. 좌표는 컨트롤러가 보장한다.
         val spec = if (query.sort == RecordSort.DISTANCE) {
-            filtered.and(TripRecordSpecifications.orderByDistanceFrom(requireNotNull(query.lat), requireNotNull(query.lng)))
+            filtered.and(TripRecordSpecifications.orderByDistanceFrom(requireNotNull(query.origin)))
         } else {
             filtered
         }
@@ -94,7 +93,7 @@ class TripRecordService(
         val tags = tagsOf(recordIds)
         val records = found.toPageResult().map {
             val recordId = requireNotNull(it.id)
-            it.toDomain(photos[recordId].orEmpty(), tags[recordId].orEmpty(), distanceOf(it, query.lat, query.lng))
+            it.toDomain(photos[recordId].orEmpty(), tags[recordId].orEmpty(), query.origin?.let { origin -> distanceOf(it, origin) })
         }
 
         // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 기준 좌표는 남기지 않는다.
@@ -344,9 +343,7 @@ class TripRecordService(
         return record.toDomain(photos, record.tags.map { it.name }, distanceKm = null)
     }
 
-    /** 기준 좌표가 둘 다 왔을 때만 계산한다. 좌표는 계산에만 쓰고 남기지 않는다. */
-    private fun distanceOf(record: TripRecordEntity, lat: Double?, lng: Double?): Double? {
-        if (lat == null || lng == null) return null
-        return haversineKm(lat, lng, record.latitude, record.longitude).roundTo2Decimals()
-    }
+    /** 기준 위치에서 기록까지의 거리(km). 기준 위치는 계산에만 쓰고 남기지 않는다. */
+    private fun distanceOf(record: TripRecordEntity, origin: GeoPoint): Double =
+        haversineKm(origin.latitude, origin.longitude, record.latitude, record.longitude).roundTo2Decimals()
 }
