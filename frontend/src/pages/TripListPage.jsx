@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PLACE_ICON } from '../data/records.js'
 import { SCOPES, TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
@@ -7,6 +7,7 @@ import { fetchTrips } from '../api/trips.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import useMapMode from '../hooks/useMapMode.js'
+import useResource from '../hooks/useResource.js'
 import AppHeader from '../components/AppHeader.jsx'
 import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
@@ -36,6 +37,14 @@ export default function TripListPage() {
   const sortKey = TRIP_SORT_OPTIONS.some((o) => o.key === sortParam) ? sortParam : 'recent'
   const page = Math.max(1, Number(pageParam) || 1)
 
+  // 화면의 페이지는 1부터, API 는 0부터 센다. 페이지 크기는 서버가 정한다.
+  const apiPage = page - 1
+  const loadTrips = useCallback(() => fetchTrips(scope, sortKey, apiPage), [scope, sortKey, apiPage])
+  // 로그인 여부를 아직 모르면 기본 탭이 정해지지 않았다. 지금 읽으면 둘러보기를 한 번 읽은 뒤
+  // 내 여행으로 다시 읽게 된다. updateParams 보다 위에 둔다 — 아래에 두면 React Compiler 가
+  // scope 를 바뀔 수 있는 값으로 보고 이 화면의 최적화를 건너뛴다.
+  const { data: result, status: listStatus, reload } = useResource(loadTrips, authStatus !== 'loading')
+
   // 기본값인 항목은 URL 에서 빼서 주소를 짧게 유지한다.
   const updateParams = (next) => {
     const merged = { scope, sort: sortKey, page, ...next }
@@ -46,35 +55,6 @@ export default function TripListPage() {
     setSearchParams(params, { replace: true })
   }
 
-  // 다시 시도 버튼이 같은 조건으로 한 번 더 읽도록 reloadKey 를 둔다.
-  const [result, setResult] = useState(null)
-  const [listStatus, setListStatus] = useState(REQUEST_STATUS.LOADING)
-  const [reloadKey, setReloadKey] = useState(0)
-
-  useEffect(() => {
-    // 로그인 여부를 아직 모르면 기본 탭이 정해지지 않았다. 지금 읽으면 둘러보기를 한 번 읽은 뒤
-    // 내 여행으로 다시 읽게 된다.
-    if (authStatus === 'loading') return
-
-    // 탭·정렬·페이지를 빠르게 바꿀 때 늦게 도착한 이전 응답이 화면을 덮지 않게 한다.
-    let cancelled = false
-    setListStatus(REQUEST_STATUS.LOADING)
-    // 화면의 페이지는 1부터, API 는 0부터 센다. 페이지 크기는 서버가 정한다.
-    fetchTrips(scope, sortKey, page - 1)
-      .then((next) => {
-        if (cancelled) return
-        setResult(next)
-        setListStatus(REQUEST_STATUS.COMPLETE)
-      })
-      .catch(() => {
-        if (!cancelled) setListStatus(REQUEST_STATUS.ERROR)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [authStatus, scope, sortKey, page, reloadKey])
-
   const pageItems = result?.content ?? []
   const totalCount = result?.totalElements ?? 0
   const totalPages = Math.max(1, result?.totalPages ?? 1)
@@ -83,18 +63,19 @@ export default function TripListPage() {
 
   /** 목록 자리. 읽는 중·실패·빈 목록이면 안내 한 줄이고, 아니면 여행 카드다. */
   const renderTrips = () => {
-    if (listStatus === REQUEST_STATUS.LOADING) {
-      return <div className="empty-state">여행을 불러오는 중이에요…</div>
-    }
     if (listStatus === REQUEST_STATUS.ERROR) {
       return (
         <div className="empty-state">
           여행을 불러오지 못했습니다.{' '}
-          <button type="button" className="link-button" onClick={() => setReloadKey((k) => k + 1)}>
+          <button type="button" className="link-button" onClick={reload}>
             다시 시도
           </button>
         </div>
       )
+    }
+    // 로그인 확인을 기다리는 동안(IDLE)도 불러오는 중으로 보인다.
+    if (listStatus !== REQUEST_STATUS.COMPLETE) {
+      return <div className="empty-state">여행을 불러오는 중이에요…</div>
     }
     if (pageItems.length === 0) return <div className="empty-state">{emptyMessage}</div>
     return (

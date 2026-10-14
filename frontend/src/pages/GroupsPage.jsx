@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createGroup as createGroupApi, fetchGroups, fetchReceivedInvites } from '../api/groups.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
-import useLatestRequest from '../hooks/useLatestRequest.js'
 import useModal from '../hooks/useModal.js'
+import useResource from '../hooks/useResource.js'
 import AppHeader from '../components/AppHeader.jsx'
 import RequiredNote from '../components/RequiredNote.jsx'
 import { ArrowLeftIcon, PlusIcon } from '../components/icons.jsx'
@@ -16,48 +16,21 @@ import './GroupsPage.css'
 const NAME_MAX_LENGTH = 30
 const MEMO_MAX_LENGTH = 200
 
+/** 받은 초대 첫 페이지. 건수(`totalElements`)만 쓴다. */
+const loadReceivedInvites = () => fetchReceivedInvites(0)
+
 /**
  * 내가 만들었거나 참여 중인 그룹 목록과 새 그룹 만들기.
  *
  * 받은 초대는 목록으로 그리지 않고 건수만 알려 초대함으로 보낸다.
  */
 export default function GroupsPage() {
-  const [groups, setGroups] = useState([])
-  const [status, setStatus] = useState(REQUEST_STATUS.LOADING)
-  const beginRequest = useLatestRequest()
-
-  // 그룹을 만든 뒤에도 다시 부른다. 가장 최근 요청의 응답만 그린다.
-  const reloadGroups = useCallback(async () => {
-    const isLatest = beginRequest()
-    setStatus(REQUEST_STATUS.LOADING)
-    try {
-      const result = await fetchGroups()
-      if (!isLatest()) return
-      setGroups(result)
-      setStatus(REQUEST_STATUS.COMPLETE)
-    } catch {
-      // 사유를 나누지 않는다. 목록을 못 받았다는 사실만 화면에 필요하다.
-      if (isLatest()) setStatus(REQUEST_STATUS.ERROR)
-    }
-  }, [beginRequest])
-
-  useEffect(() => {
-    reloadGroups()
-  }, [reloadGroups])
+  // 그룹을 만든 뒤에도 다시 읽는다. 실패 사유는 나누지 않는다 — 목록을 못 받았다는 사실만
+  // 화면에 필요하다.
+  const { data: groups, status, reload: reloadGroups } = useResource(fetchGroups)
 
   /** 받은 초대 알림 줄의 건수. 못 읽으면 알림 줄을 그리지 않을 뿐이다. */
-  const [receivedCount, setReceivedCount] = useState(0)
-  useEffect(() => {
-    let cancelled = false
-    fetchReceivedInvites(0)
-      .then((result) => {
-        if (!cancelled) setReceivedCount(result.totalElements)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const receivedCount = useResource(loadReceivedInvites).data?.totalElements ?? 0
 
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')

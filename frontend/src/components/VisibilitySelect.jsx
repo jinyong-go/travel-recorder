@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
 import { fetchGroups } from '../api/groups.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { VISIBILITIES } from '../data/visibility.js'
+import useResource from '../hooks/useResource.js'
 import { GlobeIcon, LockIcon, UsersIcon } from './icons.jsx'
 import './VisibilitySelect.css'
 
@@ -25,29 +25,9 @@ export default function VisibilitySelect({
   onChangeGroups,
   onCreateGroupClick,
 }) {
-  const [groups, setGroups] = useState([])
-  const [groupsStatus, setGroupsStatus] = useState(REQUEST_STATUS.IDLE)
-  const [retryCount, setRetryCount] = useState(0)
   const wantsGroups = value === 'GROUP'
-
   // 다른 범위로 갔다가 다시 "그룹 공유" 를 고르면 새로 읽는다. 그 사이 그룹이 바뀌었을 수 있다.
-  useEffect(() => {
-    if (!wantsGroups) return undefined
-    let cancelled = false
-    setGroupsStatus(REQUEST_STATUS.LOADING)
-    fetchGroups()
-      .then((result) => {
-        if (cancelled) return
-        setGroups(result)
-        setGroupsStatus(REQUEST_STATUS.COMPLETE)
-      })
-      .catch(() => {
-        if (!cancelled) setGroupsStatus(REQUEST_STATUS.ERROR)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [wantsGroups, retryCount])
+  const { data: groups, status: groupsStatus, reload: reloadGroups } = useResource(fetchGroups, wantsGroups)
 
   const toggleGroup = (groupId) => {
     const next = selectedGroupIds.includes(groupId)
@@ -61,18 +41,18 @@ export default function VisibilitySelect({
    * 정하는 자리에서 사실과 다른 안내를 하지 않기 위해서다.
    */
   const renderGroups = () => {
-    if (groupsStatus === REQUEST_STATUS.LOADING || groupsStatus === REQUEST_STATUS.IDLE) {
-      return <p className="visibility-groups-empty">그룹을 불러오는 중이에요…</p>
-    }
     if (groupsStatus === REQUEST_STATUS.ERROR) {
       return (
         <p className="visibility-groups-empty">
           그룹을 불러오지 못했습니다.{' '}
-          <button type="button" className="link-button" onClick={() => setRetryCount((n) => n + 1)}>
+          <button type="button" className="link-button" onClick={reloadGroups}>
             다시 시도
           </button>
         </p>
       )
+    }
+    if (groupsStatus !== REQUEST_STATUS.COMPLETE) {
+      return <p className="visibility-groups-empty">그룹을 불러오는 중이에요…</p>
     }
     if (groups.length === 0) {
       return (

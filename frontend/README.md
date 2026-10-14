@@ -55,6 +55,7 @@ frontend/
 │  │  ├─ HeaderAuth.jsx        # 헤더 인증 영역·계정 메뉴·받은 초대 배지
 │  │  ├─ ConfirmDialog.jsx     # 확인 모달 (삭제·나가기·수정 확인 등)
 │  │  ├─ DetailStatus.jsx      # 상세 화면의 불러오는 중·없음·실패 안내
+│  │  ├─ PagedListBody.jsx     # 페이지 목록의 불러오는 중·실패·빈 목록·더 보기
 │  │  ├─ RequireAuth.jsx       # 로그인이 필요한 라우트 보호
 │  │  ├─ RecordForm.jsx        # 기록 입력 폼 (등록 모달·기록 수정 공용)
 │  │  ├─ RecordRegisterModal.jsx # 기록 등록 모달 (여행 상세에서 열림)
@@ -75,6 +76,7 @@ frontend/
 │  │  └─ auth.js · trips.js · records.js · groups.js # 엔드포인트별 호출
 │  ├─ context/AuthContext.jsx          # 로그인 상태 (유일한 전역 상태)
 │  ├─ hooks/
+│  │  ├─ useResource.js                # 단건·전체 목록 조회 + 다시 읽기 (404 는 MISSING)
 │  │  ├─ useTrip.js                    # 여행 하나 조회 (여행 상세·기록 상세)
 │  │  ├─ usePagedList.js               # 페이지 단위 목록 + 더 보기
 │  │  ├─ useLatestRequest.js           # 늦게 도착한 이전 응답 버리기

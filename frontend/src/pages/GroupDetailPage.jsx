@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, errorMessage } from '../api/client.js'
+import { errorMessage } from '../api/client.js'
 import * as api from '../api/groups.js'
-import useLatestRequest from '../hooks/useLatestRequest.js'
+import { REQUEST_STATUS } from '../api/requestStatus.js'
 import usePagedList from '../hooks/usePagedList.js'
+import useResource from '../hooks/useResource.js'
 import { formatDate } from '../utils/date.js'
 import AppHeader from '../components/AppHeader.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import DetailStatus from '../components/DetailStatus.jsx'
+import PagedListBody from '../components/PagedListBody.jsx'
 import { ArrowLeftIcon, PlusIcon } from '../components/icons.jsx'
 import '../styles/detailPage.css'
 import '../styles/groupPages.css'
@@ -26,6 +28,8 @@ const LOAD_ERROR = {
   FORBIDDEN: { title: '이 그룹의 멤버만 볼 수 있습니다', desc: '초대를 받아 참여하면 볼 수 있어요.' },
   GROUP_NOT_FOUND: { title: '존재하지 않는 그룹입니다', desc: '주소를 다시 확인해주세요.' },
 }
+
+const DEFAULT_LOAD_ERROR = { title: '그룹을 불러오지 못했습니다', desc: '잠시 후 다시 시도해주세요.' }
 
 /**
  * 그룹 하나의 멤버와 초대. 소유자는 초대·초대 취소·멤버 제외·그룹 삭제를, 멤버는 나가기만 할 수 있다.
@@ -56,8 +60,10 @@ export default function GroupDetailPage() {
   const { groupId } = useParams()
   const navigate = useNavigate()
 
-  const [group, setGroup] = useState(null)
-  const [loadError, setLoadError] = useState(null)
+  // 그룹 A 에서 B 로 바로 옮기면 A 의 응답이 늦게 올 수 있다. 훅이 가장 최근 요청의 응답만 남긴다.
+  const loadGroup = useCallback(() => api.fetchGroup(groupId), [groupId])
+  const { data: group, status: groupStatus, error: loadError, reload: reloadGroup } = useResource(loadGroup)
+
   const [email, setEmail] = useState('')
   const [inviteMessage, setInviteMessage] = useState(null)
   // 확인 모달에 올라 있는 동작. { type: 'delete' | 'leave' } 또는 { type: 'member', memberId }
@@ -68,38 +74,16 @@ export default function GroupDetailPage() {
   const busy = processing !== null
   const isProcessing = (action, id) => processing?.action === action && processing.id === id
 
-  const beginRequest = useLatestRequest()
-
-  // 그룹 A 에서 B 로 바로 옮기면 A 의 응답이 늦게 올 수 있다. 가장 최근 요청의 응답만 그린다.
-  const loadGroup = useCallback(async () => {
-    const isLatest = beginRequest()
-    setLoadError(null)
-    try {
-      const result = await api.fetchGroup(groupId)
-      if (isLatest()) setGroup(result)
-    } catch (err) {
-      if (!isLatest()) return
-      setGroup(null)
-      setLoadError(err instanceof ApiError ? err.code : 'UNKNOWN')
-    }
-  }, [groupId, beginRequest])
-
-  useEffect(() => {
-    loadGroup()
-  }, [loadGroup])
-
   // 대기 초대는 소유자만 본다. 비소유자에게는 호출 자체를 하지 않는다.
   const loadPending = useCallback((page) => api.fetchPendingInvites(groupId, page), [groupId])
   const pending = usePagedList(loadPending, Boolean(group?.isOwner))
 
-  if (loadError) {
-    const { title, desc } = LOAD_ERROR[loadError] ?? {
-      title: '그룹을 불러오지 못했습니다',
-      desc: '잠시 후 다시 시도해주세요.',
-    }
+  if (groupStatus === REQUEST_STATUS.ERROR || groupStatus === REQUEST_STATUS.MISSING) {
+    const { title, desc } = errorMessage(loadError, LOAD_ERROR, DEFAULT_LOAD_ERROR)
     return <DetailStatus title={title} desc={desc} backTo="/groups" backLabel="그룹 목록으로" />
   }
 
+  // 상태가 아니라 그룹 유무로 가른다. 멤버를 제외한 뒤 다시 읽는 동안 화면을 비우지 않는다.
   if (!group) return <DetailStatus title="그룹을 불러오는 중이에요…" />
 
   const isOwner = group.isOwner
@@ -164,7 +148,7 @@ export default function GroupDetailPage() {
       navigate('/groups')
       return
     }
-    loadGroup()
+    reloadGroup()
   }
 
   const confirmText = confirming && CONFIRM_TEXT[confirming.type]
@@ -259,7 +243,15 @@ export default function GroupDetailPage() {
                 </p>
               )}
 
-              {pending.items.length > 0 && (
+              {/* 정원과 무관하게 초대를 보낼 수 있어 건수가 쌓인다. 빈 목록 안내는 없다 — 대기 건수는
+                  위의 정원 안내가 이미 말한다. */}
+              <PagedListBody
+                list={pending}
+                loadingText="불러오는 중이에요…"
+                errorText="대기 중인 초대를 불러오지 못했습니다."
+                noteClassName="invite-note"
+                errorClassName="invite-error"
+              >
                 <ul className="invite-list">
                   {pending.items.map((item) => (
                     <li key={item.id} className="invite-item">
@@ -279,13 +271,7 @@ export default function GroupDetailPage() {
                     </li>
                   ))}
                 </ul>
-              )}
-              {/* 정원과 무관하게 초대를 보낼 수 있어 건수가 쌓인다. */}
-              {pending.hasNext && (
-                <button type="button" className="link-button" onClick={pending.loadMore}>
-                  더 보기
-                </button>
-              )}
+              </PagedListBody>
             </section>
           )}
 

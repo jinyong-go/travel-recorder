@@ -2,11 +2,11 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client.js'
 import * as api from '../api/groups.js'
-import { REQUEST_STATUS } from '../api/requestStatus.js'
 import usePagedList from '../hooks/usePagedList.js'
 import { formatDate } from '../utils/date.js'
 import AppHeader from '../components/AppHeader.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import PagedListBody from '../components/PagedListBody.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
 import '../styles/groupPages.css'
 import './InvitesPage.css'
@@ -149,22 +149,14 @@ export default function InvitesPage({ tab }) {
           <section className="group-section">
             <h2 className="group-section-title">대기 중</h2>
             {inviteError && <p className="invite-error">{inviteError}</p>}
-            {pending.status === REQUEST_STATUS.LOADING && pending.items.length === 0 && (
-              <p className="invite-note">불러오는 중이에요…</p>
-            )}
-            {pending.status === REQUEST_STATUS.ERROR && (
-              <p className="invite-error">
-                초대를 불러오지 못했습니다.{' '}
-                <button type="button" className="link-button" onClick={pending.reload}>
-                  다시 시도
-                </button>
-              </p>
-            )}
-            {pending.status === REQUEST_STATUS.COMPLETE && pending.items.length === 0 ? (
-              <p className="invite-note">
-                {tab === 'received' ? '받은 초대가 없어요.' : '보낸 초대가 없어요.'}
-              </p>
-            ) : (
+            <PagedListBody
+              list={pending}
+              loadingText="불러오는 중이에요…"
+              errorText="초대를 불러오지 못했습니다."
+              emptyText={tab === 'received' ? '받은 초대가 없어요.' : '보낸 초대가 없어요.'}
+              noteClassName="invite-note"
+              errorClassName="invite-error"
+            >
               <ul className="invite-list">
                 {pending.items.map((invite) => (
                   <li key={invite.id} className="invite-item">
@@ -210,28 +202,20 @@ export default function InvitesPage({ tab }) {
                   </li>
                 ))}
               </ul>
-            )}
-            {/* 이력은 지워지지 않아 계정이 오래될수록 길어진다. */}
-            {pending.hasNext && (
-              <button type="button" className="link-button" onClick={pending.loadMore}>
-                더 보기
-              </button>
-            )}
+            </PagedListBody>
           </section>
 
           <section className="group-section">
             <h2 className="group-section-title">지난 초대</h2>
-            {history.status === REQUEST_STATUS.ERROR && (
-              <p className="invite-error">
-                지난 초대를 불러오지 못했습니다.{' '}
-                <button type="button" className="link-button" onClick={history.reload}>
-                  다시 시도
-                </button>
-              </p>
-            )}
-            {history.status === REQUEST_STATUS.COMPLETE && history.items.length === 0 ? (
-              <p className="invite-note">아직 끝난 초대가 없어요.</p>
-            ) : (
+            {/* 이력은 지워지지 않아 계정이 오래될수록 길어진다. */}
+            <PagedListBody
+              list={history}
+              loadingText="불러오는 중이에요…"
+              errorText="지난 초대를 불러오지 못했습니다."
+              emptyText="아직 끝난 초대가 없어요."
+              noteClassName="invite-note"
+              errorClassName="invite-error"
+            >
               <ul className="invite-list">
                 {history.items.map((item) => (
                   <li key={item.id} className="invite-item">
@@ -260,12 +244,7 @@ export default function InvitesPage({ tab }) {
                   </li>
                 ))}
               </ul>
-            )}
-            {history.hasNext && (
-              <button type="button" className="link-button" onClick={history.loadMore}>
-                더 보기
-              </button>
-            )}
+            </PagedListBody>
           </section>
         </div>
       </main>

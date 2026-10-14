@@ -7,8 +7,7 @@ import { useCallback, useEffect, useRef } from 'react'
  * 그 사이 새 요청이 시작됐거나 컴포넌트가 사라졌으면 false 다. 화면을 빠르게 옮기거나
  * (그룹 A → B) StrictMode 가 effect 를 두 번 돌릴 때 먼저 나간 요청의 응답이 화면을 덮지 않게 한다.
  *
- * effect 안에서만 쓰는 조회는 `cancelled` 플래그로 충분하다(`useTrip`). 이 훅은 같은 조회를
- * effect 밖(다시 읽기·더 보기)에서도 부르는 곳을 위한 것이다.
+ * 화면이 직접 쓰지 않는다. 조회 훅(`useResource`, `usePagedList`)이 쓴다.
  */
 export default function useLatestRequest() {
   const latest = useRef(0)

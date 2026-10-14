@@ -2,8 +2,12 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchReceivedInvites } from '../api/groups.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import useResource from '../hooks/useResource.js'
 import { ChevronDownIcon } from './icons.jsx'
 import './HeaderAuth.css'
+
+/** 받은 초대 첫 페이지. 건수(`totalElements`)만 쓴다. */
+const loadReceivedInvites = () => fetchReceivedInvites(0)
 
 /**
  * 헤더 우상단의 인증 영역.
@@ -17,8 +21,10 @@ import './HeaderAuth.css'
  */
 export default function HeaderAuth({ receivedCount: givenCount }) {
   const { user, status, logout } = useAuth()
-  const [fetchedCount, setFetchedCount] = useState(0)
-  const receivedCount = givenCount ?? fetchedCount
+  // 넘겨받던 값이 없어지면(초대함 받은 탭 → 보낸 탭) 그때부터 직접 읽는다. 배지는 보조 정보라
+  // 못 읽으면 배지를 달지 않을 뿐 헤더는 그대로 쓴다.
+  const fetched = useResource(loadReceivedInvites, status === 'authenticated' && givenCount === undefined)
+  const receivedCount = givenCount ?? fetched.data?.totalElements ?? 0
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
   const panelId = useId()
@@ -40,21 +46,6 @@ export default function HeaderAuth({ receivedCount: givenCount }) {
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [open])
-
-  useEffect(() => {
-    // 넘겨받던 값이 없어지면(초대함 받은 탭 → 보낸 탭) 그때부터 직접 읽도록 givenCount 를 의존성에 둔다.
-    if (status !== 'authenticated' || givenCount !== undefined) return undefined
-    let cancelled = false
-    fetchReceivedInvites(0)
-      .then((result) => {
-        if (!cancelled) setFetchedCount(result.totalElements)
-      })
-      // 배지는 보조 정보다. 못 읽으면 배지를 달지 않을 뿐 헤더는 그대로 쓴다.
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [status, givenCount])
 
   // 세션 확인 전에는 아무것도 그리지 않는다. 로그인 링크를 먼저 보여 주면
   // 로그인한 사용자에게 화면이 한 번 깜빡인다.

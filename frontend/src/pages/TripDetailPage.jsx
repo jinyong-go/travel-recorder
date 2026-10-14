@@ -16,6 +16,7 @@ import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import AppHeader from '../components/AppHeader.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import DetailStatus from '../components/DetailStatus.jsx'
+import PagedListBody from '../components/PagedListBody.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import RecordRegisterModal from '../components/RecordRegisterModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
@@ -172,71 +173,48 @@ function TripDetailView({ trip, onTripChange }) {
     setActionError('')
   }
 
-  /** 하위 기록 자리. 실패·첫 로딩·빈 목록이면 안내 한 줄이고, 아니면 카드 목록이다. */
-  const renderRecords = () => {
-    if (records.status === REQUEST_STATUS.ERROR) {
-      return (
-        <div className="empty-state">
-          여행지를 불러오지 못했습니다.{' '}
-          <button type="button" className="link-button" onClick={records.reload}>
-            다시 시도
-          </button>
-        </div>
-      )
-    }
-    if (records.status === REQUEST_STATUS.LOADING && records.items.length === 0) {
-      return <div className="empty-state">여행지를 불러오는 중이에요…</div>
-    }
-    if (records.items.length === 0) {
-      return (
-        <div className="empty-state">
-          아직 등록된 여행지가 없습니다.
-          {isOwner && ' 다녀온 곳을 추가해보세요.'}
-        </div>
-      )
-    }
-    return (
-      <ul className="place-grid">
-        {records.items.map((record) => (
-          <li key={record.id} className="place-card">
-            <div className="place-thumb">
-              {/* 첫 사진이 있으면 그것을, 없으면 카테고리 아이콘을 둔다. */}
-              {record.thumbnailUrl ? (
-                <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
-              ) : (
-                <span className="place-thumb-icon">{categoryIcon(record.category)}</span>
+  /** 하위 기록 카드 목록. 불러오는 중·실패·빈 목록 안내는 PagedListBody 가 맡는다. */
+  const renderRecords = () => (
+    <ul className="place-grid">
+      {records.items.map((record) => (
+        <li key={record.id} className="place-card">
+          <div className="place-thumb">
+            {/* 첫 사진이 있으면 그것을, 없으면 카테고리 아이콘을 둔다. */}
+            {record.thumbnailUrl ? (
+              <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
+            ) : (
+              <span className="place-thumb-icon">{categoryIcon(record.category)}</span>
+            )}
+            <span className="place-category-badge">{categoryLabel(record.category)}</span>
+          </div>
+          <div className="place-body">
+            <h3 className="place-name">
+              <Link to={`/records/${record.id}`} className="place-card-link">
+                {record.name}
+              </Link>
+            </h3>
+            <p className="place-region">{record.address}</p>
+            <div className="place-meta">
+              <span className="place-rating">★ {record.rating.toFixed(1)}</span>
+              {record.distanceKm != null && (
+                <span className="place-distance">{record.distanceKm.toFixed(1)}km</span>
               )}
-              <span className="place-category-badge">{categoryLabel(record.category)}</span>
+              <span className="place-date">{formatDate(record.createdAt)}</span>
             </div>
-            <div className="place-body">
-              <h3 className="place-name">
-                <Link to={`/records/${record.id}`} className="place-card-link">
-                  {record.name}
-                </Link>
-              </h3>
-              <p className="place-region">{record.address}</p>
-              <div className="place-meta">
-                <span className="place-rating">★ {record.rating.toFixed(1)}</span>
-                {record.distanceKm != null && (
-                  <span className="place-distance">{record.distanceKm.toFixed(1)}km</span>
-                )}
-                <span className="place-date">{formatDate(record.createdAt)}</span>
-              </div>
-              {record.memo && <p className="place-memo">{record.memo}</p>}
-              <button
-                type="button"
-                className="place-map-btn"
-                onClick={() => handleMapButtonClick(record)}
-              >
-                <MapViewIcon />
-                지도
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    )
-  }
+            {record.memo && <p className="place-memo">{record.memo}</p>}
+            <button
+              type="button"
+              className="place-map-btn"
+              onClick={() => handleMapButtonClick(record)}
+            >
+              <MapViewIcon />
+              지도
+            </button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
 
   return (
     <>
@@ -356,12 +334,16 @@ function TripDetailView({ trip, onTripChange }) {
               </p>
             )}
 
-            {renderRecords()}
-            {records.hasNext && (
-              <button type="button" className="link-button" onClick={records.loadMore}>
-                더 보기
-              </button>
-            )}
+            <PagedListBody
+              list={records}
+              loadingText="여행지를 불러오는 중이에요…"
+              errorText="여행지를 불러오지 못했습니다."
+              emptyText={`아직 등록된 여행지가 없습니다.${isOwner ? ' 다녀온 곳을 추가해보세요.' : ''}`}
+              noteClassName="empty-state"
+              errorClassName="empty-state"
+            >
+              {renderRecords()}
+            </PagedListBody>
           </section>
         </div>
       </main>

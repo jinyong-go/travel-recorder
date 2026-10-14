@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 import { fetchLoginHistory } from '../api/auth.js'
-import { REQUEST_STATUS } from '../api/requestStatus.js'
 import usePagedList from '../hooks/usePagedList.js'
 import { LOGIN_HISTORY_NOTICE } from '../data/loginHistory.js'
 import AppHeader from '../components/AppHeader.jsx'
 import LoginHistoryList from '../components/LoginHistoryList.jsx'
+import PagedListBody from '../components/PagedListBody.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
 import './LoginHistoryPage.css'
 
@@ -15,7 +15,7 @@ import './LoginHistoryPage.css'
  * "전체 보기" 로만 들어온다.
  */
 export default function LoginHistoryPage() {
-  const { items, status, hasNext, loadMore, reload } = usePagedList(fetchLoginHistory)
+  const loginHistory = usePagedList(fetchLoginHistory)
 
   return (
     <>
@@ -30,27 +30,16 @@ export default function LoginHistoryPage() {
           <h1 className="login-history-title">로그인 이력</h1>
           <p className="login-history-notice">{LOGIN_HISTORY_NOTICE}</p>
 
-          {status === REQUEST_STATUS.ERROR && (
-            <p className="field-error">
-              로그인 기록을 불러오지 못했습니다.{' '}
-              <button type="button" className="link-button" onClick={reload}>
-                다시 시도
-              </button>
-            </p>
-          )}
-          {status === REQUEST_STATUS.COMPLETE && items.length === 0 ? (
-            <p className="login-history-notice">로그인 기록이 없습니다.</p>
-          ) : (
-            <LoginHistoryList items={items} />
-          )}
-          {status === REQUEST_STATUS.LOADING && (
-            <p className="login-history-notice">불러오는 중이에요…</p>
-          )}
-          {hasNext && status !== REQUEST_STATUS.LOADING && (
-            <button type="button" className="link-button" onClick={loadMore}>
-              더 보기
-            </button>
-          )}
+          <PagedListBody
+            list={loginHistory}
+            loadingText="불러오는 중이에요…"
+            errorText="로그인 기록을 불러오지 못했습니다."
+            emptyText="로그인 기록이 없습니다."
+            noteClassName="login-history-notice"
+            errorClassName="field-error"
+          >
+            <LoginHistoryList items={loginHistory.items} />
+          </PagedListBody>
         </div>
       </main>
     </>

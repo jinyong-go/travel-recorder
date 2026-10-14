@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, errorMessage, fileUrl } from '../api/client.js'
+import { errorMessage, fileUrl } from '../api/client.js'
 import * as recordApi from '../api/records.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { categoryIcon, categoryLabel, placeOf, recordPayload } from '../data/records.js'
 import { formatDate } from '../utils/date.js'
-import useLatestRequest from '../hooks/useLatestRequest.js'
+import useResource from '../hooks/useResource.js'
 import useTrip from '../hooks/useTrip.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import { haversineDistanceKm } from '../utils/geo.js'
@@ -42,32 +42,9 @@ export default function RecordDetailPage() {
   const reference = useReferenceLocation()
   const referenceLocation = reference.location
 
-  // 404 는 없는 기록과 볼 수 없는 기록을 구분하지 않는다.
-  const [record, setRecord] = useState(null)
-  const [recordStatus, setRecordStatus] = useState(REQUEST_STATUS.LOADING)
-
-  const beginRequest = useLatestRequest()
-
-  // 저장 뒤 다시 읽기도 이 함수를 쓴다. 가장 최근 요청의 응답만 그린다.
-  const loadRecord = useCallback(async () => {
-    const isLatest = beginRequest()
-    try {
-      const result = await recordApi.fetchRecord(recordId)
-      if (!isLatest()) return
-      setRecord(result)
-      setRecordStatus(REQUEST_STATUS.COMPLETE)
-    } catch (err) {
-      if (!isLatest()) return
-      setRecordStatus(
-        err instanceof ApiError && err.status === 404 ? REQUEST_STATUS.MISSING : REQUEST_STATUS.ERROR,
-      )
-    }
-  }, [recordId, beginRequest])
-
-  useEffect(() => {
-    setRecordStatus(REQUEST_STATUS.LOADING)
-    loadRecord()
-  }, [loadRecord])
+  // 404 는 없는 기록과 볼 수 없는 기록을 구분하지 않는다. 저장 뒤 다시 읽기도 reloadRecord 를 쓴다.
+  const loadRecord = useCallback(() => recordApi.fetchRecord(recordId), [recordId])
+  const { data: record, status: recordStatus, reload: reloadRecord } = useResource(loadRecord)
 
   const isAuthor = record?.isAuthor ?? false
 
@@ -86,8 +63,6 @@ export default function RecordDetailPage() {
   // 기록 응답에는 없으므로 작성자일 때만 여행을 읽는다. 열람자에게는 내려오지도 않는다.
   const { trip } = useTrip(isAuthor ? record.trip.id : null)
 
-  if (recordStatus === REQUEST_STATUS.LOADING) return <DetailStatus title="기록을 불러오는 중이에요…" />
-
   if (recordStatus === REQUEST_STATUS.ERROR) {
     return <DetailStatus title="기록을 불러오지 못했습니다" desc="잠시 후 다시 시도해주세요." />
   }
@@ -104,6 +79,10 @@ export default function RecordDetailPage() {
       />
     )
   }
+
+  // 상태가 아니라 기록 유무로 가른다. 저장 뒤 다시 읽는 동안 화면이 "불러오는 중" 으로
+  // 바뀌지 않게 한다.
+  if (!record) return <DetailStatus title="기록을 불러오는 중이에요…" />
 
   const photos = record.photos
   const place = placeOf(record)
@@ -184,7 +163,7 @@ export default function RecordDetailPage() {
       }
     }
 
-    await loadRecord()
+    await reloadRecord()
     setEditing(false)
     setBusy(false)
     if (failures.length > 0) {

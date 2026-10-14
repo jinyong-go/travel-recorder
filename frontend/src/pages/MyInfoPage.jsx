@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom'
 import { fetchLoginHistory } from '../api/auth.js'
-import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import usePagedList from '../hooks/usePagedList.js'
 import { LOGIN_HISTORY_NOTICE } from '../data/loginHistory.js'
 import AppHeader from '../components/AppHeader.jsx'
 import LoginHistoryList from '../components/LoginHistoryList.jsx'
+import PagedListBody from '../components/PagedListBody.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
 import './MyInfoPage.css'
 
@@ -58,25 +58,20 @@ export default function MyInfoPage() {
               최근 로그인
             </h2>
             <p className="my-info-note">{LOGIN_HISTORY_NOTICE}</p>
-            {loginHistory.status === REQUEST_STATUS.LOADING && (
-              <p className="my-info-note">불러오는 중이에요…</p>
-            )}
-            {/* 실패해도 위의 프로필은 그대로 둔다. 이 섹션 자리에만 알린다. */}
-            {loginHistory.status === REQUEST_STATUS.ERROR && (
-              <p className="field-error">
-                로그인 기록을 불러오지 못했습니다.{' '}
-                <button type="button" className="link-button" onClick={loginHistory.reload}>
-                  다시 시도
-                </button>
-              </p>
-            )}
-            {/* 이력은 기능 도입 시점부터 쌓이므로 로그인한 사용자에게도 비어 있을 수 있다. */}
-            {loginHistory.status === REQUEST_STATUS.COMPLETE &&
-              (loginHistory.items.length === 0 ? (
-                <p className="my-info-note">로그인 기록이 없습니다.</p>
-              ) : (
-                <LoginHistoryList items={loginHistory.items} />
-              ))}
+            {/* 실패해도 위의 프로필은 그대로 둔다. 이 섹션 자리에만 알린다. 첫 페이지만 보여 주므로
+                "더 보기" 대신 전체 보기 화면으로 보낸다. 이력은 기능 도입 시점부터 쌓이므로
+                로그인한 사용자에게도 비어 있을 수 있다. */}
+            <PagedListBody
+              list={loginHistory}
+              loadingText="불러오는 중이에요…"
+              errorText="로그인 기록을 불러오지 못했습니다."
+              emptyText="로그인 기록이 없습니다."
+              noteClassName="my-info-note"
+              errorClassName="field-error"
+              showMore={false}
+            >
+              <LoginHistoryList items={loginHistory.items} />
+            </PagedListBody>
             {/* 한 페이지에 다 들어오면 전체 보기도 같은 목록이라 링크를 그리지 않는다. */}
             {loginHistory.hasNext && (
               <Link to="/me/login-history" className="my-info-more-link">
