@@ -1,8 +1,6 @@
 import { visibilityMeta } from '../data/visibility.js'
-import { GlobeIcon, LockIcon, UsersIcon } from './icons.jsx'
+import { VisibilityIcon } from './icons.jsx'
 import './VisibilityBadge.css'
-
-const ICONS = { lock: LockIcon, users: UsersIcon, globe: GlobeIcon }
 
 /**
  * 공개 범위 배지. 작성자 본인의 기록에만 노출한다.
@@ -12,11 +10,10 @@ const ICONS = { lock: LockIcon, users: UsersIcon, globe: GlobeIcon }
  */
 export default function VisibilityBadge({ visibility, size = 'md' }) {
   const meta = visibilityMeta(visibility)
-  const Icon = ICONS[meta.icon] ?? LockIcon
 
   return (
     <span className={`visibility-badge visibility-${meta.key.toLowerCase()} visibility-badge-${size}`}>
-      <Icon className="visibility-badge-icon" />
+      <VisibilityIcon visibility={meta.key} className="visibility-badge-icon" />
       {meta.label}
     </span>
   )

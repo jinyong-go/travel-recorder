@@ -316,3 +316,14 @@ export function GlobeIcon(props) {
     </svg>
   )
 }
+
+const VISIBILITY_ICONS = { PRIVATE: LockIcon, GROUP: UsersIcon, PUBLIC: GlobeIcon }
+
+/**
+ * 공개 범위 아이콘. 모르는 값은 가장 좁은 범위의 자물쇠로 그린다 — 넓게 잘못 보이는 쪽을 피한다
+ * (`visibilityMeta` 와 같은 기준).
+ */
+export function VisibilityIcon({ visibility, ...props }) {
+  const Icon = VISIBILITY_ICONS[visibility] ?? LockIcon
+  return <Icon {...props} />
+}

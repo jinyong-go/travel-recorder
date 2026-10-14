@@ -2,10 +2,8 @@ import { fetchGroups } from '../api/groups.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { VISIBILITIES, effectiveVisibility } from '../data/visibility.js'
 import useResource from '../hooks/useResource.js'
-import { GlobeIcon, LockIcon, UsersIcon } from './icons.jsx'
+import { VisibilityIcon } from './icons.jsx'
 import './VisibilitySelect.css'
-
-const ICONS = { lock: LockIcon, users: UsersIcon, globe: GlobeIcon }
 
 /**
  * 공개 범위 선택. 등록 폼과 상세 화면이 같은 컴포넌트를 쓴다.
@@ -96,7 +94,6 @@ export default function VisibilitySelect({
 
       <div className="visibility-options">
         {VISIBILITIES.map((option) => {
-          const Icon = ICONS[option.icon] ?? LockIcon
           const checked = value === option.key
           return (
             <label
@@ -110,7 +107,7 @@ export default function VisibilitySelect({
                 checked={checked}
                 onChange={() => onChange(option.key)}
               />
-              <Icon className="visibility-option-icon" />
+              <VisibilityIcon visibility={option.key} className="visibility-option-icon" />
               <span className="visibility-option-text">
                 <span className="visibility-option-label">{option.label}</span>
                 <span className="visibility-option-desc">{option.description}</span>

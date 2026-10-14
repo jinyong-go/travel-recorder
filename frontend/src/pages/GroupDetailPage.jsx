@@ -32,30 +32,41 @@ const LOAD_ERROR = {
 const DEFAULT_LOAD_ERROR = { title: '그룹을 불러오지 못했습니다', desc: '잠시 후 다시 시도해주세요.' }
 
 /**
- * 그룹 하나의 멤버와 초대. 소유자는 초대·초대 취소·멤버 제외·그룹 삭제를, 멤버는 나가기만 할 수 있다.
+ * 확인 모달을 거치는 동작. `confirming.type` 으로 고르며, 문구와 요청과 끝난 뒤의 이동을 함께 둔다.
+ *
+ * `run(groupId, confirming)` 이 요청을 보낸다. `leavesPage` 면 그룹을 지웠거나 나가서 이 화면에
+ * 남을 수 없으므로 그룹 목록으로 가고, 아니면 바뀐 멤버를 보이도록 그룹을 다시 읽는다.
  */
-/** 확인 모달 문구. `confirming.type` 으로 고른다. */
-const CONFIRM_TEXT = {
+const CONFIRM_ACTIONS = {
   delete: {
     title: '그룹을 삭제할까요?',
     desc: '이 그룹으로만 공유한 여행은 나만 보기 상태가 됩니다. 여행과 기록 자체는 삭제되지 않습니다.',
     ok: '삭제',
     okBusy: '삭제하는 중…',
+    run: (groupId) => api.deleteGroup(groupId),
+    leavesPage: true,
   },
   leave: {
     title: '그룹에서 나갈까요?',
     desc: '이 그룹으로 공유된 여행은 더 이상 보이지 않습니다.',
     ok: '나가기',
     okBusy: '나가는 중…',
+    run: (groupId) => api.leaveGroup(groupId),
+    leavesPage: true,
   },
   member: {
     title: '멤버를 제외할까요?',
     desc: '제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없습니다.',
     ok: '제외',
     okBusy: '제외하는 중…',
+    run: (groupId, { memberId }) => api.removeMember(groupId, memberId),
+    leavesPage: false,
   },
 }
 
+/**
+ * 그룹 하나의 멤버와 초대. 소유자는 초대·초대 취소·멤버 제외·그룹 삭제를, 멤버는 나가기만 할 수 있다.
+ */
 export default function GroupDetailPage() {
   const { groupId } = useParams()
   const navigate = useNavigate()
@@ -128,30 +139,23 @@ export default function GroupDetailPage() {
     }
   }
 
+  const pendingAction = confirming && CONFIRM_ACTIONS[confirming.type]
+
   const confirmAction = async () => {
     setProcessing({ action: 'confirm' })
     try {
-      if (confirming.type === 'delete') await api.deleteGroup(group.id)
-      else if (confirming.type === 'leave') await api.leaveGroup(group.id)
-      else await api.removeMember(group.id, confirming.memberId)
+      await pendingAction.run(group.id, confirming)
     } catch {
       setInviteMessage({ type: 'error', text: '요청을 처리하지 못했습니다. 다시 시도해주세요.' })
+      return
+    } finally {
       setProcessing(null)
       setConfirming(null)
-      return
     }
 
-    setConfirming(null)
-    setProcessing(null)
-    // 그룹을 지웠거나 나갔으면 이 화면에 남을 수 없다.
-    if (confirming.type !== 'member') {
-      navigate('/groups')
-      return
-    }
-    reloadGroup()
+    if (pendingAction.leavesPage) navigate('/groups')
+    else reloadGroup()
   }
-
-  const confirmText = confirming && CONFIRM_TEXT[confirming.type]
 
   return (
     <>
@@ -288,16 +292,16 @@ export default function GroupDetailPage() {
         </div>
       </main>
 
-      {confirmText && (
+      {pendingAction && (
         <ConfirmDialog
-          title={confirmText.title}
-          confirmLabel={confirmText.ok}
-          busyLabel={confirmText.okBusy}
+          title={pendingAction.title}
+          confirmLabel={pendingAction.ok}
+          busyLabel={pendingAction.okBusy}
           busy={isProcessing('confirm')}
           onConfirm={confirmAction}
           onCancel={() => setConfirming(null)}
         >
-          {confirmText.desc}
+          {pendingAction.desc}
         </ConfirmDialog>
       )}
     </>
