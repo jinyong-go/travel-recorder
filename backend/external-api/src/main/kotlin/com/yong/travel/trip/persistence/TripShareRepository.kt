@@ -24,23 +24,6 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
     fun findByTripIdIn(@Param("tripIds") tripIds: Collection<Long>): List<TripShareEntity>
 
     /**
-     * 여행이 사용자가 속한 그룹 중 하나에라도 공유됐는지 확인한다. GROUP 여행의 열람 판정에 쓴다.
-     *
-     * 그룹 id 를 미리 읽어 넘기지 않고 멤버 행과 맞대어 한 번에 판정한다.
-     *
-     * @param tripId 여행 id
-     * @param userId 요청자의 사용자 id
-     * @return 하나라도 공유됐으면 true
-     */
-    @Query(
-        """
-        select count(s) > 0 from TripShareEntity s, GroupMemberEntity m
-        where s.trip.id = :tripId and m.group = s.group and m.user.id = :userId
-        """,
-    )
-    fun existsSharedWithMember(@Param("tripId") tripId: Long, @Param("userId") userId: Long): Boolean
-
-    /**
      * 한 여행의 공유 행을 모두 지운다. 공유 그룹 교체와 여행 삭제가 쓴다.
      *
      * 이름 기반 삭제(`deleteBy…`)는 행을 먼저 읽어 와 한 건씩 DELETE 하므로 벌크 삭제로 둔다.

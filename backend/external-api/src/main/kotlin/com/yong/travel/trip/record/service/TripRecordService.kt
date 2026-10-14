@@ -15,7 +15,6 @@ import com.yong.travel.photo.storage.PhotoDatabaseService
 import com.yong.travel.tag.service.TagService
 import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.persistence.TripEntity
-import com.yong.travel.trip.persistence.TripRepository
 import com.yong.travel.trip.record.domain.RecordListQuery
 import com.yong.travel.trip.record.domain.RecordSort
 import com.yong.travel.trip.record.domain.TripRecord
@@ -33,13 +32,12 @@ import org.springframework.transaction.annotation.Transactional
 /**
  * 여행 기록의 조회·등록·수정·이동·삭제.
  *
- * 기록의 열람과 편집 권한은 전적으로 소속 여행이 정한다. 판정식은 [TripService] 에 두고 가져다 쓴다.
+ * 기록의 열람과 편집 권한은 전적으로 소속 여행이 정한다. 열람 판정은 소속 여행을 조인한 조회 조건으로 한다.
  */
 @Service
 @Transactional(readOnly = true)
 class TripRecordService(
     private val recordRepository: TripRecordRepository,
-    private val tripRepository: TripRepository,
     private val tagService: TagService,
     private val photoRepository: PhotoRepository,
     private val photoDatabaseService: PhotoDatabaseService,
@@ -115,11 +113,7 @@ class TripRecordService(
      * @return 사진·태그까지 담긴 기록 상세
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
      */
-    fun get(recordId: Long, userId: Long?): TripRecord {
-        val record = findRecord(recordId)
-        requireViewable(record, userId)
-        return detailOf(record)
-    }
+    fun get(recordId: Long, userId: Long?): TripRecord = detailOf(findViewableRecord(recordId, userId))
 
     /**
      * 기록을 등록한다. 소속 여행은 요청자가 소유한 것이어야 한다.
@@ -131,7 +125,7 @@ class TripRecordService(
      */
     @Transactional
     fun create(authorId: Long, command: TripRecordCreateCommand): TripRecord {
-        val trip = requireOwnedTrip(command.tripId, authorId)
+        val trip = tripService.findOwnedTrip(command.tripId, authorId)
         val record = TripRecordEntity(
             trip = trip,
             name = command.name,
@@ -169,8 +163,7 @@ class TripRecordService(
         authorId: Long,
         command: TripRecordUpdateCommand,
     ): TripRecord {
-        val record = findRecord(recordId)
-        requireAuthor(record, authorId)
+        val record = findEditableRecord(recordId, authorId)
 
         record.name = command.name
         record.category = command.category
@@ -209,10 +202,9 @@ class TripRecordService(
         authorId: Long,
         tripId: Long,
     ): TripRecord {
-        val record = findRecord(recordId)
-        requireAuthor(record, authorId)
+        val record = findEditableRecord(recordId, authorId)
 
-        val newTrip = requireOwnedTrip(tripId, authorId)
+        val newTrip = tripService.findOwnedTrip(tripId, authorId)
         val previousTripId = record.trip.id
         if (newTrip.id != previousTripId) {
             record.trip.clearCoverIfAmong(photoRepository.findIdsByRecordId(recordId))
@@ -244,8 +236,7 @@ class TripRecordService(
      */
     @Transactional
     fun delete(recordId: Long, authorId: Long) {
-        val record = findRecord(recordId)
-        requireAuthor(record, authorId)
+        val record = findEditableRecord(recordId, authorId)
 
         record.trip.clearCoverIfAmong(photoRepository.findIdsByRecordId(recordId))
         record.softDelete()
@@ -254,51 +245,44 @@ class TripRecordService(
     }
 
     /**
-     * 기록을 담거나 옮길 여행을 찾는다. **소유한 여행이 아니면 404** 다 —
-     * 남의 여행에 기록을 넣을 수 없고, 403 으로 답하면 그 여행의 존재가 드러난다.
+     * 편집할 기록을 읽는다. 기록 수정·이동·삭제와 사진 업로드·삭제가 함께 쓰는 관문이다.
+     *
+     * 고칠 수 있는 사람은 소속 여행의 소유자뿐이다 — 기록에는 작성자 컬럼이 없다.
+     *
+     * 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 PhotoService 가 사진을 기록에 걸 때 쓰는
+     * 서비스 간 호출이기 때문이다. 판정을 여기 하나로 모아 사진과 기록의 실패 응답이 갈라지지 않게 한다.
+     *
+     * @param recordId 기록 id
+     * @param userId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
+     * @return 편집할 기록
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      */
-    private fun requireOwnedTrip(tripId: Long, userId: Long): TripEntity {
-        val trip = tripRepository.findById(tripId)
-            .orElseThrow { ApiException(ErrorCode.TRIP_NOT_FOUND) }
-        if (trip.owner.id != userId) {
-            // 응답이 "없는 여행"과 같으므로 남의 여행이라 막혔다는 사실은 이 로그에만 남는다.
-            log.debug("여행 소유자 아님 tripId={} userId={} ownerId={}", tripId, userId, trip.owner.id)
-            throw ApiException(ErrorCode.TRIP_NOT_FOUND)
-        }
-        return trip
-    }
-
-    /** 기록 단건 조회. 없으면 RECORD_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다. */
-    private fun findRecord(recordId: Long): TripRecordEntity =
-        recordRepository.findById(recordId)
-            .orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
-
-    /** 볼 수 없는 기록이면 없는 기록과 같은 RECORD_NOT_FOUND 를 던진다. */
-    private fun requireViewable(record: TripRecordEntity, userId: Long?) {
-        if (canView(record, userId)) return
-        // 존재 은닉 때문에 응답이 "없음"과 같다. 왜 가려졌는지는 이 로그에만 드러난다.
-        log.debug(
-            "기록 열람 차단 recordId={} tripId={} userId={} visibility={}",
-            record.id, record.trip.id, userId, record.trip.visibility,
-        )
-        // 권한 없음(403)이 아니라 없는 기록(404)으로 답한다. 403 은 "그 기록이 있다"는 뜻이 되기 때문이다.
-        // 소속 여행을 못 봐서 가려지는 경우도 RECORD_NOT_FOUND 다. TRIP_NOT_FOUND 를 내려주면
-        // "기록은 있는데 여행을 못 본다" 는 사실이 새어 나간다.
-        throw ApiException(ErrorCode.RECORD_NOT_FOUND)
-    }
-
-    /** 기록을 볼 수 있는지는 **전적으로 소속 여행이 정한다**. 판정식은 여행 서비스에 하나만 둔다. */
-    private fun canView(record: TripRecordEntity, userId: Long?): Boolean = tripService.canView(record.trip, userId)
-
-    /** 고칠 수 있는 사람은 여행 소유자뿐이다. 기록에는 작성자 컬럼이 없다. */
-    private fun requireAuthor(record: TripRecordEntity, userId: Long) {
-        // 볼 수도 없는 기록이면 존재부터 숨긴다. 볼 수 있는데 소유자가 아닌 경우에만 403 이다.
-        requireViewable(record, userId)
+    fun findEditableRecord(recordId: Long, userId: Long): TripRecordEntity {
+        // 볼 수도 없는 기록이면 존재부터 숨긴다. 존재를 이미 아는 사람에게만 403 으로 답한다.
+        val record = findViewableRecord(recordId, userId)
         if (record.trip.owner.id != userId) {
-            log.debug("기록 작성자 아님 recordId={} userId={} ownerId={}", record.id, userId, record.trip.owner.id)
+            log.debug("기록 작성자 아님 recordId={} userId={} ownerId={}", recordId, userId, record.trip.owner.id)
             throw ApiException(ErrorCode.FORBIDDEN)
         }
+        return record
     }
+
+    /**
+     * 요청자가 볼 수 있는 기록을 읽는다. 기록을 볼 수 있는지는 전적으로 소속 여행이 정한다.
+     *
+     * 판정이 조회 조건에 실려 있어 "없음"과 "권한 없음"이 같은 빈 결과로 나온다.
+     */
+    private fun findViewableRecord(recordId: Long, userId: Long?): TripRecordEntity =
+        recordRepository.findOne(
+            TripRecordSpecifications.withId(recordId).and(TripRecordSpecifications.visibleTo(userId)),
+        ).orElseThrow {
+            // 응답이 "없음"과 같으므로 막혔을 수 있다는 사실은 이 로그에만 남는다.
+            log.debug("기록 조회 차단 recordId={} userId={}", recordId, userId)
+            // 소속 여행을 못 봐서 가려지는 경우도 RECORD_NOT_FOUND 다. TRIP_NOT_FOUND 를 내려주면
+            // "기록은 있는데 여행을 못 본다" 는 사실이 새어 나간다.
+            ApiException(ErrorCode.RECORD_NOT_FOUND)
+        }
 
     /** 여러 기록의 사진을 한 번에 읽어 기록 id 로 묶는다. 등록 순서(createdAt)는 그대로 지켜진다. */
     private fun photosOf(recordIds: List<Long>): Map<Long, List<PhotoEntity>> {

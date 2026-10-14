@@ -145,9 +145,9 @@ com.yong.travel
   변환 시점에 `isOwnedBy(userId)`·`isAuthoredBy(userId)` 로 정한다.
 - **가릴 값은 읽지 않는 편이 확실하다.** 소유자에게만 나가는 `visibility`·`sharedGroups` 는
   응답에서 가리는 대신 소유자 조회일 때만 읽는다 (`TripService.sharesOf`).
-- 서비스끼리 주고받는 값은 예외다. `GroupService.requireAccessibleGroups` 와
-  `TagService.findOrCreateAll` 은 엔티티를 반환한다 — 컨트롤러로 나가는 경계가 아니라
-  다른 서비스가 연관을 걸 때 쓰기 때문이다.
+- 서비스끼리 주고받는 값은 예외다. `GroupService.requireAccessibleGroups`·
+  `TagService.findOrCreateAll`·`TripService.findOwnedTrip`·`TripRecordService.findEditableRecord` 는
+  엔티티를 반환한다 — 컨트롤러로 나가는 경계가 아니라 다른 서비스가 연관을 걸 때 쓰기 때문이다.
 - **목록 서비스는 페이지 번호(`page: Int`)를 받아 `PageResult<도메인 객체>` 를 돌려준다.**
   Spring Data 의 `Page`·`Pageable` 은 서비스와 리포지토리 사이에서만 쓴다 — 컨트롤러는 이를
   만들지도 받지도 않는다. 서비스는 `listPageRequest(page, sort)` 로 요청을 만들고, 조회 결과를
@@ -162,9 +162,9 @@ com.yong.travel
 
 - **판정은 조회 쿼리 단계에서 한다.** 전부 읽어 온 뒤 애플리케이션에서 거르면 페이지 건수가
   어긋나고, 한 번 빠뜨리면 그대로 샌다.
-- **조회 조건으로서의 판정식은 `TripVisibilityPredicates` 하나뿐이다.** 여행 목록·기록 목록·태그
-  자동완성이 모두 이것을 쓴다. 새 조회 경로도 판정식을 다시 쓰지 말고 이것을 가져다 쓴다. 메모리 판정은
-  `TripService.canView` 한 곳이다.
+- **판정식은 `TripVisibilityPredicates` 하나뿐이다.** 여행·기록의 목록과 단건 조회, 태그 자동완성이
+  모두 이것을 조회 조건으로 쓴다. 새 조회 경로도 판정식을 다시 쓰지 말고 이것을 가져다 쓴다. 메모리 판정은
+  두지 않는다. 단건은 `TripService`·`TripRecordService` 의 `findViewable*`·`findEditable*` 을 거친다.
 - 요청자가 속한 그룹은 id 를 미리 읽어 넘기지 않고 `group_member` 를 서브쿼리로 붙여 판정한다.
 - **기록 조회는 항상 소속 여행을 조인한다.** 판정 근거가 기록에 없으므로 조인 없는 조회 경로를
   만들면 그 경로가 곧 우회로가 된다. 목록·상세·태그 자동완성 모두 해당한다.

@@ -17,8 +17,31 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder
 import org.springframework.data.jpa.domain.Specification
 import java.time.Instant
 
-/** 기록 목록의 동적 조회 조건. 공개 범위 판정이 소속 여행 조인과 함께 여기서 쿼리에 실린다. */
+/** 기록 조회의 동적 조건. 목록과 단건 모두 공개 범위 판정이 소속 여행 조인과 함께 여기서 쿼리에 실린다. */
 object TripRecordSpecifications {
+
+    /**
+     * id 일치 조건. 단건 조회를 [visibleTo] 와 묶는다.
+     *
+     * @param recordId 기록 id
+     * @return id 조건
+     */
+    fun withId(recordId: Long): Specification<TripRecordEntity> =
+        Specification { root, _, cb -> cb.equal(root.get<Long>("id"), recordId) }
+
+    /**
+     * 요청자가 볼 수 있는 기록 — 소속 여행을 볼 수 있는 기록이다. 단건 상세도 목록과 같은 판정식을 거친다.
+     *
+     * 소속 여행을 조인하므로 [withScope] 와 함께 쓰지 않는다. 함께 쓰면 trips 가 두 번 붙는다.
+     *
+     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개 여행의 기록만 참이다
+     * @return 열람 가능 조건
+     */
+    fun visibleTo(userId: Long?): Specification<TripRecordEntity> =
+        Specification { root, query, cb ->
+            val q = requireNotNull(query)
+            TripVisibilityPredicates.visibleTo(joinTrip(root, q), q, cb, userId)
+        }
 
     /**
      * 조회 범위 조건.

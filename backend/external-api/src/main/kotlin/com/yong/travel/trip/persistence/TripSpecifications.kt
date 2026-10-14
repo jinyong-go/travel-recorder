@@ -5,8 +5,35 @@ import com.yong.travel.common.util.containsPattern
 import com.yong.travel.trip.domain.TripScope
 import org.springframework.data.jpa.domain.Specification
 
-/** 여행 목록의 동적 조회 조건. 공개 범위 판정이 여기서 쿼리에 실린다. */
+/** 여행 조회의 동적 조건. 목록과 단건 모두 공개 범위 판정이 여기서 쿼리에 실린다. */
 object TripSpecifications {
+
+    /**
+     * id 일치 조건. 단건 조회를 [visibleTo]·[ownedBy] 와 묶어 판정까지 한 쿼리에 싣는다.
+     *
+     * @param tripId 여행 id
+     * @return id 조건
+     */
+    fun withId(tripId: Long): Specification<TripEntity> =
+        Specification { root, _, cb -> cb.equal(root.get<Long>("id"), tripId) }
+
+    /**
+     * 요청자가 볼 수 있는 여행. 단건 열람도 목록과 같은 판정식을 거친다.
+     *
+     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개만 참이다
+     * @return 열람 가능 조건
+     */
+    fun visibleTo(userId: Long?): Specification<TripEntity> =
+        Specification { root, query, cb -> TripVisibilityPredicates.visibleTo(root, requireNotNull(query), cb, userId) }
+
+    /**
+     * 요청자가 소유한 여행. 기록을 담거나 옮길 대상 여행을 고를 때 쓴다.
+     *
+     * @param userId 요청자의 사용자 id
+     * @return 소유 조건
+     */
+    fun ownedBy(userId: Long): Specification<TripEntity> =
+        Specification { root, _, cb -> TripVisibilityPredicates.ownedBy(root, cb, userId) }
 
     /**
      * 조회 범위 조건.

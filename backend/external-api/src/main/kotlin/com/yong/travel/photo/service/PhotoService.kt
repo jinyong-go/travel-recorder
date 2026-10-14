@@ -7,8 +7,7 @@ import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
-import com.yong.travel.trip.record.persistence.TripRecordEntity
-import com.yong.travel.trip.record.persistence.TripRecordRepository
+import com.yong.travel.trip.record.service.TripRecordService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,7 +21,7 @@ import java.util.UUID
 @Service
 @Transactional(readOnly = true)
 class PhotoService(
-    private val recordRepository: TripRecordRepository,
+    private val recordService: TripRecordService,
     private val photoRepository: PhotoRepository,
     private val photoDatabaseService: PhotoDatabaseService,
     private val uploadProperties: PhotoUploadProperties,
@@ -39,12 +38,13 @@ class PhotoService(
      * @param requesterId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
      * @param files 올릴 이미지 파일들
      * @return 저장된 사진들. 올린 순서 그대로다
-     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 요청자의 기록이 아닐 때 (존재 은닉)
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      * @throws ApiException `INVALID_FILE` — 형식·용량·파일 시그니처 중 하나라도 맞지 않을 때
      */
     @Transactional
     fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<Photo> {
-        val record = findOwnRecord(recordId, requesterId)
+        val record = recordService.findEditableRecord(recordId, requesterId)
 
         val photos = files.map { file ->
             if (file.contentType !in uploadProperties.allowedContentTypes ||
@@ -80,12 +80,14 @@ class PhotoService(
      * @param recordId 사진이 달린 기록 id
      * @param photoId 지울 사진 id
      * @param requesterId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
-     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 요청자의 기록이 아닐 때 (존재 은닉)
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없거나 그 기록의 사진이 아닐 때
      */
     @Transactional
     fun delete(recordId: Long, photoId: UUID, requesterId: Long) {
-        val record = findOwnRecord(recordId, requesterId)
+        // 기록을 먼저 읽어 지워진 기록의 사진은 404 로 막는다. 사진 행은 기록이 soft delete 돼도 남아 있다.
+        val record = recordService.findEditableRecord(recordId, requesterId)
         val photo = photoRepository.findByIdAndRecordId(photoId, recordId)
             ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
 
@@ -96,26 +98,6 @@ class PhotoService(
         // 바이너리(photo_data)는 ON DELETE CASCADE 로 함께 지워진다.
         photoRepository.delete(photo)
         log.debug("사진 삭제 recordId={} photoId={} requesterId={}", recordId, photoId, requesterId)
-    }
-
-    /**
-     * 기록을 먼저 조회해 soft delete 된 기록의 사진은 404 로 막는다.
-     * (PhotoEntity 는 soft delete 대상이 아니라 삭제된 기록의 사진 행이 그대로 남아 있다.)
-     *
-     * 남의 기록이면 403 이 아니라 404 다 — 작성자가 아닌 사람에게는 그 기록의 존재 자체를 알리지 않는다.
-     */
-    private fun findOwnRecord(recordId: Long, requesterId: Long): TripRecordEntity {
-        val record = recordRepository.findById(recordId)
-            .orElseThrow { ApiException(ErrorCode.RECORD_NOT_FOUND) }
-        if (record.trip.owner.id != requesterId) {
-            // 존재 은닉 때문에 응답이 "없는 기록"과 같다.
-            log.debug(
-                "사진 접근 차단 recordId={} requesterId={} ownerId={}",
-                recordId, requesterId, record.trip.owner.id,
-            )
-            throw ApiException(ErrorCode.RECORD_NOT_FOUND)
-        }
-        return record
     }
 
     /**

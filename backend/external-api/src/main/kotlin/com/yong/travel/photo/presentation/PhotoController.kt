@@ -30,7 +30,8 @@ class PhotoController(
      * @param principal 로그인 사용자. 비로그인이면 null
      * @return 저장된 사진 목록
      * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
-     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 요청자의 기록이 아닐 때
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      * @throws ApiException `INVALID_FILE` — 허용되지 않는 형식·용량·파일일 때
      */
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
@@ -49,7 +50,8 @@ class PhotoController(
      * @param principal 로그인 사용자. 비로그인이면 null
      * @return 본문 없는 `204`
      * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
-     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 요청자의 기록이 아닐 때
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없거나 그 기록의 사진이 아닐 때
      */
     @DeleteMapping("/{photoId}")

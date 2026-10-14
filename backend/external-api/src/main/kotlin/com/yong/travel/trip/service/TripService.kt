@@ -25,6 +25,7 @@ import com.yong.travel.trip.persistence.TripSpecifications
 import com.yong.travel.trip.record.persistence.TripRecordRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -33,7 +34,7 @@ import java.util.UUID
 /**
  * 여행의 조회·생성·수정·삭제와 공개 범위·커버 지정.
  *
- * 여행과 하위 기록의 열람 판정식([canView])을 이곳 하나에 둔다.
+ * 열람 판정은 조회 조건으로 한다. 판정식은 TripVisibilityPredicates 하나뿐이고 메모리 판정은 두지 않는다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -92,11 +93,7 @@ class TripService(
      * @return 여행 상세. 공개 범위와 공유 그룹은 소유자에게만 채워진다
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때 (존재 은닉)
      */
-    fun get(tripId: Long, userId: Long?): Trip {
-        val trip = findTrip(tripId)
-        requireViewable(trip, userId)
-        return detailOf(trip, userId)
-    }
+    fun get(tripId: Long, userId: Long?): Trip = detailOf(findViewableTrip(tripId, userId), userId)
 
     /**
      * 여행을 만든다. 소유자는 요청자로 고정되며, GROUP 이면 공유 그룹도 함께 건다.
@@ -140,8 +137,7 @@ class TripService(
      */
     @Transactional
     fun update(tripId: Long, ownerId: Long, command: TripUpdateCommand): Trip {
-        val trip = findTrip(tripId)
-        requireOwner(trip, ownerId)
+        val trip = findEditableTrip(tripId, ownerId)
 
         trip.name = command.name.trim()
         trip.startDate = command.startDate
@@ -175,8 +171,7 @@ class TripService(
         visibility: TripVisibility,
         groupIds: List<Long>,
     ): Trip {
-        val trip = findTrip(tripId)
-        requireOwner(trip, ownerId)
+        val trip = findEditableTrip(tripId, ownerId)
 
         val previous = trip.visibility
         trip.visibility = visibility
@@ -203,8 +198,7 @@ class TripService(
         ownerId: Long,
         photoId: UUID?,
     ): Trip {
-        val trip = findTrip(tripId)
-        requireOwner(trip, ownerId)
+        val trip = findEditableTrip(tripId, ownerId)
 
         trip.coverPhoto = photoId?.let {
             // 다른 여행의 사진인지 아예 없는 사진인지 구분되지 않아야 한다.
@@ -231,8 +225,7 @@ class TripService(
      */
     @Transactional
     fun delete(tripId: Long, ownerId: Long) {
-        val trip = findTrip(tripId)
-        requireOwner(trip, ownerId)
+        val trip = findEditableTrip(tripId, ownerId)
 
         tripShareRepository.deleteByTripId(tripId)
 
@@ -258,26 +251,24 @@ class TripService(
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때
      */
     fun requireViewable(tripId: Long, userId: Long?) {
-        requireViewable(findTrip(tripId), userId)
+        findViewableTrip(tripId, userId)
     }
 
     /**
-     * 내 여행이거나, 전체 공개이거나, 내가 속한 그룹으로 공유됐거나 셋 중 하나다.
+     * 기록을 담거나 옮길 대상 여행을 읽는다. 요청자가 소유한 여행이어야 한다.
      *
-     * 기록의 열람도 전적으로 소속 여행이 정하므로 기록 서비스가 이 판정을 그대로 쓴다.
-     * 판정식이 두 곳에 있으면 한쪽만 고쳐졌을 때 여행과 기록의 공개 범위가 어긋난다.
+     * 편집 관문([findEditableTrip])과 달리 볼 수 있는 남의 여행이어도 403 이 아니라 404 다.
+     * 이 경로는 임의의 여행 id 를 넣어볼 수 있어, 403 으로 답하면 그 여행의 존재가 드러난다.
      *
-     * @param trip 판정할 여행
-     * @param userId 요청자의 사용자 id. 비로그인이면 null
-     * @return 볼 수 있으면 true
+     * 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 기록 서비스가 연관을 걸 때 쓰는 서비스 간 호출이다.
+     *
+     * @param tripId 대상 여행 id
+     * @param userId 요청자의 사용자 id
+     * @return 요청자의 여행
+     * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 요청자의 여행이 아닐 때
      */
-    fun canView(trip: TripEntity, userId: Long?): Boolean {
-        if (userId != null && trip.owner.id == userId) return true
-        if (trip.visibility == TripVisibility.PUBLIC) return true
-        if (trip.visibility != TripVisibility.GROUP || userId == null) return false
-
-        return tripShareRepository.existsSharedWithMember(requireNotNull(trip.id), userId)
-    }
+    fun findOwnedTrip(tripId: Long, userId: Long): TripEntity =
+        findTrip(tripId, userId, TripSpecifications.ownedBy(userId))
 
     /**
      * 공유 그룹 목록을 통째로 갈아 끼운다.
@@ -302,29 +293,33 @@ class TripService(
         tripShareRepository.saveAll(groups.map { TripShareEntity(trip = trip, group = it) })
     }
 
-    /** 여행 단건 조회. 없으면 TRIP_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다. */
-    private fun findTrip(tripId: Long): TripEntity =
-        tripRepository.findById(tripId)
-            .orElseThrow { ApiException(ErrorCode.TRIP_NOT_FOUND) }
-
-    /** 볼 수 없는 여행이면 없는 여행과 같은 TRIP_NOT_FOUND 를 던진다. */
-    private fun requireViewable(trip: TripEntity, userId: Long?) {
-        if (canView(trip, userId)) return
-        // 존재 은닉 때문에 응답이 "없음"과 같다. 왜 가려졌는지는 이 로그에만 드러난다.
-        log.debug("여행 열람 차단 tripId={} userId={} visibility={}", trip.id, userId, trip.visibility)
-        // 권한 없음(403)이 아니라 없는 여행(404)으로 답한다. 403 은 "그 여행이 있다" 는 뜻이 된다.
-        throw ApiException(ErrorCode.TRIP_NOT_FOUND)
-    }
+    /** 요청자가 볼 수 있는 여행을 읽는다. 없거나 볼 수 없으면 TRIP_NOT_FOUND 다. */
+    private fun findViewableTrip(tripId: Long, userId: Long?): TripEntity =
+        findTrip(tripId, userId, TripSpecifications.visibleTo(userId))
 
     /** 소유자만 통과시킨다. 볼 수도 없는 여행이면 404, 볼 수 있는데 소유자가 아니면 403 이다. */
-    private fun requireOwner(trip: TripEntity, userId: Long) {
-        // 볼 수도 없는 여행이면 존재부터 숨긴다. 볼 수 있는데 소유자가 아닌 경우에만 403 이다.
-        requireViewable(trip, userId)
+    private fun findEditableTrip(tripId: Long, userId: Long): TripEntity {
+        // 볼 수도 없는 여행이면 존재부터 숨긴다. 존재를 이미 아는 사람에게만 403 으로 답한다.
+        val trip = findViewableTrip(tripId, userId)
         if (trip.owner.id != userId) {
-            log.debug("여행 소유자 아님 tripId={} userId={} ownerId={}", trip.id, userId, trip.owner.id)
+            log.debug("여행 소유자 아님 tripId={} userId={} ownerId={}", tripId, userId, trip.owner.id)
             throw ApiException(ErrorCode.FORBIDDEN)
         }
+        return trip
     }
+
+    /**
+     * 판정 조건을 붙여 여행 하나를 읽는다.
+     *
+     * 판정이 조회 조건에 실려 있어 "없음"과 "권한 없음"이 같은 빈 결과로 나온다. 응답이 구분되지
+     * 않는 것이 존재 은닉 그 자체다.
+     */
+    private fun findTrip(tripId: Long, userId: Long?, access: Specification<TripEntity>): TripEntity =
+        tripRepository.findOne(TripSpecifications.withId(tripId).and(access)).orElseThrow {
+            // 응답이 "없음"과 같으므로 막혔을 수 있다는 사실은 이 로그에만 남는다.
+            log.debug("여행 조회 차단 tripId={} userId={}", tripId, userId)
+            ApiException(ErrorCode.TRIP_NOT_FOUND)
+        }
 
     /** 단건 응답의 기록 수. 목록과 같은 집계 쿼리를 한 건짜리로 쓴다. */
     private fun recordCountOf(tripId: Long): Long = recordCounts(tripId)[tripId] ?: 0L

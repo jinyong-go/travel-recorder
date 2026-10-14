@@ -8,6 +8,7 @@ import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.service.GroupService
 import com.yong.travel.group.service.GroupInviteService
 import com.yong.travel.group.persistence.GroupRepository
+import com.yong.travel.photo.service.PhotoService
 import com.yong.travel.tag.service.TagService
 import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.trip.record.domain.RecordListQuery
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.MediaType
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.transaction.annotation.Transactional
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -53,6 +56,30 @@ class RecordVisibilityTest {
     @Autowired private lateinit var tripRepository: TripRepository
     @Autowired private lateinit var tripShareRepository: TripShareRepository
     @Autowired private lateinit var tagService: TagService
+    @Autowired private lateinit var photoService: PhotoService
+
+    @Test
+    fun `공유받은 기록은 볼 수 있어도 고치거나 사진을 올릴 수 없고 403 이다`() {
+        val owner = newUser()
+        val member = newUser()
+        val stranger = newUser()
+        val groupId = newGroupWith(owner, member)
+        val recordId = newRecord(newTrip(owner, TripVisibility.GROUP, listOf(groupId)))
+        flush()
+
+        assertEquals(recordId, recordService.get(recordId, member).id)
+        // 존재를 이미 아는 사람이라 숨길 이유가 없다. 기록 편집과 사진은 같은 응답이어야 한다.
+        assertEquals(ErrorCode.FORBIDDEN, assertThrows<ApiException> { recordService.delete(recordId, member) }.errorCode)
+        assertEquals(
+            ErrorCode.FORBIDDEN,
+            assertThrows<ApiException> { photoService.upload(recordId, member, listOf(jpeg())) }.errorCode,
+        )
+        // 볼 수도 없는 사람에게는 존재부터 숨긴다.
+        assertEquals(
+            ErrorCode.RECORD_NOT_FOUND,
+            assertThrows<ApiException> { photoService.upload(recordId, stranger, listOf(jpeg())) }.errorCode,
+        )
+    }
 
     @Test
     fun `공개 범위를 지정하지 않은 여행의 기록은 비공개다`() {
@@ -577,6 +604,14 @@ class RecordVisibilityTest {
             rating = 4.5,
         ).toCommand(),
     ).id
+
+    /** 서버가 파일 앞부분의 시그니처를 확인하므로 JPEG 시그니처로 시작하는 최소 파일이다. */
+    private fun jpeg() = MockMultipartFile(
+        "files",
+        "photo.jpg",
+        MediaType.IMAGE_JPEG_VALUE,
+        byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte()),
+    )
 
     private fun flush() {
         entityManager.flush()
