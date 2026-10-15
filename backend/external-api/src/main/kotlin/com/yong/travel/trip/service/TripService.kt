@@ -77,7 +77,7 @@ class TripService(
         }
         val trips = tripRepository.findAll(spec, listPageRequest(page, sort))
 
-        val counts = recordCounts(*trips.content.mapNotNull { it.id }.toLongArray())
+        val counts = recordCounts(trips.content.mapNotNull { it.id })
         // 공유 그룹은 소유자 본인의 항목에만 필요하다. 그 여행들만 골라 한 번에 읽는다.
         val shares = sharesOf(trips.content.filter { userId != null && it.owner.id == userId })
         // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
@@ -228,12 +228,7 @@ class TripService(
         val trip = findEditableTrip(tripId, ownerId)
 
         tripShareRepository.deleteByTripId(tripId)
-
-        // 여행을 먼저 지우고 flush 한다. 하위 기록의 벌크 update 가 영속성 컨텍스트를 비우므로
-        // (clearAutomatically), 순서를 바꾸면 trip 이 준영속 상태가 되어 삭제가 유실된다.
         trip.softDelete()
-        tripRepository.saveAndFlush(trip)
-
         recordRepository.softDeleteByTripId(tripId, Instant.now())
         // 하위 기록의 사진 바이너리도 지운다. 메타데이터는 기록과 함께 남는다.
         val purged = photoDatabaseService.deleteByTrip(tripId)
@@ -321,14 +316,10 @@ class TripService(
             ApiException(ErrorCode.TRIP_NOT_FOUND)
         }
 
-    /** 단건 응답의 기록 수. 목록과 같은 집계 쿼리를 한 건짜리로 쓴다. */
-    private fun recordCountOf(tripId: Long): Long = recordCounts(tripId)[tripId] ?: 0L
-
     /** 여행별 기록 수를 한 번에 센다. 기록이 없는 여행은 결과에 없으므로 호출부가 0 으로 읽는다. */
-    private fun recordCounts(vararg tripIds: Long): Map<Long, Long> {
+    private fun recordCounts(tripIds: Collection<Long>): Map<Long, Long> {
         if (tripIds.isEmpty()) return emptyMap()
-        return recordRepository.countByTripIds(tripIds.toList())
-            .associate { (it[0] as Number).toLong() to (it[1] as Number).toLong() }
+        return recordRepository.countByTripIds(tripIds).associate { it.tripId to it.count }
     }
 
     /**
@@ -351,7 +342,8 @@ class TripService(
     private fun detailOf(trip: TripEntity, requesterId: Long?): Trip {
         val tripId = requireNotNull(trip.id)
         val shares = if (requesterId != null && trip.owner.id == requesterId) sharesOf(listOf(trip)) else emptyMap()
-        return trip.toDomain(requesterId, recordCountOf(tripId), shares)
+        // 단건도 목록과 같은 집계 쿼리를 한 건짜리로 쓴다.
+        return trip.toDomain(requesterId, recordCounts(listOf(tripId))[tripId] ?: 0L, shares)
     }
 
     /**

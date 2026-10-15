@@ -294,7 +294,7 @@ class TripRecordService(
     private fun tagsOf(recordIds: List<Long>): Map<Long, List<String>> {
         if (recordIds.isEmpty()) return emptyMap()
         return recordRepository.findTagNamesByRecordIds(recordIds)
-            .groupBy({ (it[0] as Number).toLong() }) { it[1] as String }
+            .groupBy({ it.recordId }) { it.name }
     }
 
     /** 사진 엔티티 → 접근 URL 을 붙인 도메인 값. */

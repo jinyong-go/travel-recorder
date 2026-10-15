@@ -4,6 +4,7 @@ import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.auth.persistence.toUser
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
+import com.yong.travel.common.util.trimToNull
 import com.yong.travel.group.domain.Group
 import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.persistence.GroupEntity
@@ -82,7 +83,7 @@ class GroupService(
         val owner = userRepository.findById(userId)
             .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
         val group = groupRepository.save(
-            GroupEntity(owner = owner, name = name.trim(), memo = memo.blankToNull()),
+            GroupEntity(owner = owner, name = name.trim(), memo = memo.trimToNull()),
         )
         // 소유자도 멤버 행을 가진다. 인원 계산과 조회 권한 판정을 한 경로로 모으기 위해서다.
         val ownerMember = groupMemberRepository.save(GroupMemberEntity(group = group, user = owner))
@@ -108,7 +109,7 @@ class GroupService(
         val group = findGroup(groupId)
         requireOwner(group, userId)
         group.name = name.trim()
-        group.memo = memo.blankToNull()
+        group.memo = memo.trimToNull()
         val saved = groupRepository.save(group)
         log.debug("그룹 수정 groupId={} ownerId={}", groupId, userId)
         return detailOf(saved)
@@ -207,21 +208,14 @@ class GroupService(
         val distinct = groupIds.distinct()
         if (distinct.isEmpty()) return emptyList()
 
-        val accessible = groupIdsOf(userId).toSet()
-        if (!accessible.containsAll(distinct)) {
-            log.debug("공유 대상 그룹 차단 userId={} requested={} accessible={}", userId, distinct, accessible)
+        // (그룹 id, 사용자) 멤버 행은 하나뿐이라, 하나라도 빠졌으면 속하지 않은 그룹이 섞인 것이다.
+        val groups = groupMemberRepository.findGroupsByIdInAndUserId(distinct, userId)
+        if (groups.size != distinct.size) {
+            log.debug("공유 대상 그룹 차단 userId={} requested={} accessible={}", userId, distinct, groups.map { it.id })
             throw ApiException(ErrorCode.GROUP_NOT_FOUND)
         }
-        return groupRepository.findAllById(distinct)
+        return groups
     }
-
-    /**
-     * 사용자가 속한 그룹 id 목록을 조회한다. 공유 대상 그룹 검증이 쓴다.
-     *
-     * @param userId 사용자 id
-     * @return 속한 그룹 id 목록
-     */
-    private fun groupIdsOf(userId: Long): List<Long> = groupMemberRepository.findGroupIdsByUserId(userId)
 
     /** 그룹 단건 조회. 없으면 GROUP_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다. */
     private fun findGroup(groupId: Long): GroupEntity =
@@ -235,9 +229,6 @@ class GroupService(
             throw ApiException(ErrorCode.FORBIDDEN)
         }
     }
-
-    /** 공백만 남은 메모는 "메모 없음" 과 같다. 카드에 빈 줄만 그려지지 않도록 null 로 모은다. */
-    private fun String?.blankToNull(): String? = this?.trim()?.takeIf { it.isNotBlank() }
 
     /** 단건 응답. 이 그룹의 명단만 읽어 [toDomain] 에 넘긴다. */
     private fun detailOf(group: GroupEntity): Group {

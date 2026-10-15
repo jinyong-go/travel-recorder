@@ -2,6 +2,7 @@ package com.yong.travel.trip.persistence
 
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
+import com.yong.travel.common.util.trimToNull
 import com.yong.travel.trip.domain.TripScope
 import org.springframework.data.jpa.domain.Specification
 
@@ -63,7 +64,7 @@ object TripSpecifications {
      */
     fun withKeyword(keyword: String?): Specification<TripEntity> =
         Specification { root, _, cb ->
-            val trimmed = keyword?.trim()?.takeIf { it.isNotEmpty() }
+            val trimmed = keyword.trimToNull()
                 ?: return@Specification cb.conjunction()
             cb.like(root.get("name"), containsPattern(trimmed), LIKE_ESCAPE)
         }

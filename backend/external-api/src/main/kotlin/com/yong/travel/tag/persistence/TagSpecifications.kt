@@ -2,6 +2,7 @@ package com.yong.travel.tag.persistence
 
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
+import com.yong.travel.common.util.trimToNull
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripVisibilityPredicates
 import com.yong.travel.trip.record.persistence.TripRecordEntity
@@ -44,7 +45,7 @@ object TagSpecifications {
      */
     fun nameContains(keyword: String?): Specification<TagEntity> =
         Specification { tag, _, cb ->
-            val trimmed = keyword?.trim()?.takeIf { it.isNotEmpty() }
+            val trimmed = keyword.trimToNull()
                 ?: return@Specification cb.conjunction()
             cb.like(cb.lower(tag.get("name")), containsPattern(trimmed.lowercase()), LIKE_ESCAPE)
         }

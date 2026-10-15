@@ -1,7 +1,7 @@
 package com.yong.travel.trip.presentation
 
 import com.yong.travel.auth.presentation.UserResponse
-import com.yong.travel.group.domain.GroupRef
+import com.yong.travel.group.presentation.GroupBriefResponse
 import com.yong.travel.trip.domain.Trip
 import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.domain.TripVisibility
@@ -26,27 +26,6 @@ data class TripRefResponse(
          * @return 응답 DTO
          */
         fun from(trip: TripRef) = TripRefResponse(trip.id, trip.name)
-    }
-}
-
-/**
- * 여행 응답에 담기는 공유 그룹.
- *
- * 그룹 목록 화면의 `GroupSummaryResponse` 와 달리 멤버 수·정원을 담지 않는다. 여행 응답에
- * 그룹의 인원 사정까지 실을 이유가 없다.
- */
-data class SharedGroupResponse(
-    val id: Long,
-    val name: String,
-) {
-    companion object {
-        /**
-         * 공유 그룹 → 응답.
-         *
-         * @param group 그룹 id 와 이름
-         * @return 응답 DTO
-         */
-        fun from(group: GroupRef) = SharedGroupResponse(group.id, group.name)
     }
 }
 
@@ -76,7 +55,7 @@ data class TripResponse(
     val owner: UserResponse,
     val isOwner: Boolean,
     val visibility: TripVisibility?,
-    val sharedGroups: List<SharedGroupResponse>?,
+    val sharedGroups: List<GroupBriefResponse>?,
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
@@ -104,7 +83,7 @@ data class TripResponse(
             owner = UserResponse.from(trip.owner),
             isOwner = trip.isOwnedBy(requesterId),
             visibility = trip.visibility,
-            sharedGroups = trip.sharedGroups?.map { SharedGroupResponse.from(it) },
+            sharedGroups = trip.sharedGroups?.map { GroupBriefResponse.from(it) },
             createdAt = trip.createdAt,
             updatedAt = trip.updatedAt,
         )
@@ -125,7 +104,7 @@ data class TripSummaryResponse(
     val owner: UserResponse,
     val isOwner: Boolean,
     val visibility: TripVisibility?,
-    val sharedGroups: List<SharedGroupResponse>?,
+    val sharedGroups: List<GroupBriefResponse>?,
     val createdAt: Instant,
 ) {
     companion object {
@@ -149,7 +128,7 @@ data class TripSummaryResponse(
             owner = UserResponse.from(trip.owner),
             isOwner = trip.isOwnedBy(requesterId),
             visibility = trip.visibility,
-            sharedGroups = trip.sharedGroups?.map { SharedGroupResponse.from(it) },
+            sharedGroups = trip.sharedGroups?.map { GroupBriefResponse.from(it) },
             createdAt = trip.createdAt,
         )
     }

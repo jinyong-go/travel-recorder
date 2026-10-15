@@ -4,6 +4,7 @@ import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.common.persistence.PostgisFunctions
 import com.yong.travel.common.util.LIKE_ESCAPE
 import com.yong.travel.common.util.containsPattern
+import com.yong.travel.common.util.trimToNull
 import com.yong.travel.tag.persistence.TagEntity
 import com.yong.travel.trip.persistence.TripEntity
 import com.yong.travel.trip.persistence.TripVisibilityPredicates
@@ -100,8 +101,8 @@ object TripRecordSpecifications {
 
             category?.let { predicates.add(cb.equal(root.get<Category>("category"), it)) }
 
-            keyword?.takeIf { it.isNotBlank() }?.let {
-                val like = containsPattern(it.trim())
+            keyword.trimToNull()?.let {
+                val like = containsPattern(it)
                 predicates.add(
                     cb.or(
                         cb.like(root.get("name"), like, LIKE_ESCAPE),
@@ -111,10 +112,10 @@ object TripRecordSpecifications {
             }
 
             // 조인으로 거르면 태그 행만큼 기록이 불어나 DISTINCT 가 필요해진다. EXISTS 는 기록 행을 늘리지 않는다.
-            tag?.takeIf { it.isNotBlank() }?.let {
+            tag.trimToNull()?.let {
                 val sub = requireNotNull(query).subquery(Long::class.java)
                 val tagged = sub.correlate(root).join<TripRecordEntity, TagEntity>("tags")
-                sub.select(cb.literal(1L)).where(cb.equal(tagged.get<String>("name"), it.trim()))
+                sub.select(cb.literal(1L)).where(cb.equal(tagged.get<String>("name"), it))
                 predicates.add(cb.exists(sub))
             }
 

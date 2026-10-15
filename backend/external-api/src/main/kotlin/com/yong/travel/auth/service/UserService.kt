@@ -3,6 +3,7 @@ package com.yong.travel.auth.service
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.auth.security.CustomOAuth2User
+import com.yong.travel.common.util.trimToNull
 import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest
@@ -40,7 +41,7 @@ class UserService(
 
         val providerId = attributes["id"].toString()
         // 빈 문자열로 채우면 이메일을 못 받은 계정이 둘째로 생기는 순간 유니크 제약에 걸린다 (UserEntity 참고).
-        val email = (attributes["email"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+        val email = (attributes["email"] as? String).trimToNull()
         val name = (attributes["name"] ?: attributes["nickname"]) as? String ?: providerId
         val profileImageUrl = attributes["profile_image"] as? String
 

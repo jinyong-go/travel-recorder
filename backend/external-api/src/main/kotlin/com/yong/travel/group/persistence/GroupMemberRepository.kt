@@ -64,13 +64,17 @@ interface GroupMemberRepository : JpaRepository<GroupMemberEntity, Long> {
     fun deleteByGroupId(@Param("groupId") groupId: Long): Int
 
     /**
-     * 사용자가 소유자이든 초대로 들어왔든, 속한 그룹 id 전부를 읽는다. 공유 대상 그룹 검증이 쓴다.
+     * 요청한 그룹 중 사용자가 소유자이든 초대로 들어왔든 속한 그룹만 읽는다. 공유 대상 그룹 검증이 쓴다.
      *
+     * @param groupIds 그룹 id 목록
      * @param userId 사용자 id
-     * @return 속한 그룹 id 목록
+     * @return 속한 그룹 엔티티. 속하지 않았거나 없는 그룹은 빠진다
      */
-    @Query("select m.group.id from GroupMemberEntity m where m.user.id = :userId")
-    fun findGroupIdsByUserId(@Param("userId") userId: Long): List<Long>
+    @Query("select m.group from GroupMemberEntity m where m.group.id in :groupIds and m.user.id = :userId")
+    fun findGroupsByIdInAndUserId(
+        @Param("groupIds") groupIds: Collection<Long>,
+        @Param("userId") userId: Long,
+    ): List<GroupEntity>
 
     /**
      * 사용자가 속한 그룹을 이름순으로 읽는다.

@@ -94,7 +94,12 @@ data class GroupResponse(
     }
 }
 
-/** 받은 초대에 담기는 그룹 정보. 수락 전에는 멤버 목록도 공유된 여행도 보이지 않는다. */
+/**
+ * 그룹의 id 와 이름만 담는 참조. 초대와 여행의 공유 그룹이 함께 쓴다.
+ *
+ * 멤버 수·정원·명단은 담지 않는다. 초대받은 사람은 수락 전이라 볼 수 없고, 여행 응답에는
+ * 그룹의 인원 사정까지 실을 이유가 없다.
+ */
 data class GroupBriefResponse(
     val id: Long,
     val name: String,
