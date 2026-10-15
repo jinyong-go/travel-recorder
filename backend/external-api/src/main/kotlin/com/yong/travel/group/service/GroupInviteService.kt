@@ -107,19 +107,23 @@ class GroupInviteService(
     /**
      * 소유자가 대기 중인 초대를 철회한다.
      *
+     * 그룹의 다른 소유자 전용 동작과 같은 관문을 먼저 거친다. 초대는 그 뒤에 찾으므로 소유자가 아닌
+     * 사람에게는 `inviteId` 가 무엇이든 같은 403 이라, 초대의 존재가 드러나지 않는다.
+     *
      * @param groupId 경로의 그룹 id. 초대의 그룹과 같아야 한다
      * @param inviteId 철회할 초대 id
-     * @param ownerId 요청자의 사용자 id. 초대를 보낸 소유자여야 한다
-     * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나, 보낸 소유자가 아니거나, 경로의 그룹과
-     *         어긋날 때. 당사자가 아니면 초대의 존재도 드러내지 않는다
+     * @param ownerId 요청자의 사용자 id. 소유자여야 한다
+     * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
+     * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
+     * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나 경로의 그룹 초대가 아닐 때
      */
     @Transactional
     fun revoke(groupId: Long, inviteId: Long, ownerId: Long) {
+        requireOwner(findGroup(groupId), ownerId)
         val invite = findInvite(inviteId)
-        // 보낸 소유자가 아니면 그 초대의 존재도 드러내지 않는다. 경로의 그룹과 어긋나는 id 도 같은 응답이다.
-        if (invite.group.id != groupId || invite.group.owner.id != ownerId) {
-            // 당사자가 아니면 없는 초대와 같은 응답이라, 막힌 이유는 이 로그에만 남는다.
-            log.debug("초대 철회 차단 inviteId={} groupId={} ownerId={}", inviteId, groupId, ownerId)
+        // 다른 그룹의 초대 id 는 이 그룹에 없는 초대와 같은 응답이다.
+        if (invite.group.id != groupId) {
+            log.debug("초대 철회 차단: 다른 그룹의 초대 inviteId={} groupId={}", inviteId, groupId)
             throw ApiException(ErrorCode.INVITE_NOT_FOUND)
         }
         resolve(invite, InviteOutcome.REVOKED)

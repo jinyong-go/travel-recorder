@@ -423,7 +423,7 @@ class RecordVisibilityTest {
     }
 
     @Test
-    fun `당사자가 아닌 초대는 수락도 거절도 철회도 404 다`() {
+    fun `당사자가 아닌 초대는 수락도 거절도 404 다`() {
         val owner = newUser()
         newUser(email = "friend@example.com")
         val stranger = newUser()
@@ -434,8 +434,23 @@ class RecordVisibilityTest {
         // 403 이면 "그런 초대가 있다" 는 뜻이 되므로 없는 id 와 같은 404 여야 한다.
         assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.accept(inviteId, stranger) }.errorCode)
         assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.reject(inviteId, stranger) }.errorCode)
-        assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.revoke(groupId, inviteId, stranger) }.errorCode)
         assertTrue(groupInviteService.listReceived(stranger, firstPage()).content.isEmpty())
+    }
+
+    @Test
+    fun `초대 철회는 그룹 규칙을 따라 소유자가 아니면 403 이고 다른 그룹의 초대는 404 다`() {
+        val owner = newUser()
+        newUser(email = "friend@example.com")
+        val stranger = newUser()
+        val groupId = requireNotNull(groupService.create(owner, "가족", null).id)
+        val otherGroupId = requireNotNull(groupService.create(owner, "회사", null).id)
+        val inviteId = groupInviteService.invite(groupId, owner, "friend@example.com").invite.id
+        flush()
+
+        // 소유자 확인이 초대 조회보다 먼저라, 없는 초대 id 로도 같은 403 이어서 초대의 존재가 드러나지 않는다.
+        assertEquals(ErrorCode.FORBIDDEN, assertThrows<ApiException> { groupInviteService.revoke(groupId, inviteId, stranger) }.errorCode)
+        assertEquals(ErrorCode.FORBIDDEN, assertThrows<ApiException> { groupInviteService.revoke(groupId, Long.MAX_VALUE, stranger) }.errorCode)
+        assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.revoke(otherGroupId, inviteId, owner) }.errorCode)
     }
 
     @Test
