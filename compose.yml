@@ -1,5 +1,7 @@
-# 로컬 실행. `docker compose up` 이면 DB 와 API 서버가 함께 뜬다.
+# 로컬 실행. `docker compose up` 이면 DB·API 서버·프론트엔드가 함께 뜬다.
 # DB 만 띄우고 IDE·bootRun 으로 API 서버를 돌리려면 `docker compose up db`.
+# 프론트엔드를 개발 서버(HMR)로 돌리려면 `docker compose up db api` 후 `npm run dev` (web 과 5173 포트가 겹친다).
+# 배치는 잡 하나를 돌리고 끝나는 프로그램이라 상시 서비스로 두지 않는다. 필요하면 Gradle 로 직접 실행한다.
 # 데이터는 db-data 볼륨에 남는다. 처음 상태로 되돌리려면 `docker compose down -v`.
 services:
   db:
@@ -21,7 +23,7 @@ services:
       retries: 30
 
   api:
-    build: .
+    build: ./backend
     depends_on:
       db:
         condition: service_healthy
@@ -30,6 +32,18 @@ services:
       DB_URL: jdbc:postgresql://db:5432/travel
     ports:
       - "8080:8080"
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # API 는 컨테이너가 아니라 브라우저가 부르므로 VITE_API_BASE_URL 은 기본값(localhost:8080)을 그대로 쓴다.
+        VITE_NAVER_MAP_CLIENT_ID: ${VITE_NAVER_MAP_CLIENT_ID:-}
+    depends_on:
+      - api
+    # 백엔드 local 프로파일의 CORS 허용 오리진(http://localhost:5173)과 맞춘다.
+    ports:
+      - "5173:80"
 
 volumes:
   db-data:

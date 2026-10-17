@@ -145,6 +145,10 @@ npm run dev
 
 기본 주소는 http://localhost:5173. HMR(핫 리로드) 적용.
 
+Docker로 띄우려면 저장소 루트에서 `docker compose up web` (또는 백엔드까지 `docker compose up`).
+빌드 결과를 nginx로 서빙하며 같은 5173 포트를 쓰므로 개발 서버와 동시에 띄우지 않음.
+`VITE_*` 값은 빌드 시점에 번들에 들어가므로 바꾸면 `--build`로 이미지를 다시 빌드.
+
 백엔드가 함께 떠 있어야 화면이 동작. 로그인은 임시 계정 `user1`·`user2`·`user3`, 비밀번호 `password`
 (백엔드 `local`·`dev` 프로파일 전용).
 

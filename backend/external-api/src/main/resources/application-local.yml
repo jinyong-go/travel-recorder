@@ -1,4 +1,4 @@
-# 로컬 개발용. compose.yml 의 PostgreSQL(PostGIS) 에 붙는다.
+# 로컬 개발용. 루트 compose.yml 의 PostgreSQL(PostGIS) 에 붙는다.
 # `docker compose up db` 로 DB 만 띄우고 bootRun 해도 되고, `docker compose up` 으로 API 서버까지 함께
 # 띄워도 된다. 그때는 compose 가 DB_URL 을 컨테이너 안의 주소로 넘긴다.
 spring:

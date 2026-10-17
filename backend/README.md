@@ -36,8 +36,7 @@ Gradle 멀티 모듈. 두 모듈은 서로 의존하지 않음.
 backend/
 ├─ settings.gradle.kts     # 모듈 목록
 ├─ build.gradle.kts        # 공통 빌드 설정 (플러그인 버전, Kotlin 옵션, Java 17, JUnit)
-├─ Dockerfile              # API 서버 이미지
-├─ compose.yml             # 로컬 실행 (PostgreSQL + API 서버)
+├─ Dockerfile              # API 서버 이미지 (배치 소스는 .dockerignore로 제외)
 ├─ external-api/           # API 서버 — 아래 디렉터리 구조 참고
 ├─ batch/                  # 정기 정리 작업 (Spring Batch). 웹 서버 없이 잡 실행 후 종료
 │  ├─ build.gradle.kts
@@ -192,15 +191,17 @@ export NAVER_SEARCH_CLIENT_SECRET=...
 
 ### 3. 개발 서버 실행
 
-Docker 필요. DB와 API 서버를 함께 띄우는 방법과, DB만 띄우고 API 서버는 Gradle로 돌리는 방법이 있음.
+Docker 필요. compose 파일은 저장소 루트의 `compose.yml`이며 `docker compose`는 루트에서 실행.
+DB와 API 서버를 함께 띄우는 방법과, DB만 띄우고 API 서버는 Gradle로 돌리는 방법이 있음.
+배치는 compose 서비스에 포함하지 않음.
 
 ```bash
-cd backend
-docker compose up                  # PostgreSQL(PostGIS) + API 서버
+# 저장소 루트에서
+docker compose up db api           # PostgreSQL(PostGIS) + API 서버 (프론트엔드까지는 docker compose up)
 
 # 또는 DB 만 띄우고 API 서버는 IDE·Gradle 로
 docker compose up db
-./gradlew :external-api:bootRun
+cd backend && ./gradlew :external-api:bootRun
 ```
 
 기본 주소는 http://localhost:8080. (Windows는 `./gradlew` 대신 `gradlew.bat`)

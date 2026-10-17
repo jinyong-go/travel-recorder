@@ -32,16 +32,28 @@
 
 ## 빠르게 실행하기
 
-두 모듈을 각각 기동. 백엔드는 8080, 프론트엔드는 5173 포트 사용. 백엔드 CORS에
-`http://localhost:5173`이 허용되어 있어 별도 프록시 설정 불필요. 백엔드는 Docker 필요.
+Docker 필요. 저장소 루트에서 한 번에 기동. 프론트엔드는 http://localhost:5173, 백엔드는 8080 포트 사용.
+백엔드 CORS에 `http://localhost:5173`이 허용되어 있어 별도 프록시 설정 불필요.
 
 ```bash
-# 터미널 1 — 백엔드 (PostgreSQL + API 서버, local 프로파일)
-cd backend && docker compose up
+docker compose up    # PostgreSQL + API 서버(local 프로파일) + 프론트엔드(nginx)
+```
+
+프론트엔드를 개발 서버(HMR)로 돌리려면 백엔드만 compose로 띄우고 프론트엔드는 따로 기동.
+compose의 `web`과 5173 포트가 겹치므로 `web`은 함께 띄우지 않음.
+
+```bash
+# 터미널 1 — 백엔드 (PostgreSQL + API 서버)
+docker compose up db api
 
 # 터미널 2 — 프론트엔드
 cd frontend && npm install && npm run dev
 ```
+
+- **배치**는 compose에 포함하지 않음. 잡 하나를 돌리고 끝나는 프로그램이라 필요할 때 Gradle로 직접 실행
+  ([backend README](./backend/README.md) 참고)
+- 지도 Client ID를 넣으려면 `VITE_NAVER_MAP_CLIENT_ID=... docker compose up --build`.
+  번들에 들어가는 값이라 바꾸면 이미지를 다시 빌드해야 함
 
 - **로그인**: 네이버 OAuth 복구 전까지 `local`·`dev` 프로파일 전용 임시 계정으로 로그인
   (`user1`·`user2`·`user3`, 비밀번호 `password`). 계정이 셋이라 그룹 공유·초대를 직접 주고받기 가능

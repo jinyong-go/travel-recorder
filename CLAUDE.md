@@ -179,9 +179,10 @@ backend/   Kotlin + Spring Boot 멀티 모듈 — external-api(API 서버), batc
 frontend/  React + Vite. components / context / config / utils / pages
 ```
 
-- 백엔드 실행: `cd backend && docker compose up` (PostgreSQL + API 서버). DB 만 띄우고
-  `./gradlew :external-api:bootRun` 으로 돌려도 된다 (`docker compose up db`, 기본 `local` 프로파일)
-- 프론트엔드 실행: `cd frontend && npm run dev` (5173 포트)
+- 전체 실행: 루트에서 `docker compose up` (PostgreSQL + API 서버 + 프론트엔드). 배치는 띄우지 않는다
+- 백엔드만: `docker compose up db api`. DB 만 띄우고 `cd backend && ./gradlew :external-api:bootRun`
+  으로 돌려도 된다 (`docker compose up db`, 기본 `local` 프로파일)
+- 프론트엔드 개발 서버: `cd frontend && npm run dev` (5173 포트, compose 의 `web` 과 겹친다)
 - 프론트엔드 린트: `cd frontend && npm run lint` (oxlint)
 - 백엔드 테스트: `cd backend && ./gradlew test` (모든 모듈, Testcontainers 라 Docker 가 떠 있어야 한다)
 

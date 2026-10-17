@@ -14,6 +14,9 @@ npm run lint      # oxlint
 npm run build     # 프로덕션 빌드
 ```
 
+Docker 이미지(`Dockerfile`)는 빌드 결과를 nginx 로 서빙한다. 루트 `compose.yml` 의 `web` 서비스가
+호스트 5173 포트에 붙이므로 `npm run dev` 와 동시에 띄우지 않는다.
+
 ## 스택
 
 React 19 / Vite / react-router / **순수 JavaScript**

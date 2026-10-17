@@ -8,8 +8,10 @@
 
 ## 명령
 
+compose 파일은 저장소 루트에 있다 (`compose.yml`). `docker compose` 는 루트에서 실행한다.
+
 ```bash
-docker compose up                 # PostgreSQL(PostGIS) + API 서버 (local 프로파일)
+docker compose up db api          # PostgreSQL(PostGIS) + API 서버 (local 프로파일). 루트에서
 docker compose up db              # DB 만. 이어서 bootRun 으로 API 서버를 돌릴 때
 docker compose down -v            # 로컬 DB 를 처음 상태로 (볼륨 삭제)
 ./gradlew :external-api:bootRun   # API 서버 실행 (기본 local 프로파일, compose 의 DB 에 붙는다)
@@ -20,6 +22,8 @@ docker compose down -v            # 로컬 DB 를 처음 상태로 (볼륨 삭�
 
 - **모듈을 지정하지 않은 `./gradlew bootRun` 은 쓰지 않는다.** 두 모듈의 `bootRun` 이 함께 잡히고,
   API 서버가 프로세스를 붙잡아 배치는 돌지 않는다.
+- **Docker 이미지는 API 서버만 담는다.** 배치는 compose 서비스가 아니며, `.dockerignore` 가
+  `batch/src` 를 빼므로 이미지 빌드에 배치 소스가 들어가지 않는다.
 
 - 프로파일: `local`(compose 의 PostgreSQL) / `dev` / `prod`. 테스트는 `test` 프로파일이며
   Testcontainers 가 PostGIS 컨테이너를 띄운다(`jdbc:tc:` URL). 모든 환경이 PostgreSQL + PostGIS 다.
