@@ -1,15 +1,13 @@
 package com.yong.travel.search.service
 
 import com.yong.travel.common.domain.PageResult
-import com.yong.travel.common.util.haversineKm
-import com.yong.travel.common.util.roundTo2Decimals
 import com.yong.travel.search.client.NaverLocalSearchClient
 import com.yong.travel.search.client.NaverLocalSearchItem
 import com.yong.travel.search.domain.PlaceCandidate
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
-/** 네이버 지역 검색 결과를 후보로 바꿔 거리순 정렬·페이지 자르기까지 해서 돌려준다. */
+/** 네이버 지역 검색 결과를 후보로 바꿔 페이지 자르기까지 해서 돌려준다. */
 @Service
 class PlaceSearchService(
     private val naverLocalSearchClient: NaverLocalSearchClient,
@@ -18,63 +16,42 @@ class PlaceSearchService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * 검색어로 장소 후보를 찾는다. 기준 좌표가 둘 다 오면 거리를 계산해 가까운 순으로 정렬한다.
+     * 검색어로 장소 후보를 찾는다. 순서는 원본 API 의 순서를 그대로 따른다.
+     *
+     * 거리순 정렬은 하지 않는다. 기준 위치를 서버로 받지 않고 프론트엔드가 받은 후보로 직접 계산한다.
      *
      * @param keyword 검색어
-     * @param lat 기준 위도. 계산에만 쓰고 남기지 않는다
-     * @param lng 기준 경도. 계산에만 쓰고 남기지 않는다
      * @param page 0부터 시작하는 페이지 번호
      * @return 장소 후보 한 페이지
      * @throws ApiException `PLACE_SEARCH_UNAVAILABLE` — 외부 검색 API 호출이 실패했을 때
      */
-    fun search(
-        keyword: String,
-        lat: Double?,
-        lng: Double?,
-        page: Int,
-    ): PageResult<PlaceCandidate> {
+    fun search(keyword: String, page: Int): PageResult<PlaceCandidate> {
         // 원본 API 는 검색어당 최대 5건만 반환한다. 후보 풀을 늘리려면 여기서 검색어 변형
         // (지역명 결합 등)으로 추가 호출한 뒤 아래 중복 제거에 함께 태운다.
         val candidates = naverLocalSearchClient.search(keyword)
             .distinctBy { it.address }
-            .map { it.toCandidate(lat, lng) }
+            .map { it.toCandidate() }
 
-        val sorted = if (lat != null && lng != null) {
-            candidates.sortedBy { it.distanceKm ?: Double.MAX_VALUE }
-        } else {
-            candidates
-        }
-
-        // 기준 좌표(lat,lng)는 남기지 않는다. 계산에만 쓰고 사용자와 묶지 않기로 한 값이다.
-        log.debug("장소 검색 page={} sortByDistance={} count={}", page, lat != null && lng != null, sorted.size)
+        log.debug("장소 검색 page={} count={}", page, candidates.size)
 
         // 원본 API 가 페이지를 모르므로 모아 온 후보를 여기서 자른다.
         val current = page.coerceAtLeast(0)
-        val fromIndex = (current * PAGE_SIZE).coerceAtMost(sorted.size)
-        val toIndex = (fromIndex + PAGE_SIZE).coerceAtMost(sorted.size)
-        return PageResult(sorted.subList(fromIndex, toIndex), current, PAGE_SIZE, sorted.size.toLong())
+        val fromIndex = (current * PAGE_SIZE).coerceAtMost(candidates.size)
+        val toIndex = (fromIndex + PAGE_SIZE).coerceAtMost(candidates.size)
+        return PageResult(candidates.subList(fromIndex, toIndex), current, PAGE_SIZE, candidates.size.toLong())
     }
 
     /** 원본 응답 → 후보. 좌표 환산과 HTML 태그 제거가 여기서 끝난다. */
-    private fun NaverLocalSearchItem.toCandidate(lat: Double?, lng: Double?): PlaceCandidate {
-        val longitude = (mapx.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE
-        val latitude = (mapy.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE
-        return PlaceCandidate(
-            name = title.replace(HTML_TAG_REGEX, ""),
-            category = category,
-            address = address,
-            roadAddress = roadAddress,
-            telephone = telephone,
-            latitude = latitude,
-            longitude = longitude,
-            distanceKm = if (lat != null && lng != null) {
-                haversineKm(lat, lng, latitude, longitude).roundTo2Decimals()
-            } else {
-                null
-            },
-            link = link,
-        )
-    }
+    private fun NaverLocalSearchItem.toCandidate() = PlaceCandidate(
+        name = title.replace(HTML_TAG_REGEX, ""),
+        category = category,
+        address = address,
+        roadAddress = roadAddress,
+        telephone = telephone,
+        latitude = (mapy.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE,
+        longitude = (mapx.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE,
+        link = link,
+    )
 
     companion object {
         /**

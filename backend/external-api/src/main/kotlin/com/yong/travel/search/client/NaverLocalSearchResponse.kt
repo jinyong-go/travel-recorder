@@ -1,9 +1,9 @@
 package com.yong.travel.search.client
 
 /**
- * 네이버 지역 검색 오픈API 원본 응답.
- * mapx/mapy 는 정수형 문자열(위경도 x 10^7)로 내려오므로 변환이 필요하다.
- * 실제 연동 시 표본 응답으로 타입/좌표계를 한 번 더 확인한다.
+ * NAVER API HUB 지역 검색 원본 응답.
+ * mapx(경도)/mapy(위도) 는 WGS84 기준 정수형 문자열(x 10^7)로 내려오므로 변환이 필요하다.
+ * 공식 문서는 배율을 밝히지 않으므로 실제 응답 표본으로 한 번 더 확인한다.
  */
 data class NaverLocalSearchResponse(
     val total: Int = 0,

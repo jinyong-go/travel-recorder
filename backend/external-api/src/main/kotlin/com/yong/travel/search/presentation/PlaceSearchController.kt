@@ -30,8 +30,6 @@ class PlaceSearchController(
      * 익명 요청만으로 일일 호출 한도가 소진된다.
      *
      * @param keyword 검색어
-     * @param lat 기준 위도. 있으면 거리순으로 정렬한다
-     * @param lng 기준 경도. 있으면 거리순으로 정렬한다
      * @param page 0부터 시작하는 페이지 번호
      * @param principal 로그인 사용자. 비로그인이면 null
      * @return 장소 후보 한 페이지
@@ -41,13 +39,11 @@ class PlaceSearchController(
     @GetMapping("/search")
     fun search(
         @RequestParam keyword: String,
-        @RequestParam(required = false) lat: Double?,
-        @RequestParam(required = false) lng: Double?,
         @RequestParam(defaultValue = "0") page: Int,
         @AuthenticationPrincipal principal: LoginUser?,
     ): PageResponse<PlaceSearchResultResponse> {
         requireLogin(principal)
-        return PageResponse.of(placeSearchService.search(keyword, lat, lng, page))
+        return PageResponse.of(placeSearchService.search(keyword, page))
             .map { PlaceSearchResultResponse.from(it) }
     }
 }

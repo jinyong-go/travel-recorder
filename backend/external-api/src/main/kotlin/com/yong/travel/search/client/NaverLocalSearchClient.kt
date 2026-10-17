@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 
-/** 네이버 지역 검색 오픈API 호출. 응답 모델은 [NaverLocalSearchResponse] 다. */
+/** NAVER API HUB 지역 검색 호출. 응답 모델은 [NaverLocalSearchResponse] 다. */
 @Component
 class NaverLocalSearchClient(
     private val naverSearchRestClient: RestClient,

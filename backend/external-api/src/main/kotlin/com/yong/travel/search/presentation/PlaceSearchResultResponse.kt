@@ -11,8 +11,6 @@ data class PlaceSearchResultResponse(
     val telephone: String?,
     val latitude: Double,
     val longitude: Double,
-    /** 기준 위치(lat/lng)가 전달된 경우에만 채워진다. */
-    val distanceKm: Double?,
     val link: String?,
 ) {
     companion object {
@@ -30,7 +28,6 @@ data class PlaceSearchResultResponse(
             telephone = candidate.telephone,
             latitude = candidate.latitude,
             longitude = candidate.longitude,
-            distanceKm = candidate.distanceKm,
             link = candidate.link,
         )
     }

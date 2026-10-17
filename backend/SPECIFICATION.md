@@ -30,20 +30,23 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
 > `SecurityConfig` 가 열려 있어 컨트롤러가 `requireLogin` 으로 직접 막는다. 공개 범위 판정 자체는
 > 서비스·조회 계층에 구현되어 있다. 남은 차이는 §8.1에 있다.
 
-### 1.3 네이버 지역 검색 오픈API — 구현에 필요한 사실
-제품 구분과 구조적 제약(검색어당 5건 상한, 거리순 정렬 미지원, CORS 미지원, 고유 장소 ID 부재)은
-[공통 명세 §4](../SPECIFICATION.md) 에 있다. 여기서는 **백엔드가 코드로 처리해야 하는 것만** 적는다.
+### 1.3 NAVER API HUB 지역 검색 — 구현에 필요한 사실
+제품 구분·구조적 제약(검색어당 5건 상한, 거리순 정렬 미지원, CORS 미지원, 고유 장소 ID 부재)과 공식
+문서 링크는 [공통 명세 §4](../SPECIFICATION.md) 에 있다. 여기서는 **백엔드가 코드로 처리해야 하는 것만** 적는다.
 
 | 다뤄야 할 것 | 처리 |
 |---|---|
+| 호출 규격 | `GET https://naverapihub.apigw.ntruss.com/search/v1/local?query=…&display=5` |
+| 인증 헤더 | `X-NCP-APIGW-API-KEY-ID`(Client ID), `X-NCP-APIGW-API-KEY`(Client Secret) |
 | 응답 필드 | `title, category, address, roadAddress, telephone, mapx, mapy, link` |
-| 좌표 변환 | `mapx`/`mapy` 는 정수형(10^7 배율) → **`/10,000,000` 변환 후** 저장·응답 (§4.5) |
+| 좌표 변환 | `mapx`(경도)/`mapy`(위도) 는 WGS84 정수형(10^7 배율) → **`/10,000,000` 변환 후** 저장·응답 (§4.5) |
 | 호출 경로 | 브라우저가 직접 호출할 수 없으므로 **백엔드 프록시가 유일한 경로**다 (§4.5) |
 | 키 보관 | 지역 검색 Client ID/Secret 은 서버 환경변수로만 두고 응답에 싣지 않는다 |
+| `telephone` | 문서상 값을 반환하지 않는 하위 호환용 필드다. 빈 값이 올 수 있다 |
 | 건수 부족 | 후보 풀이 요청 건수에 못 미쳐도 **오류가 아니다.** 확보된 만큼 반환한다 |
 
 - `title` 에는 검색어 강조용 HTML 태그가 섞여 오므로 제거 후 저장한다.
-- 좌표계와 일일 호출 한도는 구현 착수 시점에 공식 문서로 재검증한다 (§8.3).
+- 좌표 배율은 실제 응답 표본으로 확인한다 (§8.3).
 
 ## 2. 인증 및 인가
 
@@ -763,20 +766,20 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 ### 4.5 장소 검색 (등록용, 네이버 지역 검색 집계)
 
-기록 등록 폼에서 장소를 고를 때 사용하는 검색이다. 백엔드가 네이버 지역 검색 오픈API를 서버
+기록 등록 폼에서 장소를 고를 때 사용하는 검색이다. 백엔드가 NAVER API HUB 지역 검색을 서버
 사이드에서 호출·집계해 제공한다 (§1.3). API 키를 프론트엔드에 노출하지 않기 위해 반드시 백엔드를
 경유한다. **이 API는 저장 단위가 아니라 외부 조회 결과를 돌려줄 뿐이며, 경로가 `/api/records` 와
 분리된 이유도 그것이다.**
 
 | Method | Path | 설명 | 인증 |
 |---|---|---|:---:|
-| GET | `/api/places/search?keyword={keyword}&lat={lat}&lng={lng}&page={page}` | 지역 검색 결과를 집계·정렬·페이지네이션하여 반환. 비로그인은 `401` | 필요 |
+| GET | `/api/places/search?keyword={keyword}&page={page}` | 지역 검색 결과를 집계·페이지네이션하여 반환. 비로그인은 `401` | 필요 |
 
 **동작 방식**
 1. 원 검색어 및 보조 변형(지역명 결합 등)으로 **여러 번 호출**해 후보를 모으고 `(name, address)`
    기준으로 중복을 제거한다.
 2. 각 후보의 `mapx`/`mapy` 를 WGS84로 변환한다 (§1.3).
-3. `lat`/`lng` 가 주어지면 거리를 계산해 가까운 순으로 정렬하고, 없으면 원본 API 순서를 유지한다.
+3. 원본 API 순서를 유지한다. 기준 위치를 받지 않으므로 거리 계산·정렬은 하지 않는다 (공통 명세 §4.2).
 4. 집계된 전체 후보를 **5건 단위**로 페이지네이션한다. 원본 API가 호출당 5건까지만 주므로
    페이지 크기를 그보다 키워도 채울 수 없다 (§4.1).
 5. 원본 API 자체가 검색어당 5건으로 제한되므로 확보된 만큼만 반환하며, `totalElements` 로
@@ -794,7 +797,6 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
       "telephone": "064-783-0959",
       "latitude": 33.458031,
       "longitude": 126.942520,
-      "distanceKm": 1.2,
       "link": "https://map.naver.com/..."
     }
   ],
@@ -803,7 +805,6 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 ```
 
 - 응답의 `category` 는 네이버가 내려주는 분류 문자열이며 서비스 카테고리(`SIGHT` 등)와 별개다.
-- `distanceKm` 은 `lat`/`lng` 가 주어졌을 때만 포함된다.
 - 사용자가 후보를 선택하면 프론트엔드가 해당 값을 그대로 `POST /api/records` 요청에 채워 넣는다.
 
 ### 4.6 사진
@@ -1055,7 +1056,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 그룹 정원(5명) 초과 | 409 | `GROUP_MEMBER_LIMIT_EXCEEDED` |
 | 이미 멤버인 사용자를 초대 | 409 | `ALREADY_MEMBER` |
 | 그 밖의 DB 제약 위반 (동시 요청 경합 등) | 409 | `CONFLICT` |
-| 네이버 지역 검색 오픈API 호출 실패/한도 초과 | 502 | `PLACE_SEARCH_UNAVAILABLE` |
+| 지역 검색 API 호출 실패/한도 초과 | 502 | `PLACE_SEARCH_UNAVAILABLE` |
 | 그 밖의 처리되지 않은 예외 | 500 | `INTERNAL_ERROR` |
 
 - `500` 과 `409` 의 `message` 는 고정 문구로 내려간다. 예외 메시지에 테이블·제약 이름이나 내부
@@ -1159,6 +1160,6 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
   의도적으로 집계하지 않는다 (§3.1).
 
 ### 8.3 외부 확인이 필요한 것
-- 네이버 지역 검색 오픈API의 **정확한 `mapx`/`mapy` 좌표계**와 **일일 호출 한도**는 구현 착수
-  시점에 developers.naver.com 공식 문서로 재검증해야 한다 (§1.3).
+- 지역 검색 `mapx`/`mapy` 의 **배율**은 공식 문서에 없다(WGS84 기준이라고만 적혀 있다). 실제 응답
+  표본으로 10^7 배율 정수형인지 확인해야 한다 (§1.3).
 - 오브젝트 스토리지 전환 일정과 DB 에 저장된 사진의 이전 절차는 후속 명세에서 다룬다 (§5.2).

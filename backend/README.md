@@ -4,7 +4,7 @@
 
 - 사용자가 **여행(Trip)** 을 만들고 그 하위에 방문 장소를 **여행 기록(TripRecord)** 으로 등록(사진·메모·평점)
 - 공개 범위는 `PRIVATE` / `GROUP` / `PUBLIC` 중 **여행 단위로** 지정, 하위 기록은 소속 여행의 범위를 따름
-- 기록 등록용 장소 검색은 네이버 지역 검색 오픈API를 백엔드가 프록시·집계해 제공
+- 기록 등록용 장소 검색은 NAVER API HUB 지역 검색을 백엔드가 프록시·집계해 제공
 
 상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md) 참고. 작업 규칙은 [CLAUDE.md](./CLAUDE.md) 참고.
 
@@ -26,7 +26,7 @@
 
 - 요구 JDK 버전: **17 이상** (루트 `build.gradle.kts`의 toolchain이 17로 고정)
 - 세션 쿠키(`JSESSIONID`) 기반 인증. JWT 미사용
-- 외부 API는 **네이버 검색 오픈API의 지역(Local) 검색**만 사용. 지도 렌더링은 프론트엔드 담당
+- 외부 API는 **NAVER API HUB 의 지역(Local) 검색**만 사용. 지도 렌더링은 프론트엔드 담당
 
 ## 모듈 구성
 
@@ -116,9 +116,9 @@ external-api/
 │  │  ├─ persistence/GroupEntity.kt, GroupMemberEntity.kt, GroupInviteEntity.kt, InviteHistoryEntity.kt
 │  │  ├─ domain/InviteOutcome.kt
 │  │  └─ service·presentation
-│  ├─ search/                      # 네이버 지역 검색 오픈API 연동
+│  ├─ search/                      # NAVER API HUB 지역 검색 연동
 │  │  ├─ client/NaverLocalSearchClient.kt
-│  │  ├─ service/PlaceSearchService.kt      # 중복 제거·거리순 정렬·페이징
+│  │  ├─ service/PlaceSearchService.kt      # 중복 제거·좌표 변환·페이징
 │  │  └─ presentation/PlaceSearchController.kt  # GET /api/places/search (저장 단위가 아니라 외부 조회)
 │  ├─ tag/                         # 태그 조회 (볼 수 있는 기록에 쓰인 태그로 제한)
 │  ├─ photo/                       # 사진 업로드·삭제·서빙
@@ -158,7 +158,7 @@ external-api/
 | 용도 | 발급처 | 비고 |
 |---|---|---|
 | 네이버 로그인 | developers.naver.com | Callback URL에 `http://localhost:8080/login/oauth2/code/naver` 등록. 이메일·이름 권한을 "필수"로 설정해야 프로필 수신 가능 |
-| 지역(Local) 검색 | developers.naver.com | 검색 오픈API용 애플리케이션. 로그인용 키와 별개 |
+| 지역(Local) 검색 | ncloud.com (NAVER API HUB) | API Gateway 인증 키. 로그인용 키와 별개. 규격: [개요](https://api.ncloud-docs.com/docs/naver-api-hub-overview) · [지역 검색](https://api.ncloud-docs.com/docs/naver-api-hub-search-local) |
 
 ### 2. 환경 변수 설정
 
@@ -166,8 +166,9 @@ external-api/
 |---|---|---|
 | `NAVER_CLIENT_ID` | OAuth 복구 후 | 네이버 로그인 Client ID |
 | `NAVER_CLIENT_SECRET` | OAuth 복구 후 | 네이버 로그인 Client Secret |
-| `NAVER_SEARCH_CLIENT_ID` | 장소 검색 사용 시 | 지역 검색 오픈API Client ID |
-| `NAVER_SEARCH_CLIENT_SECRET` | 장소 검색 사용 시 | 지역 검색 오픈API Client Secret |
+| `NAVER_API_CLIENT_ID` | 장소 검색 사용 시 | NAVER API HUB Client ID (`X-NCP-APIGW-API-KEY-ID`) |
+| `NAVER_API_CLIENT_SECRET` | 장소 검색 사용 시 | NAVER API HUB Client Secret (`X-NCP-APIGW-API-KEY`) |
+| `NAVER_API_BASE_URL` | 선택 | 지역 검색 주소 (기본 `https://naverapihub.apigw.ntruss.com/search/v1/local`) |
 
 `dev` / `prod` 프로파일은 아래 값이 추가로 필요. (`local`은 compose의 DB 접속 정보가 기본값이라 불필요)
 
@@ -183,8 +184,8 @@ external-api/
 ```bash
 export NAVER_CLIENT_ID=...
 export NAVER_CLIENT_SECRET=...
-export NAVER_SEARCH_CLIENT_ID=...
-export NAVER_SEARCH_CLIENT_SECRET=...
+export NAVER_API_CLIENT_ID=...
+export NAVER_API_CLIENT_SECRET=...
 ```
 
 > 네이버 키 네 값 모두 기본값이 `changeit`이라 미설정 시에도 서버는 기동. 단 장소 검색은 동작하지 않음.
@@ -365,7 +366,7 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 - 도메인 모델 및 API — 여행, 여행 기록, 공개 범위(여행 단위), 공유 그룹, 초대·초대 이력, 태그, 사진
 - 공개 범위 판정을 조회 쿼리 단계에서 수행. 기록 목록·상세·태그 자동완성 모두 소속 여행을 조인해 판정
 - 임시 인메모리 로그인 (`local`·`dev` 전용 고정 계정 셋)
-- 네이버 지역 검색 오픈API 프록시 (중복 제거, 거리순 정렬, 페이징)
+- NAVER API HUB 지역 검색 프록시 (중복 제거, 좌표 변환, 페이징)
 - 사진 DB 저장(`photo_data`, `BYTEA`) 및 `/api/files/photos/{photoId}` 서빙, 공통 예외 처리
 
 미구현 / 예정 (상세는 SPECIFICATION.md 8장)

@@ -17,9 +17,5 @@ data class PlaceCandidate(
     val telephone: String?,
     val latitude: Double,
     val longitude: Double,
-
-    /** 요청자의 기준 좌표가 함께 온 경우에만 채워진다. 기준 좌표 자체는 저장하지 않는다. */
-    val distanceKm: Double?,
-
     val link: String?,
 )
