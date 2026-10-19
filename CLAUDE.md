@@ -179,7 +179,8 @@ backend/   Kotlin + Spring Boot 멀티 모듈 — external-api(API 서버), batc
 frontend/  React + Vite. components / context / config / utils / pages
 ```
 
-- 전체 실행: 루트에서 `docker compose up` (PostgreSQL + API 서버 + 프론트엔드). 배치는 띄우지 않는다
+- 전체 실행: 루트에서 `docker compose up` (PostgreSQL + API 서버 + 프론트엔드 + Prometheus·Grafana).
+  배치는 띄우지 않는다. 모니터링 없이 앱만 띄우려면 `docker compose up db api web`
 - 백엔드만: `docker compose up db api`. DB 만 띄우고 `cd backend && ./gradlew :external-api:bootRun`
   으로 돌려도 된다 (`docker compose up db`, 기본 `local` 프로파일)
 - 프론트엔드 개발 서버: `cd frontend && npm run dev` (5173 포트, compose 의 `web` 과 겹친다)

@@ -1,0 +1,9 @@
+# compose 의 api 컨테이너만 수집한다. bootRun 으로 띄운 서버는 대상이 아니다.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: travel-recorder-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["api:8081"]

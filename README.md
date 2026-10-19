@@ -36,7 +36,7 @@ Docker (Compose 2.24 이상) 필요. 저장소 루트에서 한 번에 기동. �
 백엔드 CORS에 `http://localhost:5173`이 허용되어 있어 별도 프록시 설정 불필요.
 
 ```bash
-docker compose up    # PostgreSQL + API 서버(local 프로파일) + 프론트엔드(nginx)
+docker compose up    # PostgreSQL + API 서버(local 프로파일) + 프론트엔드(nginx) + Prometheus·Grafana
 ```
 
 프론트엔드를 개발 서버(HMR)로 돌리려면 백엔드만 compose로 띄우고 프론트엔드는 따로 기동.
@@ -54,6 +54,10 @@ cd frontend && npm install && npm run dev
   ([backend README](./backend/README.md) 참고)
 - 네이버 키·지도 Client ID는 루트 `.env`에 둠 (`cp .env.example .env` 후 필요한 줄만 주석 해제).
   지도 Client ID는 번들에 들어가는 값이라 바꾸면 `docker compose up --build`로 다시 빌드해야 함
+- **모니터링**: Grafana http://localhost:3000 (admin / `admin`, `.env`의 `GRAFANA_ADMIN_PASSWORD`로 변경),
+  Prometheus http://localhost:9090. Prometheus 데이터 소스는 자동 등록됨. 대시보드는 Grafana의
+  Dashboards > New > Import에서 ID로 가져옴 — JVM(Micrometer) `4701`, Spring Boot 3.x Statistics `19004`.
+  모니터링 없이 앱만 띄우려면 `docker compose up db api web`
 
 - **로그인**: 네이버 OAuth 복구 전까지 `local`·`dev` 프로파일 전용 임시 계정으로 로그인
   (`user1`·`user2`·`user3`, 비밀번호 `password`). 계정이 셋이라 그룹 공유·초대를 직접 주고받기 가능

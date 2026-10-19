@@ -61,3 +61,17 @@ app:
     # 서비스 레벨 검증 값. spring.servlet.multipart.max-file-size 와 같은 값을 유지한다.
     max-photo-size: ${MAX_PHOTO_SIZE:5MB}
     allowed-content-types: ${ALLOWED_PHOTO_CONTENT_TYPES:image/jpeg,image/png,image/webp}
+
+management:
+  server:
+    # 관리 엔드포인트는 서비스 포트와 나눈다. SecurityConfig 가 permitAll 이라 같은 포트에 두면 외부에
+    # 그대로 열린다. 포트를 나누면 배포에서 이 포트를 공개하지 않는 것만으로 막힌다.
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+  metrics:
+    tags:
+      # Grafana 기성 대시보드가 앱을 application 라벨로 구분한다.
+      application: ${spring.application.name}

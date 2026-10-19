@@ -1,4 +1,5 @@
-# 로컬 실행. `docker compose up` 이면 DB·API 서버·프론트엔드가 함께 뜬다.
+# 로컬 실행. `docker compose up` 이면 DB·API 서버·프론트엔드와 모니터링(Prometheus 9090, Grafana 3000)이 함께 뜬다.
+# 모니터링 없이 앱만 띄우려면 `docker compose up db api web`.
 # DB 만 띄우고 IDE·bootRun 으로 API 서버를 돌리려면 `docker compose up db`.
 # 프론트엔드를 개발 서버(HMR)로 돌리려면 `docker compose up db api` 후 `npm run dev` (web 과 5173 포트가 겹친다).
 # 배치는 잡 하나를 돌리고 끝나는 프로그램이라 상시 서비스로 두지 않는다. 필요하면 Gradle 로 직접 실행한다.
@@ -37,8 +38,16 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: local
       DB_URL: jdbc:postgresql://db:5432/travel
+    # 관리 포트(8081)는 호스트에 열지 않는다. Prometheus 는 compose 네트워크 안에서 읽는다.
     ports:
       - "8080:8080"
+    healthcheck:
+      # 실행 이미지(eclipse-temurin)에 curl 이 들어 있다. 첫 기동은 Flyway 적용까지 기다린다.
+      test: ["CMD-SHELL", "curl -fs http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      start_period: 60s
+      retries: 3
 
   web:
     build:
@@ -52,5 +61,27 @@ services:
     ports:
       - "5173:80"
 
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+
 volumes:
   db-data:
+  prometheus-data:
+  grafana-data:

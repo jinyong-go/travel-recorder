@@ -169,6 +169,7 @@ external-api/
 | `NAVER_API_CLIENT_ID` | 장소 검색 사용 시 | NAVER API HUB Client ID (`X-NCP-APIGW-API-KEY-ID`) |
 | `NAVER_API_CLIENT_SECRET` | 장소 검색 사용 시 | NAVER API HUB Client Secret (`X-NCP-APIGW-API-KEY`) |
 | `NAVER_API_BASE_URL` | 선택 | 지역 검색 주소 (기본 `https://naverapihub.apigw.ntruss.com/search/v1/local`) |
+| `MANAGEMENT_PORT` | 선택 | 관리 엔드포인트(actuator) 포트 (기본 `8081`). 외부에 공개하지 않음 |
 
 `dev` / `prod` 프로파일은 아래 값이 추가로 필요. (`local`은 compose의 DB 접속 정보가 기본값이라 불필요)
 
@@ -209,6 +210,8 @@ cd backend && ./gradlew :external-api:bootRun
 ```
 
 기본 주소는 http://localhost:8080. (Windows는 `./gradlew` 대신 `gradlew.bat`)
+관리 엔드포인트는 별도 포트 8081 — 상태 확인 `/actuator/health`, 지표 `/actuator/prometheus`.
+compose에서는 8081을 호스트에 열지 않으므로 bootRun으로 띄웠을 때만 `localhost:8081`로 접근 가능.
 
 - 기동 시 Flyway가 스키마와 초기 데이터(사용자·그룹·여행·기록 목업)를 적용
 - 데이터는 `db-data` 볼륨에 남음. 처음 상태로 되돌리려면 `docker compose down -v`

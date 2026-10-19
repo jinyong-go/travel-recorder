@@ -14,6 +14,7 @@ compose 파일은 저장소 루트에 있다 (`compose.yml`). `docker compose` �
 docker compose up db api          # PostgreSQL(PostGIS) + API 서버 (local 프로파일). 루트에서
 docker compose up db              # DB 만. 이어서 bootRun 으로 API 서버를 돌릴 때
 docker compose down -v            # 로컬 DB 를 처음 상태로 (볼륨 삭제)
+curl localhost:8081/actuator/health  # 상태 확인. 관리 포트(8081)는 bootRun 일 때만 호스트에서 열린다
 ./gradlew :external-api:bootRun   # API 서버 실행 (기본 local 프로파일, compose 의 DB 에 붙는다)
 ./gradlew :batch:bootRun --args='--spring.batch.job.name=<잡 이름>'   # 배치 실행 (잡 하나를 돌리고 종료)
 ./gradlew test                    # 모든 모듈 테스트 (Testcontainers — Docker 가 떠 있어야 한다)
