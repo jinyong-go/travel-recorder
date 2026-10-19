@@ -188,11 +188,14 @@ export NAVER_API_CLIENT_ID=...
 export NAVER_API_CLIENT_SECRET=...
 ```
 
+compose로 API 서버를 띄울 때(`docker compose up db api`)는 `export` 대신 루트 `.env`에 적음
+(`.env.example` 참고). `bootRun`은 `.env`를 읽지 않으므로 위처럼 `export` 필요.
+
 > 네이버 키 네 값 모두 기본값이 `changeit`이라 미설정 시에도 서버는 기동. 단 장소 검색은 동작하지 않음.
 
 ### 3. 개발 서버 실행
 
-Docker 필요. compose 파일은 저장소 루트의 `compose.yml`이며 `docker compose`는 루트에서 실행.
+Docker (Compose 2.24 이상) 필요. compose 파일은 저장소 루트의 `compose.yml`이며 `docker compose`는 루트에서 실행.
 DB와 API 서버를 함께 띄우는 방법과, DB만 띄우고 API 서버는 Gradle로 돌리는 방법이 있음.
 배치는 compose 서비스에 포함하지 않음.
 

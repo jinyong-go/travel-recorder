@@ -31,3 +31,6 @@ replay_pid*
 
 # OS
 .DS_Store
+
+# 로컬 비밀값
+.env

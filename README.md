@@ -32,7 +32,7 @@
 
 ## 빠르게 실행하기
 
-Docker 필요. 저장소 루트에서 한 번에 기동. 프론트엔드는 http://localhost:5173, 백엔드는 8080 포트 사용.
+Docker (Compose 2.24 이상) 필요. 저장소 루트에서 한 번에 기동. 프론트엔드는 http://localhost:5173, 백엔드는 8080 포트 사용.
 백엔드 CORS에 `http://localhost:5173`이 허용되어 있어 별도 프록시 설정 불필요.
 
 ```bash
@@ -52,8 +52,8 @@ cd frontend && npm install && npm run dev
 
 - **배치**는 compose에 포함하지 않음. 잡 하나를 돌리고 끝나는 프로그램이라 필요할 때 Gradle로 직접 실행
   ([backend README](./backend/README.md) 참고)
-- 지도 Client ID를 넣으려면 `VITE_NAVER_MAP_CLIENT_ID=... docker compose up --build`.
-  번들에 들어가는 값이라 바꾸면 이미지를 다시 빌드해야 함
+- 네이버 키·지도 Client ID는 루트 `.env`에 둠 (`cp .env.example .env` 후 필요한 줄만 주석 해제).
+  지도 Client ID는 번들에 들어가는 값이라 바꾸면 `docker compose up --build`로 다시 빌드해야 함
 
 - **로그인**: 네이버 OAuth 복구 전까지 `local`·`dev` 프로파일 전용 임시 계정으로 로그인
   (`user1`·`user2`·`user3`, 비밀번호 `password`). 계정이 셋이라 그룹 공유·초대를 직접 주고받기 가능
