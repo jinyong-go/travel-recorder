@@ -55,7 +55,8 @@ cd frontend && npm install && npm run dev
 - 네이버 키·지도 Client ID는 루트 `.env`에 둠 (`cp .env.example .env` 후 필요한 줄만 주석 해제).
   지도 Client ID는 번들에 들어가는 값이라 바꾸면 `docker compose up --build`로 다시 빌드해야 함
 - **모니터링**: Grafana http://localhost:3000 (admin / `admin`, `.env`의 `GRAFANA_ADMIN_PASSWORD`로 변경),
-  Prometheus http://localhost:9090. Prometheus 데이터 소스는 자동 등록됨. 대시보드는 Grafana의
+  Prometheus http://localhost:9090. Prometheus 데이터 소스와 "장소 검색 외부 호출" 대시보드는 자동
+  등록됨(`monitoring/grafana/provisioning/dashboards`). 그 밖의 대시보드는 Grafana의
   Dashboards > New > Import에서 ID로 가져옴 — JVM(Micrometer) `4701`, Spring Boot 3.x Statistics `19004`.
   모니터링 없이 앱만 띄우려면 `docker compose up db api web`
 

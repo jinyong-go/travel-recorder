@@ -48,7 +48,7 @@ const CONFIRM_ACTIONS = {
   },
   leave: {
     title: '그룹에서 나갈까요?',
-    desc: '이 그룹으로 공유된 여행은 더 이상 보이지 않습니다.',
+    desc: '이 그룹으로 공유된 여행은 더 이상 보이지 않습니다. 내가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않습니다.',
     ok: '나가기',
     okBusy: '나가는 중…',
     run: (groupId) => api.leaveGroup(groupId),
@@ -56,7 +56,7 @@ const CONFIRM_ACTIONS = {
   },
   member: {
     title: '멤버를 제외할까요?',
-    desc: '제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없습니다.',
+    desc: '제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없습니다. 이 멤버가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않습니다.',
     ok: '제외',
     okBusy: '제외하는 중…',
     run: (groupId, { memberId }) => api.removeMember(groupId, memberId),

@@ -26,6 +26,8 @@ class NaverLocalSearchClient(
     fun search(query: String, display: Int = MAX_DISPLAY): List<NaverLocalSearchItem> {
         val response = try {
             naverSearchRestClient.get()
+                // 검색어를 URI 템플릿 문자열에 넣지 않고 빌더로 붙인다. 호출 지표의 경로 라벨은 템플릿이라
+                // 이렇게 해야 사용자가 입력한 검색어가 지표에 남지 않는다.
                 .uri { builder ->
                     builder
                         .queryParam("query", query)

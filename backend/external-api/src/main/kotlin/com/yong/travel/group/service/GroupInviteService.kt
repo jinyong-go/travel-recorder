@@ -8,6 +8,7 @@ import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.persistence.listPageRequest
 import com.yong.travel.common.persistence.toPageResult
 import com.yong.travel.group.domain.GroupInvite
+import com.yong.travel.group.domain.GroupMemberEvent
 import com.yong.travel.group.domain.GroupRef
 import com.yong.travel.group.domain.InviteHistoryEntry
 import com.yong.travel.group.domain.InviteHistoryRole
@@ -16,6 +17,8 @@ import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.group.persistence.GroupInviteEntity
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.persistence.GroupMemberEntity
+import com.yong.travel.group.persistence.GroupMemberHistoryEntity
+import com.yong.travel.group.persistence.GroupMemberHistoryRepository
 import com.yong.travel.group.persistence.GroupMemberRepository
 import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.group.persistence.InviteHistoryEntity
@@ -37,6 +40,7 @@ class GroupInviteService(
     private val groupMemberRepository: GroupMemberRepository,
     private val inviteRepository: GroupInviteRepository,
     private val historyRepository: InviteHistoryRepository,
+    private val memberHistoryRepository: GroupMemberHistoryRepository,
     private val userRepository: UserRepository,
 ) {
 
@@ -203,6 +207,7 @@ class GroupInviteService(
         }
 
         groupMemberRepository.save(GroupMemberEntity(group = group, user = invite.invitee))
+        memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, invite.invitee, GroupMemberEvent.JOINED))
         resolve(invite, InviteOutcome.ACCEPTED)
     }
 

@@ -6,15 +6,19 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.util.trimToNull
 import com.yong.travel.group.domain.Group
+import com.yong.travel.group.domain.GroupMemberEvent
 import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.persistence.GroupMemberEntity
+import com.yong.travel.group.persistence.GroupMemberHistoryEntity
+import com.yong.travel.group.persistence.GroupMemberHistoryRepository
 import com.yong.travel.group.persistence.GroupMemberRepository
 import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.group.persistence.InviteHistoryEntity
 import com.yong.travel.group.persistence.InviteHistoryRepository
-import com.yong.travel.trip.persistence.TripShareRepository
+import com.yong.travel.trip.domain.TripVisibilityChangeCause
+import com.yong.travel.trip.service.TripVisibilityHistoryService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,7 +35,8 @@ class GroupService(
     private val groupMemberRepository: GroupMemberRepository,
     private val groupInviteRepository: GroupInviteRepository,
     private val inviteHistoryRepository: InviteHistoryRepository,
-    private val tripShareRepository: TripShareRepository,
+    private val memberHistoryRepository: GroupMemberHistoryRepository,
+    private val tripVisibilityHistoryService: TripVisibilityHistoryService,
     private val userRepository: UserRepository,
 ) {
 
@@ -87,6 +92,7 @@ class GroupService(
         )
         // 소유자도 멤버 행을 가진다. 인원 계산과 조회 권한 판정을 한 경로로 모으기 위해서다.
         val ownerMember = groupMemberRepository.save(GroupMemberEntity(group = group, user = owner))
+        memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, owner, GroupMemberEvent.JOINED))
         log.debug("그룹 생성 groupId={} ownerId={}", group.id, userId)
 
         // 방금 만든 멤버가 전부라 다시 읽지 않는다. detailOf 를 쓰면 flush 순서에 기대게 된다.
@@ -120,6 +126,7 @@ class GroupService(
      *
      * 이 그룹으로만 공유되던 여행은 결과적으로 비공개가 되며, 여행과 하위 기록 자체는 삭제되지 않는다.
      * 대기 중이던 초대는 받는 쪽에서 이유 없이 사라지는 일이라 `GROUP_DELETED` 이력으로 남긴다.
+     * 남아 있던 멤버와 공유도 지우기 전에 권한 변경 이력으로 남긴다.
      *
      * @param groupId 삭제할 그룹 id
      * @param userId 삭제를 요청한 사용자 id
@@ -131,7 +138,11 @@ class GroupService(
         val group = findGroup(groupId)
         requireOwner(group, userId)
 
-        tripShareRepository.deleteByGroupId(groupId)
+        val revokedShares = tripVisibilityHistoryService.revokeGroupShares(groupId)
+        val members = groupMemberRepository.findWithUserByGroupIdIn(listOf(groupId))
+        memberHistoryRepository.saveAll(
+            members.map { GroupMemberHistoryEntity.of(group, it.user, GroupMemberEvent.GROUP_DELETED) },
+        )
         val pending = groupInviteRepository.findByGroupId(groupId)
         inviteHistoryRepository.saveAll(pending.map { InviteHistoryEntity.from(it, InviteOutcome.GROUP_DELETED) })
         // 초대 벌크 삭제가 영속성 컨텍스트를 비우므로 이 뒤로 group 은 준영속이다.
@@ -139,11 +150,14 @@ class GroupService(
         groupInviteRepository.deleteByGroupId(groupId)
         groupMemberRepository.deleteByGroupId(groupId)
         groupRepository.delete(group)
-        log.debug("그룹 삭제 groupId={} ownerId={} pendingInvites={}", groupId, userId, pending.size)
+        log.debug(
+            "그룹 삭제 groupId={} ownerId={} pendingInvites={} revokedShares={}",
+            groupId, userId, pending.size, revokedShares,
+        )
     }
 
     /**
-     * 소유자가 다른 멤버를 그룹에서 내보낸다.
+     * 소유자가 다른 멤버를 그룹에서 내보낸다. 그 멤버가 이 그룹에 걸어 둔 여행 공유도 함께 푼다.
      *
      * @param groupId 대상 그룹 id
      * @param targetUserId 내보낼 멤버의 사용자 id
@@ -164,11 +178,18 @@ class GroupService(
         val member = groupMemberRepository.findByGroupIdAndUserId(groupId, targetUserId)
             ?: throw ApiException(ErrorCode.MEMBER_NOT_FOUND)
         groupMemberRepository.delete(member)
-        log.debug("그룹 멤버 제외 groupId={} targetUserId={} requesterId={}", groupId, targetUserId, requesterId)
+        memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, member.user, GroupMemberEvent.REMOVED))
+        val revokedShares = tripVisibilityHistoryService.revokeOwnerShares(
+            groupId, targetUserId, TripVisibilityChangeCause.OWNER_REMOVED,
+        )
+        log.debug(
+            "그룹 멤버 제외 groupId={} targetUserId={} requesterId={} revokedShares={}",
+            groupId, targetUserId, requesterId, revokedShares,
+        )
     }
 
     /**
-     * 멤버 본인이 그룹에서 나간다.
+     * 멤버 본인이 그룹에서 나간다. 내가 이 그룹에 걸어 둔 여행 공유도 함께 푼다.
      *
      * [removeMember] 와 달리 소유자 확인을 하지 않는다. 요청자가 곧 대상이라 남의 멤버십을
      * 건드릴 경로가 없기 때문이다.
@@ -188,7 +209,11 @@ class GroupService(
         val member = groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
             ?: throw ApiException(ErrorCode.FORBIDDEN, "그룹 멤버가 아닙니다.")
         groupMemberRepository.delete(member)
-        log.debug("그룹 탈퇴 groupId={} userId={}", groupId, userId)
+        memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, member.user, GroupMemberEvent.LEFT))
+        val revokedShares = tripVisibilityHistoryService.revokeOwnerShares(
+            groupId, userId, TripVisibilityChangeCause.OWNER_LEFT,
+        )
+        log.debug("그룹 탈퇴 groupId={} userId={} revokedShares={}", groupId, userId, revokedShares)
     }
 
     /**

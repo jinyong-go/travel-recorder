@@ -1,5 +1,6 @@
 package com.yong.travel.search.config
 
+import io.micrometer.observation.ObservationRegistry
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.client.RestClient
@@ -11,14 +12,23 @@ class NaverSearchClientConfig {
     /**
      * 지역 검색 API 클라이언트를 만든다.
      *
+     * 관측 레지스트리를 걸어야 호출마다 http.client.requests 지표가 남는다. 빠뜨리면 외부 호출이
+     * 지표에서 통째로 빠진다. 관측이 걸린 빌더를 내주는 Spring Boot 모듈(spring-boot-restclient)을
+     * 들이지 않고 레지스트리만 직접 건다 — 쓰는 클라이언트가 이것 하나뿐이다.
+     *
      * @param properties 기본 주소와 클라이언트 id·secret
+     * @param observationRegistry actuator 가 등록한 관측 레지스트리
      * @return 인증 헤더를 기본값으로 실은 클라이언트
      */
     @Bean
-    fun naverSearchRestClient(properties: NaverSearchProperties): RestClient =
+    fun naverSearchRestClient(
+        properties: NaverSearchProperties,
+        observationRegistry: ObservationRegistry,
+    ): RestClient =
         RestClient.builder()
             .baseUrl(properties.baseUrl)
             .defaultHeader("X-NCP-APIGW-API-KEY-ID", properties.clientId)
             .defaultHeader("X-NCP-APIGW-API-KEY", properties.clientSecret)
+            .observationRegistry(observationRegistry)
             .build()
 }

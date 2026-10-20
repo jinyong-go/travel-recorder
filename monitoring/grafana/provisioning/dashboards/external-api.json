@@ -1,0 +1,70 @@
+{
+  "uid": "place-search-external",
+  "title": "장소 검색 외부 호출",
+  "description": "NAVER API HUB 지역 검색 호출 수·소요 시간. 검색 한 번이 여러 번의 외부 호출로 불어난다.",
+  "tags": ["travel-recorder", "external-api"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "client",
+        "label": "외부 호스트",
+        "type": "constant",
+        "query": "naverapihub.apigw.ntruss.com",
+        "hide": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "호출 수 (응답 상태별, 초당)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(http_client_requests_seconds_count{application=\"backend\", client_name=\"$client\"}[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "평균 소요 시간",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_client_requests_seconds_sum{application=\"backend\", client_name=\"$client\"}[5m])) / sum(rate(http_client_requests_seconds_count{application=\"backend\", client_name=\"$client\"}[5m]))",
+          "legendFormat": "평균"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "최대 소요 시간",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(http_client_requests_seconds_max{application=\"backend\", client_name=\"$client\"})",
+          "legendFormat": "최대"
+        }
+      ]
+    }
+  ]
+}

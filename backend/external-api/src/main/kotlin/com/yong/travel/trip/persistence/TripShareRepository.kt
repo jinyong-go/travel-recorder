@@ -38,14 +38,19 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
     fun deleteByTripId(@Param("tripId") tripId: Long): Int
 
     /**
-     * 그룹이 사라지면 그 그룹으로 공유되던 관계도 함께 사라진다.
-     *
-     * 벌크 삭제로 두는 이유는 [deleteByTripId] 와 같다.
+     * 한 그룹으로 걸린 공유 행 전부. 그룹 삭제가 공유를 풀기 전에 이력을 남기려고 읽는다.
      *
      * @param groupId 그룹 id
-     * @return 지운 행 수
+     * @return 공유 행
      */
-    @Modifying(flushAutomatically = true)
-    @Query("delete from TripShareEntity s where s.group.id = :groupId")
-    fun deleteByGroupId(@Param("groupId") groupId: Long): Int
+    fun findByGroupId(groupId: Long): List<TripShareEntity>
+
+    /**
+     * 한 그룹에 특정 사용자가 걸어 둔 공유 행. 탈퇴·제외가 나간 사람의 공유만 풀 때 쓴다.
+     *
+     * @param groupId 그룹 id
+     * @param ownerId 여행 소유자의 사용자 id
+     * @return 공유 행
+     */
+    fun findByGroupIdAndTripOwnerId(groupId: Long, ownerId: Long): List<TripShareEntity>
 }

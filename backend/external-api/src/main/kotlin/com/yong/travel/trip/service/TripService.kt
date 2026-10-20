@@ -46,6 +46,7 @@ class TripService(
     private val groupService: GroupService,
     private val photoRepository: PhotoRepository,
     private val photoDatabaseService: PhotoDatabaseService,
+    private val visibilityHistoryService: TripVisibilityHistoryService,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -266,10 +267,12 @@ class TripService(
         findTrip(tripId, userId, TripSpecifications.ownedBy(userId))
 
     /**
-     * 공유 그룹 목록을 통째로 갈아 끼운다.
+     * 공유 그룹 목록을 통째로 갈아 끼우고 바뀐 뒤의 상태를 이력으로 남긴다.
      *
      * GROUP 이 아닌 값으로 바뀌면 기존 공유를 지운다 — 남겨 두면 나중에 다시 GROUP 으로
      * 되돌렸을 때 예전 공유가 의도치 않게 되살아난다.
+     *
+     * 소유자가 공유를 정하는 경로(생성·공개 범위 변경)가 모두 여기를 지나므로 이력도 여기서 남긴다.
      */
     private fun applyShares(
         trip: TripEntity,
@@ -281,11 +284,15 @@ class TripService(
         // 벌크 삭제라 호출 즉시 DB 에 반영된다. 아래 INSERT 보다 늦게 나가 교체 후에도 남는 그룹에서
         // unique(trip_id, group_id) 위반이 나는 일이 없다.
         tripShareRepository.deleteByTripId(tripId)
-        if (visibility != TripVisibility.GROUP) return
 
         // 속하지 않은 그룹에는 공유할 수 없다. 그런 그룹 id 는 404 로 막아 존재 여부도 알리지 않는다.
-        val groups = groupService.requireAccessibleGroups(groupIds, ownerId)
+        val groups = if (visibility == TripVisibility.GROUP) {
+            groupService.requireAccessibleGroups(groupIds, ownerId)
+        } else {
+            emptyList()
+        }
         tripShareRepository.saveAll(groups.map { TripShareEntity(trip = trip, group = it) })
+        visibilityHistoryService.recordOwnerChange(trip, visibility, groups.mapNotNull { it.id })
     }
 
     /** 요청자가 볼 수 있는 여행을 읽는다. 없거나 볼 수 없으면 TRIP_NOT_FOUND 다. */
