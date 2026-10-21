@@ -20,6 +20,7 @@ npm run build     # 프로덕션 빌드
 ## 파일 배치
 
 - 라우트 화면은 `pages/XxxPage.jsx`. 재사용이 두 번째 생기면 `components/` 로 옮긴다. 처음부터 빼지 않는다.
+  단 화면과 독립적인 부품(모달, 입력 컨트롤, 라우트 가드, 지도 뷰)은 처음부터 `components/` 에 둔다.
 - 훅은 두 화면 이상이 쓸 때 `hooks/` 로 올린다. 외부 SDK 로더(`useNaverMapsSdk`)는 예외로 처음부터 둔다.
 - 부모와 자식 모달이 같은 훅 상태를 봐야 하면 부모가 결과를 prop 으로 넘긴다. 자식이 다시 부르면 상태가 갈라진다.
 
@@ -36,15 +37,18 @@ npm run build     # 프로덕션 빌드
 - `Foo.jsx` 의 스타일은 옆의 `Foo.css` 에 두고 컴포넌트가 import 한다.
 - 범용 UI(헤더·모달 틀·버튼·오류 문구·빈 상태·페이지네이션)는 `App.css`, 두 화면 이상이 쓰는 화면 틀은 `src/styles/`.
 - import 순서는 공유 CSS 먼저, 자기 CSS 마지막이다. 다른 화면의 CSS 를 가져다 쓰지 않는다.
-- 클래스명은 kebab-case, 컴포넌트 이름을 접두사로 (`visibility-badge-icon`).
-- 색상은 CSS 변수로만 쓴다 — 라이트/다크가 같은 변수를 공유한다.
+- 클래스명은 kebab-case, 컴포넌트 이름을 접두사로 (`visibility-badge-icon`). `styles/` 의 공유 틀은 틀 이름을
+  접두사로 쓴다 (`detail-*`, `invite-*`).
+- 색상은 CSS 변수로만 쓴다 — 라이트/다크가 같은 변수를 공유한다. 테마와 무관한 고정 색(브랜드 색)도
+  변수로 정의하고 다크 값을 따로 두지 않는다.
 
 ## 상태
 
 - 서버 데이터는 쓰는 화면이 직접 조회한다. 전역 컨텍스트는 `AuthContext` 하나이며 서버 데이터를 캐시하지
   않는다. 여러 화면이 같은 조회를 하면 훅으로 모은다 (`useTrip`).
-- **조회는 `useResource`(단건·전체) 또는 `usePagedList`(페이지) 로 한다.** 화면에서 `useEffect` + 취소 플래그를
-  새로 짜지 않는다. 페이지 목록은 `PagedListBody` 로 그린다.
+- **조회는 `useResource` 또는 `usePagedList` 로 한다.** 화면에서 `useEffect` + 취소 플래그를 새로 짜지 않는다.
+  - `useResource`: 단건, 전체 목록, 번호 페이지네이션(페이지마다 새로 읽기)
+  - `usePagedList` + `PagedListBody`: "더 보기"로 누적하는 목록
 - 같은 화면의 두 컴포넌트가 같은 값을 쓰면 조회한 쪽이 prop 으로 넘긴다.
 - 낙관적 갱신을 하지 않는다. 서버만 아는 규칙(정원 등)이 있어 쓰기 성공 후 다시 읽는다.
 - 개발 모드의 이중 조회는 StrictMode 때문이며 유지한다.
@@ -67,9 +71,11 @@ npm run build     # 프로덕션 빌드
 
 - 모든 요청은 `credentials: 'include'`, 쓰기 요청에는 `X-XSRF-TOKEN` 헤더를 붙인다 (`api/client.js`).
 - 오류 분기는 HTTP 상태가 아니라 응답의 `code` 로 한다. 서버 `message` 를 화면에 그대로 띄우지 않고
-  `errorMessage(err, 코드별 표, 기본 문구)` 로 고른다.
+  `errorMessage(err, 코드별 표, 기본 문구)` 로 고른다. 예외: `useResource` 는 404 를 상태로 판정해 "없음(MISSING)"
+  으로 바꾼다 — 여러 `*_NOT_FOUND` 를 한 화면 상태로 모으는 자리다.
 - 네이버 검색·OAuth 키를 브라우저에 두지 않는다. 장소 검색은 백엔드를 경유한다. 브라우저 키는 지도 Client ID 하나뿐이다.
-- 백엔드와 같아야 하는 값(사진 제한 등)은 `config/` 에 환경변수로 둔다. 컴포넌트에 숫자를 하드코딩하지 않는다.
+- 백엔드와 같아야 하는 값(사진 제한, 입력 길이 등)은 `config/` 에 둔다. 배포마다 달라질 수 있는 값만
+  환경변수로 받는다. 컴포넌트에 숫자를 하드코딩하지 않는다.
 - 서버가 주는 파일 URL(`/api/files/...`)은 `fileUrl()` 로 감싸 쓴다.
 
 ## 접근성·반응형

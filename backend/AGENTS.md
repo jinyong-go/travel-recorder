@@ -42,12 +42,15 @@ docker compose down -v            # 로컬 DB 초기화 (볼륨 삭제)
 
 - 도메인으로 먼저 나누고(`auth`, `trip`, `group` …), 그 안을 `presentation` / `service` / `persistence` / `domain`
   으로 나눈다. 상위 없이 존재할 수 없는 하위 도메인은 상위 아래에 둔다 (`trip.record`).
+- 4계층 밖에는 보조 패키지만 둔다: `config`(설정), `security`(인증 주체), `client`(외부 API 호출),
+  `storage`(사진 바이너리 저장), `web`·`util`(`common` 의 공용 도구). `client`·`storage` 는 서비스만 부른다.
 - 의존 방향은 `presentation → service → persistence → domain` 이다. `domain` 은 아무것도 모른다.
   - `presentation` 은 엔티티를 모른다. 서비스·persistence 는 요청 DTO·`PageResponse` 를 모른다.
 - `persistence`: JPA 엔티티(`*Entity`)·리포지토리·`*Specifications`.
   `domain`: 저장 수단을 모르는 개념 — enum, 도메인 객체, `*Command`, `*Query`.
   외부 API 응답 모델은 그 API 를 부르는 `client` 에 둔다.
 - `presentation` 은 하위 패키지 없이 `*Controller`, `*Requests`, `*Responses` 파일로 나눈다.
+  DTO 가 하나뿐이면 단수(`*Response`)로 쓴다.
 - 두 도메인 이상이 쓰는 것만 `common` 으로 올린다.
 - import 는 명시적으로 쓴다. 와일드카드를 쓰지 않는다.
 
@@ -56,12 +59,14 @@ docker compose down -v            # 로컬 DB 초기화 (볼륨 삭제)
 본보기는 `trip/presentation/TripController.kt` 와 `trip/service/TripService.kt` 다.
 
 - 컨트롤러: `requireLogin` → 요청 DTO `toCommand()` → 서비스 호출 → `XxxResponse.from(도메인 객체[, userId])`.
-  비즈니스 로직과 조회를 두지 않는다.
+  비즈니스 로직과 조회를 두지 않는다. 요청 형식의 검증(파라미터 조합, 필수 좌표 등)은 컨트롤러가 해도 된다.
 - 서비스는 요청 DTO 를 받지 않는다. 필드가 많으면 `*Command`, 한두 개면 파라미터로 받는다.
-  Bean Validation 은 요청 DTO 에만 건다.
+  Bean Validation 은 요청 DTO 에만 건다. 업로드 파일(`MultipartFile`)은 그대로 넘긴다.
 - 서비스는 DTO 가 아니라 도메인 객체를 반환한다. 예외로, 다른 서비스가 연관을 걸 때 쓰는 메서드
   (`findOwnedTrip`, `findEditableRecord` 등)는 엔티티를 반환한다.
 - 서비스 클래스에 `@Transactional(readOnly = true)`, 쓰는 메서드에만 `@Transactional` 을 단다.
+  예외: DB 를 쓰지 않는 서비스는 달지 않고, 호출자 트랜잭션 안에서만 돌아야 하는 서비스는
+  `Propagation.MANDATORY` 로 그 의도를 드러낸다.
 - 응답 DTO 는 `companion object` 의 `from()` 으로 만든다. 도메인 객체에 `toXxxResponse()` 확장 함수를 두지 않는다.
 - **응답 변환 중에 조회하지 않는다** (N+1). 필요한 것은 서비스가 미리 모아 담는다 (`findByTripIdIn` 류).
 - 요청자에 따라 달라지는 값(`isOwner` 등)은 도메인 객체 필드가 아니라 변환 시점에 정한다.
@@ -83,7 +88,8 @@ docker compose down -v            # 로컬 DB 초기화 (볼륨 삭제)
 
 ## 예외
 
-- 도메인 실패는 `throw ApiException(ErrorCode.XXX)`. 컨트롤러가 상태 코드를 직접 만들지 않는다.
+- 도메인 실패는 `throw ApiException(ErrorCode.XXX)`. 컨트롤러가 오류 상태 코드를 직접 만들지 않는다
+  (성공 응답의 201·204 는 `ResponseEntity` 로 만든다).
 - 새 `ErrorCode` 는 명세의 오류 표에도 함께 적는다.
 - 변환은 `GlobalExceptionHandler` 하나가 한다. 핸들러를 새로 만들지 않는다.
 - `500`·`409` 메시지는 고정 문구다. 예외 메시지(테이블·제약 이름)는 로그로만 남긴다.
@@ -93,6 +99,7 @@ docker compose down -v            # 로컬 DB 초기화 (볼륨 삭제)
 - `private val log = LoggerFactory.getLogger(javaClass)`.
 - 형식: `"<대상> <동작>[: <사유>] key={} key={}"` — `"초대 수락 거부: 정원 초과 inviteId={} groupId={}"`.
   키는 영문 camelCase, 단위는 키 이름에(`totalBytes`), 상태 변화는 `from={} to={}`. 괄호 부연을 붙이지 않는다.
+  예외: `LoggingFilter` 의 요청 한 줄(`GET /api/trips -> 200 (12ms)`)은 액세스 로그 관례를 따른다.
 - 변경 로그는 저장 후에, 차단 로그는 예외를 던지기 직전에 찍는다.
 - 레벨: 도메인 이벤트·권한 차단 `DEBUG`, 요청 한 줄·배치 결과 `INFO`, 외부 API 실패·제약 위반 `WARN`,
   처리되지 않은 예외 `ERROR`.
