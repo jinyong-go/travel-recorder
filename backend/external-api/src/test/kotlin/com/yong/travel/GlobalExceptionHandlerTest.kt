@@ -1,8 +1,11 @@
 package com.yong.travel
 
+import com.yong.travel.common.error.GlobalExceptionHandler
+import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.web.servlet.MockMvc
@@ -12,6 +15,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.web.server.ResponseStatusException
 
 /**
  * 어떤 경로로 실패하든 `ErrorResponse`(code/message/status) 한 가지 형태로 응답하는지 확인한다.
@@ -85,5 +89,22 @@ class GlobalExceptionHandlerTest {
         mockMvc.perform(get("/api/records/99999999"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("RECORD_NOT_FOUND"))
+    }
+
+    // 앱 코드에는 상태만 담긴 예외를 던지는 경로가 없어 핸들러를 직접 부른다.
+    @Test
+    fun `상태만 담긴 404 는 도메인 코드가 아니라 NOT_FOUND 다`() {
+        val response = GlobalExceptionHandler().handleErrorResponseException(ResponseStatusException(HttpStatus.NOT_FOUND))
+
+        assertEquals(404, response.statusCode.value())
+        assertEquals("NOT_FOUND", response.body?.code)
+    }
+
+    @Test
+    fun `범용 코드가 없는 4xx 는 상태를 유지하고 BAD_REQUEST 다`() {
+        val response = GlobalExceptionHandler().handleErrorResponseException(ResponseStatusException(HttpStatus.NOT_ACCEPTABLE))
+
+        assertEquals(406, response.statusCode.value())
+        assertEquals("BAD_REQUEST", response.body?.code)
     }
 }

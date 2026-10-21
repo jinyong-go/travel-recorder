@@ -1,4 +1,5 @@
 import { REQUEST_STATUS } from '../api/requestStatus.js'
+import { effectiveVisibility } from './visibility.js'
 
 // 여행 표시용 값과 함수. 여행 데이터 자체는 서버에서 온다 (api/trips.js).
 //
@@ -56,6 +57,9 @@ export const tripAudience = (trip) => ({
   visibility: trip.visibility,
   groupIds: (trip.sharedGroups ?? []).map((g) => g.id),
 })
+
+/** 여행을 실제로 볼 수 있는 범위. 공개 범위를 화면에 말하는 자리는 저장값이 아니라 이 값을 쓴다. */
+export const tripVisibility = (trip) => effectiveVisibility(tripAudience(trip))
 
 /** `1,200,000원` 처럼 쓴다. 예산이 없으면(`null`) 표기도 null 이다 — `0원` 과 구분한다. */
 export const budgetLabel = (budget) =>

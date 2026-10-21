@@ -3,6 +3,7 @@ import { errorMessage } from '../api/client.js'
 import { createRecord, uploadPhotos } from '../api/records.js'
 import { recordPayload } from '../data/records.js'
 import { visibilityMeta } from '../data/visibility.js'
+import { tripVisibility } from '../data/trips.js'
 import useModal from '../hooks/useModal.js'
 import RecordForm from './RecordForm.jsx'
 import { CloseIcon } from './icons.jsx'
@@ -57,7 +58,7 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
     onCreated(record, { photoFailed })
   }
 
-  const visibility = visibilityMeta(trip.visibility)
+  const visibility = visibilityMeta(tripVisibility(trip))
 
   return (
     // 제출 중에는 바깥 클릭으로 닫지 않는다. 기록이 만들어진 뒤 사진을 올리는 도중일 수 있다.

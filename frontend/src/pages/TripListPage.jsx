@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PLACE_ICON } from '../data/records.js'
-import { SCOPES, TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
+import { SCOPES, TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel, tripVisibility } from '../data/trips.js'
 import { fileUrl } from '../api/client.js'
 import { fetchTrips } from '../api/trips.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
@@ -107,7 +107,7 @@ export default function TripListPage() {
                 <div className="trip-meta">
                   <span className="trip-owner">by {isOwner ? '나' : trip.owner?.name}</span>
                   {/* 누구에게 공유했는지는 소유자만 아는 정보다. */}
-                  {isOwner && <VisibilityBadge visibility={trip.visibility} size="sm" />}
+                  {isOwner && <VisibilityBadge visibility={tripVisibility(trip)} size="sm" />}
                 </div>
                 {/* 긴 설명은 CSS 로 2줄에서 자른다. 자르는 위치는 글자 폭에 따라 달라져야 한다. */}
                 {trip.memo && <p className="trip-memo">{trip.memo}</p>}

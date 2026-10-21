@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { categoryIcon, categoryLabel, placeOf } from '../data/records.js'
 import { DEFAULT_VISIBILITY, effectiveVisibility, isWideningVisibility } from '../data/visibility.js'
 import { formatDate } from '../utils/date.js'
-import { TRIP_STATUS_MESSAGE, budgetLabel, tripAudience, tripDurationLabel, tripPeriodLabel } from '../data/trips.js'
+import { TRIP_STATUS_MESSAGE, budgetLabel, tripAudience, tripDurationLabel, tripPeriodLabel, tripVisibility } from '../data/trips.js'
 import { errorMessage, fileUrl } from '../api/client.js'
 import { fetchTripRecords } from '../api/records.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
@@ -356,7 +356,7 @@ function TripVisibilitySection({ trip, onTripChange }) {
         <summary className="collapsible-summary">
           <span className="detail-section-title">공개 범위</span>
           <span className="detail-visibility-current">
-            <VisibilityBadge visibility={trip.visibility} />
+            <VisibilityBadge visibility={tripVisibility(trip)} />
             {effectiveVisibility(saved) === 'GROUP' && (
               <span className="detail-shared-groups">
                 {sharedGroups.map((g) => g.name).join(', ')}

@@ -5,8 +5,7 @@ import * as recordApi from '../api/records.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { categoryIcon, categoryLabel, placeOf, recordPayload } from '../data/records.js'
 import { formatDate } from '../utils/date.js'
-import { tripAudience } from '../data/trips.js'
-import { effectiveVisibility } from '../data/visibility.js'
+import { tripVisibility } from '../data/trips.js'
 import useResource from '../hooks/useResource.js'
 import useTrip from '../hooks/useTrip.js'
 import { buildMapsSearchUrl } from '../config/mapSettings.js'
@@ -90,7 +89,7 @@ export default function RecordDetailPage() {
   const place = placeOf(record)
   // 소유자에게만 채워지는 값이다. 열람자에게는 null 이다.
   const sharedGroups = trip?.sharedGroups ?? []
-  const sharedWithGroups = trip != null && effectiveVisibility(tripAudience(trip)) === 'GROUP'
+  const sharedWithGroups = trip != null && tripVisibility(trip) === 'GROUP'
   // 서버는 저장하지 않는 값이다. 기준 위치는 이 브라우저의 것이다.
   const distanceKm = haversineDistanceKm(referenceLocation, place.location)
 
@@ -307,7 +306,7 @@ export default function RecordDetailPage() {
             </p>
             {trip && (
               <p className="detail-visibility-current">
-                이 여행의 공개 범위 <VisibilityBadge visibility={trip.visibility} />
+                이 여행의 공개 범위 <VisibilityBadge visibility={tripVisibility(trip)} />
                 {sharedWithGroups && (
                   <span>· {sharedGroups.map((g) => g.name).join(', ')}</span>
                 )}

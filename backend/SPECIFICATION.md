@@ -1102,6 +1102,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 매핑되지 않은 주소, 존재하지 않는 정적 파일 | 404 | `NOT_FOUND` |
 | 지원하지 않는 HTTP 메서드 | 405 | `METHOD_NOT_ALLOWED` |
 | 지원하지 않는 `Content-Type` | 415 | `UNSUPPORTED_MEDIA_TYPE` |
+| 그 밖에 상태만 알려진 요청 실패 (협상 불가 `Accept` 등). 상태는 원래 값을 유지 | 해당 4xx | `BAD_REQUEST` |
 | 그룹 정원(5명) 초과 | 409 | `GROUP_MEMBER_LIMIT_EXCEEDED` |
 | 이미 멤버인 사용자를 초대 | 409 | `ALREADY_MEMBER` |
 | 그 밖의 DB 제약 위반 (동시 요청 경합 등) | 409 | `CONFLICT` |

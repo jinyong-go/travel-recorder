@@ -77,6 +77,8 @@ export default function GroupDetailPage() {
 
   const [email, setEmail] = useState('')
   const [inviteMessage, setInviteMessage] = useState(null)
+  // 나가기·삭제·제외 실패 문구. 멤버에게도 보여야 하므로 소유자 전용인 초대 문구와 따로 둔다.
+  const [actionError, setActionError] = useState(null)
   // 확인 모달에 올라 있는 동작. { type: 'delete' | 'leave' } 또는 { type: 'member', memberId }
   const [confirming, setConfirming] = useState(null)
   // 나가 있는 요청. 다른 버튼까지 막되 문구는 누른 버튼에서만 바꾼다.
@@ -99,7 +101,8 @@ export default function GroupDetailPage() {
 
   const isOwner = group.isOwner
   const isFull = group.memberCount >= group.memberLimit
-  const pendingCount = pending.items.length
+  // 불러온 항목 수가 아니라 서버의 전체 건수다. "더 보기" 전에는 일부만 불러와 있다.
+  const pendingCount = pending.total ?? 0
 
   const handleSend = async (e) => {
     e.preventDefault()
@@ -143,10 +146,11 @@ export default function GroupDetailPage() {
 
   const confirmAction = async () => {
     setProcessing({ action: 'confirm' })
+    setActionError(null)
     try {
       await pendingAction.run(group.id, confirming)
     } catch {
-      setInviteMessage({ type: 'error', text: '요청을 처리하지 못했습니다. 다시 시도해주세요.' })
+      setActionError('요청을 처리하지 못했습니다. 다시 시도해주세요.')
       return
     } finally {
       setProcessing(null)
@@ -288,6 +292,7 @@ export default function GroupDetailPage() {
             >
               {isOwner ? '그룹 삭제' : '그룹 나가기'}
             </button>
+            {actionError && <p className="invite-error">{actionError}</p>}
           </section>
         </div>
       </main>

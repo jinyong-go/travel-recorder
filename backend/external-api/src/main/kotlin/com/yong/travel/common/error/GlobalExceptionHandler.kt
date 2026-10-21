@@ -176,9 +176,26 @@ class GlobalExceptionHandler {
     @ExceptionHandler(ErrorResponseException::class)
     fun handleErrorResponseException(e: ErrorResponseException): ResponseEntity<ErrorResponse> {
         val status = e.statusCode
-        val code = ErrorCode.entries.find { it.status.value() == status.value() } ?: ErrorCode.INTERNAL_ERROR
+        val code = genericCodeOf(status.value())
         if (status.is5xxServerError) log.error("처리되지 않은 서버 오류", e)
         return ResponseEntity.status(status).body(ErrorResponse(code.name, code.defaultMessage, status.value()))
+    }
+
+    /**
+     * 상태만 알려진 실패에 붙일 범용 코드.
+     *
+     * 상태로 `ErrorCode` 를 찾으면 같은 상태의 도메인 코드(`TRIP_NOT_FOUND` 등)가 먼저 걸려
+     * 프론트엔드가 엉뚱한 문구를 고른다. 그래서 범용 코드만 명시해 고른다.
+     */
+    private fun genericCodeOf(status: Int): ErrorCode = when (status) {
+        401 -> ErrorCode.UNAUTHENTICATED
+        403 -> ErrorCode.FORBIDDEN
+        404 -> ErrorCode.NOT_FOUND
+        405 -> ErrorCode.METHOD_NOT_ALLOWED
+        409 -> ErrorCode.CONFLICT
+        415 -> ErrorCode.UNSUPPORTED_MEDIA_TYPE
+        in 400..499 -> ErrorCode.BAD_REQUEST
+        else -> ErrorCode.INTERNAL_ERROR
     }
 
     /**
