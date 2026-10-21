@@ -89,7 +89,7 @@ presentation → service → persistence
 - **`presentation`은 `persistence`를 건너뛰어 참조하지 않음** — 엔티티를 받거나 반환하는 변환 함수 금지
 - `domain`은 다른 계층을 참조하지 않음
 
-세부 규칙은 [AGENTS.md](./AGENTS.md)의 "패키지 구조"·"계층 책임" 참고.
+세부 규칙은 [AGENTS.md](./AGENTS.md)의 "패키지"·"계층" 참고.
 
 ```
 external-api/
