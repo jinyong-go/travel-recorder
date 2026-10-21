@@ -19,6 +19,7 @@
 | [`backend/SPECIFICATION.md`](./backend/SPECIFICATION.md) | 엔티티·테이블, 인가 구현, REST API, 오류 코드, 저장소 설계 |
 | [`frontend/SPECIFICATION.md`](./frontend/SPECIFICATION.md) | 화면·라우트, 폼·모달 동작, 문구, 테마, 접근성 |
 | [`REFERENCE.md`](./REFERENCE.md) | 공개 범위·공유 모델과 여행 계층의 설계 근거, 유사 서비스 조사 |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | 서버·DB·외부 서비스 구성과 실행 환경(Docker Compose, 프로파일별 구성) |
 | [`CLAUDE.md`](./CLAUDE.md) | 작업 규칙 — 승인 절차, 커밋 메시지 형식, 명세 작성 원칙, 코드·주석 원칙 |
 
 두 모듈 명세가 어긋나면 루트 [SPECIFICATION.md](./SPECIFICATION.md)가 우선.
