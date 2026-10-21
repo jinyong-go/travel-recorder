@@ -6,7 +6,7 @@
 - 공개 범위는 `PRIVATE` / `GROUP` / `PUBLIC` 중 **여행 단위로** 지정, 하위 기록은 소속 여행의 범위를 따름
 - 기록 등록용 장소 검색은 NAVER API HUB 지역 검색을 백엔드가 프록시·집계해 제공
 
-상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md) 참고. 작업 규칙은 [CLAUDE.md](./CLAUDE.md) 참고.
+상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md) 참고. 작업 규칙은 [AGENTS.md](./AGENTS.md) 참고.
 
 ## 기술 스택
 
@@ -89,7 +89,7 @@ presentation → service → persistence
 - **`presentation`은 `persistence`를 건너뛰어 참조하지 않음** — 엔티티를 받거나 반환하는 변환 함수 금지
 - `domain`은 다른 계층을 참조하지 않음
 
-세부 규칙은 [CLAUDE.md](./CLAUDE.md)의 "패키지 구조"·"계층 책임" 참고.
+세부 규칙은 [AGENTS.md](./AGENTS.md)의 "패키지 구조"·"계층 책임" 참고.
 
 ```
 external-api/

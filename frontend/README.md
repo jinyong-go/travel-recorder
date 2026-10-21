@@ -6,7 +6,7 @@
 - 공개 범위(나만 보기 / 그룹 공유 / 전체 공개)는 **여행 단위로** 지정, 하위 기록 전체가 함께 적용
 - 목록은 내 여행·공유받은 여행·둘러보기로 구분
 
-상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md) 참고. 작업 규칙은 [CLAUDE.md](./CLAUDE.md) 참고.
+상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md) 참고. 작업 규칙은 [AGENTS.md](./AGENTS.md) 참고.
 
 ## 기술 스택
 
