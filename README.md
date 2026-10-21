@@ -19,7 +19,7 @@
 | [`backend/SPECIFICATION.md`](./backend/SPECIFICATION.md) | 엔티티·테이블, 인가 구현, REST API, 오류 코드, 저장소 설계 |
 | [`frontend/SPECIFICATION.md`](./frontend/SPECIFICATION.md) | 화면·라우트, 폼·모달 동작, 문구, 테마, 접근성 |
 | [`REFERENCE.md`](./REFERENCE.md) | 공개 범위·공유 모델과 여행 계층의 설계 근거, 유사 서비스 조사 |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | 서버·DB·외부 서비스 구성과 실행 환경(Docker Compose, 프로파일별 구성) |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | 서버·DB·외부 서비스 구성, 구조·기술 스택을 고른 이유, 실행 환경(Docker Compose, 프로파일별 구성) |
 | [`AGENTS.md`](./AGENTS.md) | 작업 규칙 — 승인 절차, 커밋 메시지 형식, 명세 작성 원칙, 코드·주석 원칙 |
 
 두 모듈 명세가 어긋나면 루트 [SPECIFICATION.md](./SPECIFICATION.md)가 우선.
@@ -63,7 +63,7 @@ cd frontend && npm install && npm run dev
 
 - **로그인**: 네이버 OAuth 복구 전까지 `local`·`dev` 프로파일 전용 임시 계정으로 로그인
   (`user1`·`user2`·`user3`, 비밀번호 `password`). 계정이 셋이라 그룹 공유·초대를 직접 주고받기 가능
-- **API 키**: 키 없이도 기동 가능. 장소 검색은 목업 결과, 지도는 "새 창으로 열기" 방식으로 동작.
+- **API 키**: 키 없이도 기동 가능. 장소 검색은 키가 없으면 실패 안내, 지도는 "새 창으로 열기" 방식으로 동작.
   발급·설정 방법은 각 모듈 README 참고
 
 | 작업 | 명령 |
@@ -83,7 +83,7 @@ cd frontend && npm install && npm run dev
 
 - **백엔드**: 여행·여행 기록·공개 범위(여행 단위)·공유 그룹·초대·초대 이력·태그·사진 구현. 공개 범위 판정은
   조회 쿼리 단계에서 수행하며, 기록 조회는 항상 소속 여행을 조인
-- **프론트엔드**: 장소 검색을 제외한 전 화면이 백엔드 API로 동작. 장소 검색만 목업
+- **프론트엔드**: 전 화면이 백엔드 API로 동작
 - **임시 조치**
     - 네이버 OAuth 대신 임시 인메모리 로그인 사용
     - 시큐리티 인가 정책이 `permitAll()`로 열려 있어, 인증이 필요한 엔드포인트는 컨트롤러가 직접 차단

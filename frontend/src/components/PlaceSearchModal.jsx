@@ -1,11 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import useModal from '../hooks/useModal.js'
+import useResource from '../hooks/useResource.js'
+import { searchPlaces } from '../api/places.js'
+import { errorMessage } from '../api/client.js'
+import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { CloseIcon, SearchIcon } from './icons.jsx'
-import { PLACE_SEARCH_RESULTS } from '../data/placeSearchResults.js'
 import { haversineDistanceKm } from '../utils/geo.js'
 import './PlaceSearchModal.css'
 
-const PAGE_SIZE = 10
+const SEARCH_ERROR = {
+  PLACE_SEARCH_UNAVAILABLE: '지금은 장소 검색을 할 수 없습니다. 잠시 후 다시 시도해주세요.',
+}
 
 /** 검색 결과 거리의 기준이 무엇인지. 확인 중이면 출처보다 그 사실을 먼저 알린다. */
 const REFERENCE_LOCATION_LABEL = {
@@ -15,48 +20,50 @@ const REFERENCE_LOCATION_LABEL = {
   default: '기본 위치(서울역)',
 }
 
-// 우편번호 검색 방식의 장소 검색 모달.
-// 실제 구현에서는 PLACE_SEARCH_RESULTS 목업 대신 백엔드의 네이버 지역 검색
-// 프록시 API(거리 계산·페이지네이션까지 처리된 응답)를 호출해야 한다.
+/**
+ * 우편번호 검색 방식의 장소 검색 모달. 백엔드가 네이버 지역 검색을 집계해 페이지로 준다.
+ *
+ * 기준 위치는 서버로 보내지 않으므로 거리순 정렬은 받은 페이지 안에서만 이뤄진다. 원본 API 의
+ * 검색어당 건수 상한 때문에 결과가 적게 와도 오류가 아니다.
+ */
 export default function PlaceSearchModal({ reference, onSelect, onClose }) {
-  const { location: referenceLocation, source, status, setManualLocation } = reference
+  const { location: referenceLocation, source, status: referenceStatus, setManualLocation } = reference
   const panelRef = useModal(onClose)
   // true 면 고른 장소를 기록에 넣지 않고 기준 위치로 저장한다.
   const [pickingReference, setPickingReference] = useState(false)
   const title = pickingReference ? '내 위치 지정' : '장소 검색'
   const referenceLabel =
-    status === 'locating' ? REFERENCE_LOCATION_LABEL.locating : REFERENCE_LOCATION_LABEL[source]
+    referenceStatus === 'locating' ? REFERENCE_LOCATION_LABEL.locating : REFERENCE_LOCATION_LABEL[source]
   const [queryInput, setQueryInput] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState(null)
-  const [page, setPage] = useState(1)
+  const [emptyKeyword, setEmptyKeyword] = useState(false)
+  // 서버 페이지 번호라 0 부터다. 화면에는 1 을 더해 보인다.
+  const [page, setPage] = useState(0)
+
+  const load = useCallback(() => searchPlaces(submittedQuery, page), [submittedQuery, page])
+  const { data, status, error, reload } = useResource(load, submittedQuery !== null)
 
   const results = useMemo(() => {
-    if (submittedQuery === null) return null
-    const q = submittedQuery.trim().toLowerCase()
-    const matched = q
-      ? PLACE_SEARCH_RESULTS.filter(
-          (p) =>
-            p.name.toLowerCase().includes(q) ||
-            p.region.toLowerCase().includes(q) ||
-            p.address.toLowerCase().includes(q),
-        )
-      : PLACE_SEARCH_RESULTS
-    return matched
-      .map((p) => ({ ...p, distanceKm: haversineDistanceKm(referenceLocation, p.location) }))
+    if (!data) return []
+    return data.content
+      .map(({ latitude, longitude, ...p }) => {
+        const location = { lat: latitude, lng: longitude }
+        return { ...p, location, distanceKm: haversineDistanceKm(referenceLocation, location) }
+      })
       .sort((a, b) => a.distanceKm - b.distanceKm)
-  }, [submittedQuery, referenceLocation])
+  }, [data, referenceLocation])
 
-  const totalCount = results?.length ?? 0
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages)
-  const pageItems = results
-    ? results.slice((currentPage - 1) * PAGE_SIZE, (currentPage - 1) * PAGE_SIZE + PAGE_SIZE)
-    : []
+  const totalCount = data?.totalElements ?? 0
+  const totalPages = data?.totalPages ?? 0
 
   const handleSearch = (e) => {
     e.preventDefault()
-    setSubmittedQuery(queryInput)
-    setPage(1)
+    // 빈 검색어는 외부 API 호출 한도만 쓰므로 보내지 않고 안내만 한다.
+    const keyword = queryInput.trim()
+    setEmptyKeyword(!keyword)
+    if (!keyword) return
+    setSubmittedQuery(keyword)
+    setPage(0)
   }
 
   const handleSelect = (place) => {
@@ -71,11 +78,12 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
     onSelect({
       name: place.name,
       address: place.address,
-      region: place.region,
-      category: place.category,
+      roadAddress: place.roadAddress ?? null,
+      // 검색 결과에는 지역명이 따로 없어 기존 기록(placeOf)처럼 주소를 대신 쓴다.
+      region: place.address,
       location: place.location,
       // 네이버 지역 검색 결과의 원본 링크. 있을 때만 등록 요청의 externalLink 로 넘어간다.
-      link: place.link,
+      link: place.link ?? null,
     })
   }
 
@@ -119,21 +127,36 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
         )}
 
         <div className="place-search-body">
-          {submittedQuery === null && (
+          {emptyKeyword && <p className="place-search-hint field-error">검색어를 입력해주세요.</p>}
+
+          {!emptyKeyword && submittedQuery === null && (
             <p className="place-search-hint">검색어를 입력하고 검색해주세요.</p>
           )}
 
-          {submittedQuery !== null && totalCount === 0 && (
+          {status === REQUEST_STATUS.LOADING && !data && (
+            <p className="place-search-hint">검색 중…</p>
+          )}
+
+          {status === REQUEST_STATUS.ERROR && (
+            <p className="place-search-hint field-error">
+              {errorMessage(error, SEARCH_ERROR, '장소를 검색하지 못했습니다.')}{' '}
+              <button type="button" className="link-button" onClick={reload}>
+                다시 시도
+              </button>
+            </p>
+          )}
+
+          {status === REQUEST_STATUS.COMPLETE && totalCount === 0 && (
             <p className="place-search-hint">검색 결과가 없습니다.</p>
           )}
 
-          {totalCount > 0 && (
+          {data && totalCount > 0 && (
             <>
               <p className="place-search-count">
-                총 <strong>{totalCount}</strong>건 · 가까운 순
+                총 <strong>{totalCount}</strong>건 · 이 페이지 안에서 가까운 순
               </p>
               <ul className="place-search-list">
-                {pageItems.map((p) => (
+                {results.map((p) => (
                   <li key={`${p.name}-${p.address}`}>
                     <button
                       type="button"
@@ -159,26 +182,26 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
                   <button
                     type="button"
                     className="page-btn"
-                    disabled={currentPage === 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => p - 1)}
                   >
                     이전
                   </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                  {Array.from({ length: totalPages }, (_, i) => i).map((n) => (
                     <button
                       key={n}
                       type="button"
-                      className={`page-btn${n === currentPage ? ' active' : ''}`}
+                      className={`page-btn${n === page ? ' active' : ''}`}
                       onClick={() => setPage(n)}
                     >
-                      {n}
+                      {n + 1}
                     </button>
                   ))}
                   <button
                     type="button"
                     className="page-btn"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages - 1}
+                    onClick={() => setPage((p) => p + 1)}
                   >
                     다음
                   </button>
