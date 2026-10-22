@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { categoryIcon, categoryLabel, placeOf } from '../data/records.js'
-import { DEFAULT_VISIBILITY, effectiveVisibility, isWideningVisibility } from '../data/visibility.js'
+import { DEFAULT_VISIBILITY, PHOTO_LINK_NOTICE, effectiveVisibility, isWideningVisibility } from '../data/visibility.js'
 import { formatDate } from '../utils/date.js'
 import { TRIP_STATUS_MESSAGE, budgetLabel, tripAudience, tripDurationLabel, tripPeriodLabel, tripVisibility } from '../data/trips.js'
 import { errorMessage, fileUrl } from '../api/client.js'
@@ -326,11 +326,15 @@ function TripVisibilitySection({ trip, onTripChange }) {
 
   const handleSave = async () => {
     setSaving(true)
+    const next = { visibility: visibilityDraft, groupIds: groupDraft }
+    // 거꾸로 가면 넓히는 변경이라면, 이번 변경으로 볼 수 있는 사람이 줄었다.
+    const narrowing = isWideningVisibility(next, saved)
     try {
       const updated = await tripApi.changeTripVisibility(trip.id, visibilityDraft, groupDraft)
       onTripChange(updated)
       const where = SAVED_SCOPE_TEXT[effectiveVisibility(tripAudience(updated))]
-      setMessage({ type: 'success', text: `여행지 ${recordCount}곳이 ${where}.` })
+      const notice = narrowing ? ` ${PHOTO_LINK_NOTICE}` : ''
+      setMessage({ type: 'success', text: `여행지 ${recordCount}곳이 ${where}.${notice}` })
     } catch (err) {
       setMessage({ type: 'error', text: errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했습니다.') })
     } finally {
