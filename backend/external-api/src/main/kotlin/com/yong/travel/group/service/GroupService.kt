@@ -204,10 +204,14 @@ class GroupService(
     fun leave(groupId: Long, userId: Long) {
         val group = findGroup(groupId)
         if (group.owner.id == userId) {
+            log.debug("그룹 탈퇴 차단: 소유자 groupId={} userId={}", groupId, userId)
             throw ApiException(ErrorCode.FORBIDDEN, "소유자는 탈퇴할 수 없습니다. 그룹을 삭제해주세요.")
         }
         val member = groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
-            ?: throw ApiException(ErrorCode.FORBIDDEN, "그룹 멤버가 아닙니다.")
+            ?: run {
+                log.debug("그룹 탈퇴 차단: 비멤버 groupId={} userId={}", groupId, userId)
+                throw ApiException(ErrorCode.FORBIDDEN, "그룹 멤버가 아닙니다.")
+            }
         groupMemberRepository.delete(member)
         memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, member.user, GroupMemberEvent.LEFT))
         val revokedShares = tripVisibilityHistoryService.revokeOwnerShares(

@@ -44,6 +44,7 @@ class LocalLoginController(
     /** 세션 쿠키 인증이므로 인증 결과를 세션에 직접 넣는다. */
     private val securityContextRepository = HttpSessionSecurityContextRepository()
 
+    /** 임시 로그인 요청. 고정 계정의 아이디와 비밀번호다. */
     data class LocalLoginRequest(
         @field:NotBlank
         val username: String,

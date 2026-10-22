@@ -210,6 +210,7 @@ class GlobalExceptionHandler {
         return toResponse(ErrorCode.INTERNAL_ERROR)
     }
 
+    /** 오류 코드의 상태로 응답을 만든다. `message` 를 주지 않으면 코드의 기본 문구를 쓴다. */
     private fun toResponse(
         errorCode: ErrorCode,
         message: String = errorCode.defaultMessage,

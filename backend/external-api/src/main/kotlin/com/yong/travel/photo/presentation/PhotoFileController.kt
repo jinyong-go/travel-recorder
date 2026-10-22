@@ -1,5 +1,6 @@
 package com.yong.travel.photo.presentation
 
+import com.yong.travel.photo.service.PhotoService
 import com.yong.travel.photo.storage.PhotoDatabaseService
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
@@ -18,7 +19,7 @@ import java.util.concurrent.TimeUnit
  */
 @RestController
 class PhotoFileController(
-    private val photoDatabaseService: PhotoDatabaseService,
+    private val photoService: PhotoService,
 ) {
 
     /**
@@ -30,7 +31,7 @@ class PhotoFileController(
      */
     @GetMapping("${PhotoDatabaseService.PHOTO_URL_PREFIX}/{photoId}")
     fun serve(@PathVariable photoId: UUID): ResponseEntity<ByteArray> {
-        val content = photoDatabaseService.load(photoId)
+        val content = photoService.load(photoId)
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(content.contentType))
             // 수정 API 가 없어 한 번 올라간 사진은 바뀌지 않는다. 비공개 여행의 사진이 공유 캐시(프록시)에

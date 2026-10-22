@@ -58,8 +58,8 @@ naver:
 
 app:
   upload:
-    # 서비스 레벨 검증 값. spring.servlet.multipart.max-file-size 와 같은 값을 유지한다.
-    max-photo-size: ${MAX_PHOTO_SIZE:5MB}
+    # 서비스 레벨 검증 값. 멀티파트 단계 제한과 항상 같도록 그 값을 그대로 따른다.
+    max-photo-size: ${spring.servlet.multipart.max-file-size}
     allowed-content-types: ${ALLOWED_PHOTO_CONTENT_TYPES:image/jpeg,image/png,image/webp}
 
 management:

@@ -82,7 +82,7 @@ class TripService(
         // 공유 그룹은 소유자 본인의 항목에만 필요하다. 그 여행들만 골라 한 번에 읽는다.
         val shares = sharesOf(trips.content.filter { userId != null && it.owner.id == userId })
         // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
-        log.debug("여행 목록 scope={} userId={} count={}", query.scope, userId, trips.totalElements)
+        log.debug("여행 목록 조회 scope={} userId={} count={}", query.scope, userId, trips.totalElements)
         return trips.toPageResult().map { it.toDomain(userId, counts[requireNotNull(it.id)] ?: 0L, shares) }
     }
 
@@ -233,7 +233,7 @@ class TripService(
         recordRepository.softDeleteByTripId(tripId, Instant.now())
         // 하위 기록의 사진 바이너리도 지운다. 메타데이터는 기록과 함께 남는다.
         val purged = photoDatabaseService.deleteByTrip(tripId)
-        log.debug("여행 삭제 tripId={} ownerId={} photos={}", tripId, ownerId, purged)
+        log.debug("여행 삭제 tripId={} ownerId={} purgedPhotoCount={}", tripId, ownerId, purged)
     }
 
     /**

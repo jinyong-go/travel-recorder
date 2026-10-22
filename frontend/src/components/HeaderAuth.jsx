@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import useResource from '../hooks/useResource.js'
 import { ChevronDownIcon } from './icons.jsx'
 import './HeaderAuth.css'
+import { AUTH_STATUS } from '../context/authStatus.js'
 
 /** 받은 초대 첫 페이지. 건수(`totalElements`)만 쓴다. */
 const loadReceivedInvites = () => fetchReceivedInvites(0)
@@ -23,7 +24,7 @@ export default function HeaderAuth({ receivedCount: givenCount }) {
   const { user, status, logout } = useAuth()
   // 넘겨받던 값이 없어지면(초대함 받은 탭 → 보낸 탭) 그때부터 직접 읽는다. 배지는 보조 정보라
   // 못 읽으면 배지를 달지 않을 뿐 헤더는 그대로 쓴다.
-  const fetched = useResource(loadReceivedInvites, status === 'authenticated' && givenCount === undefined)
+  const fetched = useResource(loadReceivedInvites, status === AUTH_STATUS.AUTHENTICATED && givenCount === undefined)
   const receivedCount = givenCount ?? fetched.data?.totalElements ?? 0
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
@@ -49,9 +50,9 @@ export default function HeaderAuth({ receivedCount: givenCount }) {
 
   // 세션 확인 전에는 아무것도 그리지 않는다. 로그인 링크를 먼저 보여 주면
   // 로그인한 사용자에게 화면이 한 번 깜빡인다.
-  if (status === 'loading') return null
+  if (status === AUTH_STATUS.LOADING) return null
 
-  if (status !== 'authenticated') {
+  if (status !== AUTH_STATUS.AUTHENTICATED) {
     return (
       <Link to="/login" className="header-login-link">
         로그인

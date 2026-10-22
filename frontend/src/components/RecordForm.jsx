@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { fileUrl } from '../api/client.js'
-import { CATEGORIES, MEMO_MAX_LENGTH, categoryIcon } from '../data/records.js'
+import { CATEGORIES, categoryIcon } from '../data/records.js'
+import { RECORD_MEMO_MAX_LENGTH } from '../config/inputLimits.js'
 import {
   ALLOWED_PHOTO_ACCEPT,
   MAX_PHOTO_SIZE_MB,
@@ -106,7 +107,7 @@ export default function RecordForm({
     if (!place) next.place = '장소를 검색해 선택해주세요.'
     if (!category) next.category = '카테고리를 선택해주세요.'
     if (!rating) next.rating = '평점을 선택해주세요.'
-    if (memo.length > MEMO_MAX_LENGTH) next.memo = `메모는 ${MEMO_MAX_LENGTH}자 이하로 입력해주세요.`
+    if (memo.length > RECORD_MEMO_MAX_LENGTH) next.memo = `메모는 ${RECORD_MEMO_MAX_LENGTH}자 이하로 입력해주세요.`
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -212,7 +213,7 @@ export default function RecordForm({
             id="record-memo"
             rows={4}
             value={memo}
-            maxLength={MEMO_MAX_LENGTH}
+            maxLength={RECORD_MEMO_MAX_LENGTH}
             onChange={(e) => setMemo(e.target.value)}
             placeholder="이 방문에 대한 메모를 남겨보세요"
           />

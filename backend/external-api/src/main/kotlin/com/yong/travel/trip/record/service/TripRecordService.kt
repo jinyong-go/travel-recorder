@@ -6,8 +6,6 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.persistence.listPageRequest
 import com.yong.travel.common.persistence.toPageResult
-import com.yong.travel.common.util.haversineKm
-import com.yong.travel.common.util.roundTo2Decimals
 import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
@@ -21,6 +19,8 @@ import com.yong.travel.trip.record.domain.RecordSort
 import com.yong.travel.trip.record.domain.TripRecord
 import com.yong.travel.trip.record.domain.TripRecordCreateCommand
 import com.yong.travel.trip.record.domain.TripRecordUpdateCommand
+import com.yong.travel.trip.record.domain.haversineKm
+import com.yong.travel.trip.record.domain.roundTo2Decimals
 import com.yong.travel.trip.record.persistence.TripRecordEntity
 import com.yong.travel.trip.record.persistence.TripRecordRepository
 import com.yong.travel.trip.record.persistence.TripRecordSpecifications
@@ -98,7 +98,7 @@ class TripRecordService(
 
         // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 기준 좌표는 남기지 않는다.
         log.debug(
-            "기록 목록 scope={} tripId={} userId={} count={}",
+            "기록 목록 조회 scope={} tripId={} userId={} count={}",
             query.scope, query.tripId, userId, found.totalElements,
         )
         return records
@@ -240,7 +240,7 @@ class TripRecordService(
         record.trip.clearCoverIfAmong(photoRepository.findIdsByRecordId(recordId))
         record.softDelete()
         val purged = photoDatabaseService.deleteByRecord(recordId)
-        log.debug("기록 삭제 recordId={} tripId={} authorId={} photos={}", recordId, record.trip.id, authorId, purged)
+        log.debug("기록 삭제 recordId={} tripId={} authorId={} purgedPhotoCount={}", recordId, record.trip.id, authorId, purged)
     }
 
     /**

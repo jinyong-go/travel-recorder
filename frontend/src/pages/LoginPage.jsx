@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { errorMessage } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import ThemeSelector from '../components/ThemeSelector.jsx'
-import { ArrowLeftIcon, MapPinIcon } from '../components/icons.jsx'
+import AppLogoMark from '../components/AppLogoMark.jsx'
+import { ArrowLeftIcon } from '../components/icons.jsx'
 import './LoginPage.css'
 
 const LOGIN_FAILED = '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.'
@@ -60,8 +61,7 @@ export default function LoginPage() {
     <>
       <header className="app-header">
         <Link to="/" className="app-title login-home-link">
-          <MapPinIcon className="app-title-icon" />
-          여행 지도 <span className="by-yong">by YONG</span>
+          <AppLogoMark />
         </Link>
         <div className="header-actions">
           <ThemeSelector />

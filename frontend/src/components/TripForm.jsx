@@ -3,12 +3,11 @@ import { DEFAULT_VISIBILITY } from '../data/visibility.js'
 import { tripDurationLabel } from '../data/trips.js'
 import VisibilitySelect from './VisibilitySelect.jsx'
 import RequiredNote from './RequiredNote.jsx'
+import { TRIP_MEMO_MAX_LENGTH, TRIP_NAME_MAX_LENGTH } from '../config/inputLimits.js'
 import '../styles/form.css'
 import './TripForm.css'
 
 // 백엔드 요청 검증과 같은 값이다.
-const NAME_MAX_LENGTH = 50
-const MEMO_MAX_LENGTH = 1000
 // 제출 검증과 즉시 표시가 같은 문구를 쓴다.
 const DATE_ORDER_ERROR = '종료일은 시작일 이후여야 합니다.'
 
@@ -69,13 +68,13 @@ export default function TripForm({
   const validate = () => {
     const next = {}
     if (!name.trim()) next.name = '여행 이름을 입력해주세요.'
-    else if (name.trim().length > NAME_MAX_LENGTH) next.name = `여행 이름은 ${NAME_MAX_LENGTH}자 이하로 입력해주세요.`
+    else if (name.trim().length > TRIP_NAME_MAX_LENGTH) next.name = `여행 이름은 ${TRIP_NAME_MAX_LENGTH}자 이하로 입력해주세요.`
     if (!startDate) next.startDate = '시작일을 선택해주세요.'
     if (!endDate) next.endDate = '종료일을 선택해주세요.'
     else if (dateOrderInvalid) next.endDate = DATE_ORDER_ERROR
     if (!headcount || Number(headcount) < 1) next.headcount = '인원은 1명 이상이어야 합니다.'
     if (budget !== '' && Number(budget) < 0) next.budget = '예산은 0 이상이어야 합니다.'
-    if (memo.length > MEMO_MAX_LENGTH) next.memo = `여행 설명은 ${MEMO_MAX_LENGTH}자 이하로 입력해주세요.`
+    if (memo.length > TRIP_MEMO_MAX_LENGTH) next.memo = `여행 설명은 ${TRIP_MEMO_MAX_LENGTH}자 이하로 입력해주세요.`
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -106,7 +105,7 @@ export default function TripForm({
           aria-required="true"
           type="text"
           value={name}
-          maxLength={NAME_MAX_LENGTH}
+          maxLength={TRIP_NAME_MAX_LENGTH}
           placeholder="예: 제주 3박 4일"
           onChange={(e) => setName(e.target.value)}
         />
@@ -177,7 +176,7 @@ export default function TripForm({
           id="trip-memo"
           rows={4}
           value={memo}
-          maxLength={MEMO_MAX_LENGTH}
+          maxLength={TRIP_MEMO_MAX_LENGTH}
           placeholder="어떤 여행이었는지 적어보세요"
           onChange={(e) => setMemo(e.target.value)}
         />

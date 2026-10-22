@@ -52,6 +52,7 @@ frontend/
 │  │                           # /records, /records/register 로 들어온 요청은 /trips 로 보낸다
 │  ├─ components/
 │  │  ├─ AppHeader.jsx         # 공통 헤더 (로고·테마 토글·인증 영역, 랜딩·로그인 제외)
+│  │  ├─ AppLogoMark.jsx       # 로고 아이콘과 서비스 이름 (헤더·랜딩·로그인 공용)
 │  │  ├─ HeaderAuth.jsx        # 헤더 인증 영역·계정 메뉴·받은 초대 배지
 │  │  ├─ ConfirmDialog.jsx     # 확인 모달 (삭제·나가기·수정 확인 등)
 │  │  ├─ DetailStatus.jsx      # 상세 화면의 불러오는 중·없음·실패 안내
@@ -75,6 +76,7 @@ frontend/
 │  │  ├─ requestStatus.js              # 조회 진행 상태 값
 │  │  └─ auth.js · trips.js · records.js · groups.js · places.js # 엔드포인트별 호출
 │  ├─ context/AuthContext.jsx          # 로그인 상태 (유일한 전역 상태)
+│  ├─ context/authStatus.js            # 로그인 상태 값
 │  ├─ hooks/
 │  │  ├─ useResource.js                # 단건·전체 목록 조회 + 다시 읽기 (404 는 MISSING)
 │  │  ├─ useTrip.js                    # 여행 하나 조회 (여행 상세·기록 상세)
@@ -87,9 +89,10 @@ frontend/
 │  │  ├─ api.js                        # 백엔드 오리진·네이버 로그인 진입 URL(OAuth 복구 전까지 미사용)
 │  │  ├─ mapSettings.js                # 지도 표시 방식·지도 URL 생성
 │  │  ├─ uploadLimits.js               # 사진 용량·형식 제한 및 검증
+│  │  ├─ inputLimits.js                # 입력 길이 제한 (백엔드 검증과 같은 값)
 │  │  ├─ referenceLocation.js          # 기준 위치 저장/조회, 기본값(서울역)
 │  │  └─ theme.js                      # 라이트/다크 테마 정의·적용·로컬 저장
-│  ├─ data/                            # 화면 표기용 값·함수(records·trips·visibility·loginHistory)
+│  ├─ data/                            # 화면 표기용 값·함수(records·trips·visibility·loginHistory·invites)
 │  ├─ styles/                          # 두 화면 이상이 함께 쓰는 CSS
 │  │  ├─ form.css                      # 입력 폼
 │  │  ├─ detailPage.css                # 상세 화면 틀

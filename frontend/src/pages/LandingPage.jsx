@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CATEGORIES, categoryIcon } from '../data/records.js'
 import { fetchTrips } from '../api/trips.js'
+import useResource from '../hooks/useResource.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import ThemeSelector from '../components/ThemeSelector.jsx'
 import HeaderAuth from '../components/HeaderAuth.jsx'
-import { MapPinIcon, MapViewIcon, PlusIcon, UsersIcon } from '../components/icons.jsx'
+import AppLogoMark from '../components/AppLogoMark.jsx'
+import { MapViewIcon, PlusIcon, UsersIcon } from '../components/icons.jsx'
 import './LandingPage.css'
+import { AUTH_STATUS } from '../context/authStatus.js'
 
 const FEATURES = [
   {
@@ -29,30 +31,21 @@ const FEATURES = [
   },
 ]
 
+/** 공개 여행 첫 페이지. 건수(`totalElements`)만 쓴다. */
+const loadPublicTrips = () => fetchTrips('public', 'recent', 0)
+
 /** 첫 화면. 서비스 소개와 공개 여행 건수를 보여 준다. 비로그인도 보는 화면이다. */
 export default function LandingPage() {
   const { status } = useAuth()
   // 랜딩은 비로그인도 보는 화면이므로 전체 공개 여행만 센다. 건수만 필요해 첫 페이지의
   // totalElements 를 쓴다. 받기 전이나 실패했을 때는 문장을 그리지 않는다 — 0건으로 보이면 거짓이다.
-  const [publicTripCount, setPublicTripCount] = useState(null)
-  useEffect(() => {
-    let cancelled = false
-    fetchTrips('public', 'recent', 0)
-      .then((result) => {
-        if (!cancelled) setPublicTripCount(result.totalElements)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const publicTripCount = useResource(loadPublicTrips).data?.totalElements ?? null
 
   return (
     <>
       <header className="app-header">
         <h1 className="app-title">
-          <MapPinIcon className="app-title-icon" />
-          여행 지도 <span className="by-yong">by YONG</span>
+          <AppLogoMark />
         </h1>
         <div className="header-actions">
           <ThemeSelector />
@@ -79,7 +72,7 @@ export default function LandingPage() {
             {/* 네이버 로그인 복구 시 "네이버로 시작하기" 로 되돌린다.
                 이미 로그인했으면 보이지 않는다. 확인 중에도 그리지 않는다 — 먼저 그리면
                 로그인한 사용자에게 한 번 깜빡인다 (헤더 로그인 링크와 같은 이유). */}
-            {status === 'anonymous' && (
+            {status === AUTH_STATUS.ANONYMOUS && (
               <Link to="/login" className="landing-cta-secondary">
                 로그인하고 시작하기
               </Link>

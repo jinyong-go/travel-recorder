@@ -58,6 +58,7 @@ class LoginHistoryService(
         loginHistoryRepository.findByUserIdOrderByLoggedInAtDesc(userId, listPageRequest(page))
             .toPageResult().map { it.toDomain() }
 
+    /** 저장된 로그인 이력 한 건 → 도메인 객체. */
     private fun LoginHistoryEntity.toDomain() = LoginHistoryEntry(
         id = requireNotNull(id),
         ipAddress = ipAddress,

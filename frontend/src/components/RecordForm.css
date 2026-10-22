@@ -49,8 +49,8 @@
   height: 22px;
   border: none;
   border-radius: 50%;
-  background: rgba(20, 30, 18, 0.6);
-  color: #fff;
+  background: var(--photo-control-bg);
+  color: var(--photo-control-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;

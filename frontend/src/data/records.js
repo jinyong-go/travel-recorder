@@ -11,9 +11,6 @@ const CATEGORY_ICON = {
   SIGHT: '🏞️',
 }
 
-/** 기록 메모 최대 길이. 백엔드 요청 검증(`@Size(max = 1000)`)과 같은 값이다. */
-export const MEMO_MAX_LENGTH = 1000
-
 /** 카테고리가 없거나 정해지지 않은 자리(대표 사진이 없는 여행 등)에 쓰는 핀 이모지. */
 export const PLACE_ICON = '📍'
 

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, clearCsrfToken, fetchSession, setUnauthorizedHandler } from '../api/client.js'
+import { AUTH_STATUS } from './authStatus.js'
 
 const AuthContext = createContext(null)
 
@@ -17,7 +18,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   // loading 을 따로 두는 이유는 비로그인과 "아직 모름" 이 다르기 때문이다.
   // 구분하지 않으면 새로고침 직후 로그인 상태가 잠깐 비로그인으로 보인다.
-  const [status, setStatus] = useState('loading')
+  const [status, setStatus] = useState(AUTH_STATUS.LOADING)
   const navigate = useNavigate()
 
   // 만료 핸들러는 한 번만 등록하므로 최신 status 를 ref 로 읽는다.
@@ -30,11 +31,11 @@ export function AuthProvider({ children }) {
     setUnauthorizedHandler(() => {
       // 부팅 시 본인 정보 조회와 로그인 요청의 401 은 만료가 아니다.
       // 로그인 상태였을 때만 만료로 본다.
-      if (statusRef.current !== 'authenticated') return
+      if (statusRef.current !== AUTH_STATUS.AUTHENTICATED) return
       // 동시에 나간 요청 여럿이 401 을 받아도 한 번만 처리한다.
-      statusRef.current = 'anonymous'
+      statusRef.current = AUTH_STATUS.ANONYMOUS
       setUser(null)
-      setStatus('anonymous')
+      setStatus(AUTH_STATUS.ANONYMOUS)
       // useLocation 을 쓰면 화면을 옮길 때마다 프로바이더가 다시 그려지므로 window.location 을 읽는다.
       const { pathname, search } = window.location
       navigate('/login?error=session_expired', {
@@ -54,13 +55,13 @@ export function AuthProvider({ children }) {
       .then((me) => {
         if (cancelled) return
         setUser(me)
-        setStatus(me ? 'authenticated' : 'anonymous')
+        setStatus(me ? AUTH_STATUS.AUTHENTICATED : AUTH_STATUS.ANONYMOUS)
       })
       .catch(() => {
         // 서버 장애, 또는 두 조회 사이에 세션이 끝난 경우다. 화면은 비로그인으로 그린다.
         if (cancelled) return
         setUser(null)
-        setStatus('anonymous')
+        setStatus(AUTH_STATUS.ANONYMOUS)
       })
 
     return () => {
@@ -77,11 +78,11 @@ export function AuthProvider({ children }) {
       })
       clearCsrfToken()
       setUser(me)
-      setStatus('authenticated')
+      setStatus(AUTH_STATUS.AUTHENTICATED)
       return me
     } catch (error) {
       setUser(null)
-      setStatus('anonymous')
+      setStatus(AUTH_STATUS.ANONYMOUS)
       throw error
     }
   }, [])
@@ -94,18 +95,19 @@ export function AuthProvider({ children }) {
       // 호출이 실패했어도 버린다. 토큰이 살아 있으면 다음 쓰기 요청에서 다시 받아 오면 그만이다.
       clearCsrfToken()
       setUser(null)
-      setStatus('anonymous')
+      setStatus(AUTH_STATUS.ANONYMOUS)
     }
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, isLoggedIn: status === 'authenticated', login, logout }),
+    () => ({ user, status, isLoggedIn: status === AUTH_STATUS.AUTHENTICATED, login, logout }),
     [user, status, login, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+/** 로그인 상태와 login·logout. AuthProvider 밖에서 부르면 바로 실패한다. */
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) throw new Error('useAuth 는 AuthProvider 안에서만 쓸 수 있습니다.')

@@ -47,7 +47,7 @@
   position: absolute;
   top: 10px;
   left: 10px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--badge-bg);
   color: var(--accent-strong);
   font-size: 12px;
   font-weight: 700;

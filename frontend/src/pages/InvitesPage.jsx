@@ -10,6 +10,7 @@ import PagedListBody from '../components/PagedListBody.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
 import '../styles/groupPages.css'
 import './InvitesPage.css'
+import { INVITE_GONE_MESSAGE } from '../data/invites.js'
 
 /**
  * 끝난 방식의 표기. 같은 사실을 받은 쪽과 보낸 쪽이 각자의 시점으로 읽으므로 주어가 드러나야 한다.
@@ -79,7 +80,7 @@ export default function InvitesPage({ tab }) {
         // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다.
         setInviteError('그룹 정원이 가득 찼습니다. 자리가 나면 다시 수락할 수 있습니다.')
       } else {
-        setInviteError('이미 처리되었거나 취소된 초대입니다.')
+        setInviteError(INVITE_GONE_MESSAGE)
         pending.reload()
       }
       setProcessing(null)
@@ -95,7 +96,7 @@ export default function InvitesPage({ tab }) {
     try {
       await api.rejectInvite(invite.id)
     } catch {
-      setInviteError('이미 처리되었거나 취소된 초대입니다.')
+      setInviteError(INVITE_GONE_MESSAGE)
     } finally {
       await refreshAll()
       setProcessing(null)
@@ -107,7 +108,7 @@ export default function InvitesPage({ tab }) {
     try {
       await api.revokeInvite(invite.group.id, invite.id)
     } catch {
-      setInviteError('이미 처리되었거나 취소된 초대입니다.')
+      setInviteError(INVITE_GONE_MESSAGE)
     } finally {
       await refreshAll()
       setProcessing(null)

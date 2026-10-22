@@ -4,6 +4,7 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.photo.config.PhotoUploadProperties
 import com.yong.travel.photo.domain.Photo
+import com.yong.travel.photo.domain.PhotoContent
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
@@ -28,6 +29,18 @@ class PhotoService(
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
+
+    /**
+     * 사진 바이너리를 읽는다.
+     *
+     * 로그인도 공개 범위도 확인하지 않는다. 추측할 수 없는 UUID 에만 의존하며, 이것은 알려진 한계다.
+     * 판정을 붙이려면 이 메서드에 붙인다 — 그래서 저장소를 컨트롤러가 직접 부르지 않고 여기를 거친다.
+     *
+     * @param photoId 사진 id
+     * @return 사진 바이트와 그 Content-Type
+     * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없을 때
+     */
+    fun load(photoId: UUID): PhotoContent = photoDatabaseService.load(photoId)
 
     /**
      * 기록에 사진 여러 장을 올린다.

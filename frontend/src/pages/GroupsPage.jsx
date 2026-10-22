@@ -11,10 +11,8 @@ import '../styles/form.css'
 import '../styles/confirmPanel.css'
 import '../styles/groupPages.css'
 import './GroupsPage.css'
+import { GROUP_MEMO_MAX_LENGTH, GROUP_NAME_MAX_LENGTH } from '../config/inputLimits.js'
 
-// 백엔드 요청 검증과 같은 값이다.
-const NAME_MAX_LENGTH = 30
-const MEMO_MAX_LENGTH = 200
 
 /** 받은 초대 첫 페이지. 건수(`totalElements`)만 쓴다. */
 const loadReceivedInvites = () => fetchReceivedInvites(0)
@@ -55,8 +53,8 @@ export default function GroupsPage() {
       setError('그룹 이름을 입력해주세요.')
       return
     }
-    if (trimmed.length > NAME_MAX_LENGTH) {
-      setError(`그룹 이름은 ${NAME_MAX_LENGTH}자 이하로 입력해주세요.`)
+    if (trimmed.length > GROUP_NAME_MAX_LENGTH) {
+      setError(`그룹 이름은 ${GROUP_NAME_MAX_LENGTH}자 이하로 입력해주세요.`)
       return
     }
 
@@ -163,7 +161,7 @@ export default function GroupsPage() {
                 aria-required="true"
                 type="text"
                 value={name}
-                maxLength={NAME_MAX_LENGTH}
+                maxLength={GROUP_NAME_MAX_LENGTH}
                 autoFocus
                 placeholder="예: 가족, 제주 동행"
                 onChange={(e) => setName(e.target.value)}
@@ -173,7 +171,7 @@ export default function GroupsPage() {
               <textarea
                 id="group-memo"
                 value={memo}
-                maxLength={MEMO_MAX_LENGTH}
+                maxLength={GROUP_MEMO_MAX_LENGTH}
                 rows={3}
                 placeholder="예: 설 연휴 사진 공유용"
                 onChange={(e) => setMemo(e.target.value)}

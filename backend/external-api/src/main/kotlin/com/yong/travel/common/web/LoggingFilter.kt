@@ -1,6 +1,5 @@
 package com.yong.travel.common.web
 
-import com.yong.travel.photo.storage.PhotoDatabaseService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -64,13 +63,13 @@ class LoggingFilter : OncePerRequestFilter() {
     }
 
     /**
-     * 로그를 남기지 않을 요청인지. 사진 서빙은 건당 한 줄을 남길 값어치가 없다.
+     * 로그를 남기지 않을 요청인지. 파일 서빙(`/api/files/` 아래)은 건당 한 줄을 남길 값어치가 없다.
      *
      * @param request 들어온 요청
      * @return 건너뛸 요청이면 true
      */
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
-        request.requestURI.startsWith(PhotoDatabaseService.PHOTO_URL_PREFIX)
+        request.requestURI.startsWith(FILE_SERVING_PREFIX)
 
     /**
      * 쿼리 문자열. 두 가지를 걸러 낸다.
@@ -95,5 +94,8 @@ class LoggingFilter : OncePerRequestFilter() {
     private companion object {
         /** 값을 가릴 쿼리 파라미터 — 요청자의 기준 위치다. */
         val MASKED_PARAMS = setOf("lat", "lng")
+
+        /** 파일 서빙 경로. 도메인(사진)의 상수를 끌어오지 않도록 공통 접두사로 거른다. */
+        const val FILE_SERVING_PREFIX = "/api/files/"
     }
 }

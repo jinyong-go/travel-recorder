@@ -14,6 +14,7 @@ import { ArrowLeftIcon, PlusIcon } from '../components/icons.jsx'
 import '../styles/detailPage.css'
 import '../styles/groupPages.css'
 import './GroupDetailPage.css'
+import { INVITE_GONE_MESSAGE } from '../data/invites.js'
 
 const INVITE_ERROR = {
   USER_NOT_FOUND: '해당 이메일로 가입한 사용자가 없습니다. 주소를 다시 확인해주세요.',
@@ -135,7 +136,7 @@ export default function GroupDetailPage() {
       await api.revokeInvite(group.id, inviteId)
     } catch {
       // 이미 처리된 초대일 수 있다. 어느 쪽이든 목록을 다시 읽으면 실제 상태로 맞춰진다.
-      setInviteMessage({ type: 'error', text: '이미 처리되었거나 취소된 초대입니다.' })
+      setInviteMessage({ type: 'error', text: INVITE_GONE_MESSAGE })
     } finally {
       pending.reload()
       setProcessing(null)

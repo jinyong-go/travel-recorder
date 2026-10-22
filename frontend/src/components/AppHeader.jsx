@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import ThemeSelector from './ThemeSelector.jsx'
 import HeaderAuth from './HeaderAuth.jsx'
-import { MapPinIcon } from './icons.jsx'
+import AppLogoMark from './AppLogoMark.jsx'
 
 /**
  * 화면 위의 공통 헤더 — 홈으로 가는 로고, 테마 토글, 인증 영역.
@@ -15,8 +15,7 @@ export default function AppHeader({ receivedCount, children }) {
   return (
     <header className="app-header">
       <Link to="/" className="app-title app-title-link">
-        <MapPinIcon className="app-title-icon" />
-        여행 지도 <span className="by-yong">by YONG</span>
+        <AppLogoMark />
       </Link>
       <div className="header-actions">
         {children}

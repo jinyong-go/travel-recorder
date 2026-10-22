@@ -26,7 +26,7 @@ logging:
     root: INFO
     com.yong.travel: INFO
   file:
-    # 로그 수집기가 있는 환경이면 LOG_FILE 로 경로를 옮긴다. 사진 저장 경로와 달리 필수는 아니다.
+    # 로그 수집기가 있는 환경이면 LOG_FILE 로 경로를 옮긴다. 필수는 아니다.
     name: ${LOG_FILE:./logs/travel-recorder.log}
   logback:
     rollingpolicy:

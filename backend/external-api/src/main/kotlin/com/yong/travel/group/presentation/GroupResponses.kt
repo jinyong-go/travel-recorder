@@ -197,7 +197,13 @@ data class HistoryGroupResponse(
     val id: Long,
     val name: String,
     val deleted: Boolean,
-)
+) {
+    companion object {
+        /** 끝난 초대 한 건의 그룹 → 응답. 삭제 여부는 그룹이 아니라 이력 항목이 안다. */
+        fun from(entry: InviteHistoryEntry) =
+            HistoryGroupResponse(id = entry.group.id, name = entry.group.name, deleted = entry.groupDeleted)
+    }
+}
 
 /** 끝난 초대 한 건. 받은 관점과 보낸 관점이 같은 모양을 쓴다. */
 data class InviteHistoryResponse(
@@ -221,7 +227,7 @@ data class InviteHistoryResponse(
          */
         fun from(entry: InviteHistoryEntry) = InviteHistoryResponse(
             id = entry.id,
-            group = HistoryGroupResponse(id = entry.group.id, name = entry.group.name, deleted = entry.groupDeleted),
+            group = HistoryGroupResponse.from(entry),
             counterpart = UserResponse.from(entry.counterpart),
             outcome = entry.outcome,
             invitedAt = entry.invitedAt,

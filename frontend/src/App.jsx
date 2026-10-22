@@ -16,6 +16,7 @@ import RecordDetailPage from './pages/RecordDetailPage.jsx'
 import TripDetailPage from './pages/TripDetailPage.jsx'
 import TripListPage from './pages/TripListPage.jsx'
 
+/** 라우트 구성. 로그인이 필요한 화면은 RequireAuth 로 감싼다. */
 function App() {
   return (
     // 전역 상태는 로그인 상태 하나다. 여행·기록·그룹은 쓰는 화면이 직접 읽는다.

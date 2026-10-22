@@ -1,4 +1,4 @@
-package com.yong.travel.common.util
+package com.yong.travel.trip.record.domain
 
 import kotlin.math.atan2
 import kotlin.math.cos

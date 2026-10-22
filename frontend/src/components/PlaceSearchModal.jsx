@@ -62,6 +62,11 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
     const keyword = queryInput.trim()
     setEmptyKeyword(!keyword)
     if (!keyword) return
+    // 같은 검색어로 다시 검색하면 load 가 바뀌지 않아 요청이 나가지 않는다. 직접 다시 읽는다.
+    if (keyword === submittedQuery && page === 0) {
+      reload()
+      return
+    }
     setSubmittedQuery(keyword)
     setPage(0)
   }
@@ -155,9 +160,10 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
               <p className="place-search-count">
                 총 <strong>{totalCount}</strong>건 · 이 페이지 안에서 가까운 순
               </p>
-              <ul className="place-search-list">
+              {/* 페이지를 넘기는 동안 이전 결과를 남겨 두되, 바뀌는 중임을 알린다. */}
+              <ul className="place-search-list" aria-busy={status === REQUEST_STATUS.LOADING}>
                 {results.map((p) => (
-                  <li key={`${p.name}-${p.address}`}>
+                  <li key={`${p.name}-${p.location.lat}-${p.location.lng}`}>
                     <button
                       type="button"
                       className="place-search-item"

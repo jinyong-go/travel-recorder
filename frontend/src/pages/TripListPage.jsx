@@ -13,6 +13,7 @@ import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import { PlusIcon } from '../components/icons.jsx'
 import './TripListPage.css'
+import { AUTH_STATUS } from '../context/authStatus.js'
 
 /**
  * 여행 목록. 내 여행·공유받은 여행·둘러보기 세 범위를 탭으로 나누고, 범위·정렬·페이지는 주소 쿼리에
@@ -43,7 +44,7 @@ export default function TripListPage() {
   // 로그인 여부를 아직 모르면 기본 탭이 정해지지 않았다. 지금 읽으면 둘러보기를 한 번 읽은 뒤
   // 내 여행으로 다시 읽게 된다. updateParams 보다 위에 둔다 — 아래에 두면 React Compiler 가
   // scope 를 바뀔 수 있는 값으로 보고 이 화면의 최적화를 건너뛴다.
-  const { data: result, status: listStatus, reload } = useResource(loadTrips, authStatus !== 'loading')
+  const { data: result, status: listStatus, reload } = useResource(loadTrips, authStatus !== AUTH_STATUS.LOADING)
 
   // 기본값인 항목은 URL 에서 빼서 주소를 짧게 유지한다.
   const updateParams = (next) => {

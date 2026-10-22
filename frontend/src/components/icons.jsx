@@ -1,3 +1,5 @@
+/** 화면에서 쓰는 SVG 아이콘. 이름이 곧 설명이라 아이콘별 주석은 두지 않는다. */
+
 export function MapPinIcon(props) {
   return (
     <svg

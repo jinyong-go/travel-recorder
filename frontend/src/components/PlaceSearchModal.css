@@ -126,3 +126,7 @@
   font-size: 12.5px;
   color: var(--text-faint);
 }
+
+.place-search-list[aria-busy='true'] {
+  opacity: 0.5;
+}

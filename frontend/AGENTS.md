@@ -37,6 +37,7 @@ npm run build     # 프로덕션 빌드
 - `Foo.jsx` 의 스타일은 옆의 `Foo.css` 에 두고 컴포넌트가 import 한다.
 - 범용 UI(헤더·모달 틀·버튼·오류 문구·빈 상태·페이지네이션)는 `App.css`, 두 화면 이상이 쓰는 화면 틀은 `src/styles/`.
 - import 순서는 공유 CSS 먼저, 자기 CSS 마지막이다. 다른 화면의 CSS 를 가져다 쓰지 않는다.
+  예외: 별점 표시는 입력의 `StarRatingInput.css` 를 함께 쓴다 (쓰는 곳이 둘뿐이다).
 - 클래스명은 kebab-case, 컴포넌트 이름을 접두사로 (`visibility-badge-icon`). `styles/` 의 공유 틀은 틀 이름을
   접두사로 쓴다 (`detail-*`, `invite-*`).
 - 색상은 CSS 변수로만 쓴다 — 라이트/다크가 같은 변수를 공유한다. 테마와 무관한 고정 색(브랜드 색)도

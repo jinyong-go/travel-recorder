@@ -7,9 +7,11 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 /** 로그인한 본인의 정보 조회. 이메일까지 담기는 유일한 조회 경로다. */
 @Service
+@Transactional(readOnly = true)
 class AuthService(
     private val userRepository: UserRepository,
 ) {
