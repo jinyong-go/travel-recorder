@@ -3,9 +3,10 @@ package com.yong.travel.search.config
 import io.micrometer.observation.ObservationRegistry
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpHeaders
 import org.springframework.web.client.RestClient
 
-/** NAVER API HUB 지역 검색을 부를 `RestClient`. NCP API Gateway 인증 헤더를 기본값으로 싣는다. */
+/** NAVER API HUB 지역 검색을 부를 `RestClient`. NCP API Gateway 인증 헤더와 Accept 를 기본값으로 싣는다. */
 @Configuration
 class NaverSearchClientConfig {
 
@@ -29,6 +30,12 @@ class NaverSearchClientConfig {
             .baseUrl(properties.baseUrl)
             .defaultHeader("X-NCP-APIGW-API-KEY-ID", properties.clientId)
             .defaultHeader("X-NCP-APIGW-API-KEY", properties.clientSecret)
+            // Accept 를 명시하지 않으면 API 가 JSON 본문에 text/plain 을 붙여 보내 변환에 실패한다.
+            .defaultHeader(HttpHeaders.ACCEPT, JSON_UTF8)
             .observationRegistry(observationRegistry)
             .build()
+
+    private companion object {
+        const val JSON_UTF8 = "application/json;charset=UTF-8"
+    }
 }

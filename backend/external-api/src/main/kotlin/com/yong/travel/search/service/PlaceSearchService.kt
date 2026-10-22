@@ -1,11 +1,13 @@
 package com.yong.travel.search.service
 
 import com.yong.travel.common.domain.PageResult
+import com.yong.travel.common.util.trimToNull
 import com.yong.travel.search.client.NaverLocalSearchClient
 import com.yong.travel.search.client.NaverLocalSearchItem
 import com.yong.travel.search.domain.PlaceCandidate
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.web.util.HtmlUtils
 
 /** 네이버 지역 검색 결과를 후보로 바꿔 페이지 자르기까지 해서 돌려준다. */
 @Service
@@ -30,7 +32,7 @@ class PlaceSearchService(
         // (지역명 결합 등)으로 추가 호출한 뒤 아래 중복 제거에 함께 태운다.
         val candidates = naverLocalSearchClient.search(keyword)
             .distinctBy { it.address }
-            .map { it.toCandidate() }
+            .mapNotNull { it.toCandidate() }
 
         log.debug("장소 검색 page={} count={}", page, candidates.size)
 
@@ -41,17 +43,28 @@ class PlaceSearchService(
         return PageResult(candidates.subList(fromIndex, toIndex), current, PAGE_SIZE, candidates.size.toLong())
     }
 
-    /** 원본 응답 → 후보. 좌표 환산과 HTML 태그 제거가 여기서 끝난다. */
-    private fun NaverLocalSearchItem.toCandidate() = PlaceCandidate(
-        name = title.replace(HTML_TAG_REGEX, ""),
-        category = category,
-        address = address,
-        roadAddress = roadAddress,
-        telephone = telephone,
-        latitude = (mapy.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE,
-        longitude = (mapx.toDoubleOrNull() ?: 0.0) / COORDINATE_SCALE,
-        link = link,
-    )
+    /**
+     * 원본 응답 → 후보. 좌표 환산, 강조 태그 제거, HTML 엔티티 복원이 여기서 끝난다.
+     *
+     * 좌표를 읽을 수 없는 항목은 버린다. (0, 0) 으로 채우면 엉뚱한 위치가 기록에 그대로 저장된다.
+     * 원본은 값이 없을 때 빈 문자열을 보내므로 선택 항목은 null 로 바꾼다 — 빈 링크가 기록에 남지 않게 한다.
+     *
+     * @return 후보. 좌표를 읽을 수 없으면 null
+     */
+    private fun NaverLocalSearchItem.toCandidate(): PlaceCandidate? {
+        val latitude = mapy.toDoubleOrNull() ?: return null
+        val longitude = mapx.toDoubleOrNull() ?: return null
+        return PlaceCandidate(
+            name = HtmlUtils.htmlUnescape(title.replace(HTML_TAG_REGEX, "")),
+            category = category.trimToNull(),
+            address = address,
+            roadAddress = roadAddress.trimToNull(),
+            telephone = telephone.trimToNull(),
+            latitude = latitude / COORDINATE_SCALE,
+            longitude = longitude / COORDINATE_SCALE,
+            link = link.trimToNull(),
+        )
+    }
 
     companion object {
         /**
