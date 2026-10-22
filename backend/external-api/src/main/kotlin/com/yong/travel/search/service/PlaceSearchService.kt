@@ -31,8 +31,10 @@ class PlaceSearchService(
         // 원본 API 는 검색어당 최대 5건만 반환한다. 후보 풀을 늘리려면 여기서 검색어 변형
         // (지역명 결합 등)으로 추가 호출한 뒤 아래 중복 제거에 함께 태운다.
         val candidates = naverLocalSearchClient.search(keyword)
-            .distinctBy { it.address }
             .mapNotNull { it.toCandidate() }
+            // 같은 건물에 여러 장소가 있으므로 주소만으로는 같은 장소가 아니다. 원본 이름은 검색어에 따라
+            // 강조 태그가 달라지므로, 태그·엔티티를 정리한 뒤의 이름으로 비교한다.
+            .distinctBy { it.name to it.address }
 
         log.debug("장소 검색 page={} count={}", page, candidates.size)
 

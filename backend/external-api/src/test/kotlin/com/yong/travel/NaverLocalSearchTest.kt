@@ -8,6 +8,7 @@ import com.yong.travel.search.service.PlaceSearchService
 import io.micrometer.observation.ObservationRegistry
 import java.net.InetSocketAddress
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -52,17 +53,17 @@ class NaverLocalSearchTest {
 
     @Test
     fun `Accept 를 JSON 으로 보내 text-plain 응답 없이 변환된다`() {
-        assertEquals(1, service.search("카페", 0).content.size)
+        assertEquals(2, service.search("카페", 0).content.size)
     }
 
     @Test
     fun `장소 이름의 태그를 지우고 엔티티를 복원한다`() {
-        assertEquals("A&B 카페", service.search("카페", 0).content.single().name)
+        assertEquals("A&B 카페", service.search("카페", 0).content.first().name)
     }
 
     @Test
     fun `빈 링크와 전화번호는 null 이다`() {
-        val place = service.search("카페", 0).content.single()
+        val place = service.search("카페", 0).content.first()
 
         assertNull(place.link)
         assertNull(place.telephone)
@@ -72,13 +73,23 @@ class NaverLocalSearchTest {
     fun `좌표를 읽을 수 없는 항목은 결과에서 빠진다`() {
         val result = service.search("카페", 0)
 
-        assertEquals(1, result.content.size)
-        assertEquals(1L, result.totalElements)
-        assertEquals(37.5026235, result.content.single().latitude, 1e-9)
+        assertFalse(result.content.any { it.name == "좌표 없음" })
+        assertEquals(2L, result.totalElements)
+        assertEquals(37.5026235, result.content.first().latitude, 1e-9)
+    }
+
+    @Test
+    fun `같은 주소라도 이름이 다르면 둘 다 남고 이름과 주소가 모두 같으면 하나만 남는다`() {
+        val names = service.search("카페", 0).content.map { it.name }
+
+        assertEquals(listOf("A&B 카페", "같은 건물 다른 가게"), names)
     }
 
     companion object {
-        /** 실제 응답 표본을 줄인 것. 두 번째 항목은 좌표가 숫자가 아니다. */
+        /**
+         * 실제 응답 표본을 줄인 것. 두 번째는 좌표가 숫자가 아니고, 세 번째는 첫 항목과 주소만 같은 다른 가게,
+         * 네 번째는 강조 태그만 다른 첫 항목의 중복이다.
+         */
         private val SAMPLE = """
             {
               "total": 2,
@@ -98,6 +109,18 @@ class NaverLocalSearchTest {
                   "address": "서울특별시 강남구 역삼동 825-8",
                   "mapx": "",
                   "mapy": ""
+                },
+                {
+                  "title": "같은 건물 다른 가게",
+                  "address": "서울특별시 강남구 역삼동 618-18",
+                  "mapx": "1270279481",
+                  "mapy": "375026235"
+                },
+                {
+                  "title": "A&amp;B 카페",
+                  "address": "서울특별시 강남구 역삼동 618-18",
+                  "mapx": "1270279481",
+                  "mapy": "375026235"
                 }
               ]
             }
