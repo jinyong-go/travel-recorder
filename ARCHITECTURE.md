@@ -78,7 +78,7 @@ flowchart LR
 | Testcontainers | 테스트도 운영과 같은 PostgreSQL + PostGIS 에서 돌려, 다른 DB 를 쓰면 숨는 쿼리 차이를 잡는다 |
 | React · Vite · 순수 JavaScript | 화면 수가 많지 않아 TypeScript·전역 상태 라이브러리 없이 충분하다. 결과물이 정적 파일이라 배포가 단순하다 |
 | 세션 쿠키 + CSRF 토큰 | 인증 토큰을 HttpOnly 쿠키에 두어 스크립트가 읽을 수 없게 한다 |
-| Prometheus · Grafana | 장소 검색 한 번이 외부 API 를 여러 번 부르므로 호출 수·지연·실패를 지표로 본다 |
+| Prometheus · Grafana | 장소 검색이 외부 API 에 의존하므로 호출 수·지연·실패를 지표로 본다 |
 | Docker Compose | DB·API·프론트엔드·모니터링을 명령 하나로 같은 구성으로 띄운다 |
 
 ## 3. 로컬 실행 환경 — Docker Compose
@@ -158,3 +158,23 @@ API 서버와 배치는 Spring 프로파일로 환경을 구분한다.
 | Naver Maps JS SDK | 브라우저 | 지도 표시 |
 | NAVER API HUB 지역 검색 | API 서버 | 장소 검색 |
 | 네이버 로그인 OAuth | API 서버 | 로그인 (예정) |
+
+### 5.1 장소 검색 흐름
+
+```mermaid
+sequenceDiagram
+    participant B as 브라우저
+    participant A as API 서버
+    participant N as NAVER API HUB
+    B->>A: GET /api/places/search?keyword&page (로그인 필요)
+    A->>N: 지역 검색 (Accept: application/json, 인증 헤더)
+    N-->>A: 최대 5건 (mapx·mapy 정수 좌표, 강조 태그 포함 이름)
+    A-->>B: 장소 후보 한 페이지 (좌표 환산·태그 제거·중복 제거 후)
+    Note over B: 기준 위치로 거리 계산·정렬은 브라우저가 한다
+```
+
+- 검색 한 번에 외부 API 를 **한 번** 부른다. 원본이 검색어당 5건까지만 주므로 결과도 최대 5건이다.
+  후보를 늘리는 검색어 변형 호출은 아직 없다 (설계 전제는 [명세 §4.2](./SPECIFICATION.md)).
+- 기준 위치는 서버로 보내지 않는다. 거리순 정렬은 받은 페이지 안에서만 이뤄진다.
+- 키는 API 서버에만 있다. 키가 없거나 호출이 실패하면 `PLACE_SEARCH_UNAVAILABLE` 로 실패를 알린다.
+- 외부 호출은 `http.client.requests` 지표로 남고, 검색어는 지표 라벨에 남기지 않는다.
