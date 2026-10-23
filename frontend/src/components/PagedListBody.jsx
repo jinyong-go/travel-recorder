@@ -15,8 +15,6 @@ import { REQUEST_STATUS } from '../api/requestStatus.js'
  * - `loadingText`·`emptyText` 를 비우면 그 안내는 그리지 않는다.
  *
  * @param list `usePagedList` 의 반환값
- * @param noteClassName 불러오는 중·빈 목록 안내의 클래스
- * @param errorClassName 실패 안내의 클래스
  */
 export default function PagedListBody({
   list,

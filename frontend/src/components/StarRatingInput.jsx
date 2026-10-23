@@ -3,7 +3,7 @@ import './StarRatingInput.css'
 
 const STARS = [1, 2, 3, 4, 5]
 
-// 별 하나당 좌/우 절반을 각각 눌러 0.5 단위(0.5 ~ 5.0)로 별점을 매긴다.
+/** 별 하나당 좌/우 절반을 각각 눌러 0.5 단위(0.5 ~ 5.0)로 별점을 매긴다. */
 export default function StarRatingInput({ value, onChange }) {
   const [hoverValue, setHoverValue] = useState(0)
   const shown = hoverValue || value

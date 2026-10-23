@@ -7,8 +7,10 @@ import { TRIP_MEMO_MAX_LENGTH, TRIP_NAME_MAX_LENGTH } from '../config/inputLimit
 import '../styles/form.css'
 import './TripForm.css'
 
-// 백엔드 요청 검증과 같은 값이다.
-// 제출 검증과 즉시 표시가 같은 문구를 쓴다.
+/**
+ * 백엔드 요청 검증과 같은 값이다.
+ * 제출 검증과 즉시 표시가 같은 문구를 쓴다.
+ */
 const DATE_ORDER_ERROR = '종료일은 시작일 이후여야 해요.'
 
 const EMPTY = {

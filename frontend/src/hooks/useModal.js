@@ -3,8 +3,10 @@ import { useEffect, useRef } from 'react'
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-// 열려 있는 모달을 연 순서대로 쌓는다. 모달이 겹쳐 있으면(등록 모달 위의 장소 검색) Esc·Tab 은
-// 맨 위 하나만 받는다 — 그러지 않으면 Esc 한 번에 두 모달이 함께 닫힌다.
+/**
+ * 열려 있는 모달을 연 순서대로 쌓는다. 모달이 겹쳐 있으면(등록 모달 위의 장소 검색) Esc·Tab 은
+ * 맨 위 하나만 받는다 — 그러지 않으면 Esc 한 번에 두 모달이 함께 닫힌다.
+ */
 const openModals = []
 
 /**

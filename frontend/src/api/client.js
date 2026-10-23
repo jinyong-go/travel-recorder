@@ -15,8 +15,10 @@ export class ApiError extends Error {
 
 const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 
-// 토큰 쿠키가 HttpOnly 라 읽을 수 없으므로 세션 조회로 받아 둔다. 메모리에만 둔다 —
-// localStorage 에 두면 탭·재방문을 넘어 남는다.
+/**
+ * 토큰 쿠키가 HttpOnly 라 읽을 수 없으므로 세션 조회로 받아 둔다. 메모리에만 둔다 —
+ * localStorage 에 두면 탭·재방문을 넘어 남는다.
+ */
 let csrfToken = null
 
 /**

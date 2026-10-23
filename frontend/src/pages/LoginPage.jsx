@@ -9,7 +9,7 @@ import './LoginPage.css'
 
 const LOGIN_FAILED = '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.'
 
-// 주소의 `?error=` 로 넘어오는 안내. 세션 만료는 AuthContext 가 이 화면으로 보낼 때 붙인다.
+/** 주소의 `?error=` 로 넘어오는 안내. 세션 만료는 AuthContext 가 이 화면으로 보낼 때 붙인다. */
 const QUERY_ERROR = {
   access_denied: '네이버 로그인 동의가 취소되었어요. 다시 시도해 주세요.',
   session_expired: '세션이 만료되었어요. 다시 로그인해 주세요.',

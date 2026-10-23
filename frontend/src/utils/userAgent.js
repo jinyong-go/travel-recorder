@@ -5,8 +5,10 @@
  * 주요 브라우저·OS 만 가린다. 판별하지 못한 쪽은 "알 수 없음", 원문이 없으면 "알 수 없는 기기" 다.
  */
 
-// 순서가 판정이다. Edge·Whale·삼성 인터넷·Opera 는 UA 에 Chrome 과 Safari 를 함께 적고,
-// Chrome 은 Safari 를 함께 적으므로 더 구체적인 것을 먼저 본다.
+/**
+ * 순서가 판정이다. Edge·Whale·삼성 인터넷·Opera 는 UA 에 Chrome 과 Safari 를 함께 적고,
+ * Chrome 은 Safari 를 함께 적으므로 더 구체적인 것을 먼저 본다.
+ */
 const BROWSERS = [
   ['Edge', /Edg(A|iOS)?\//],
   ['Whale', /Whale\//],
@@ -17,8 +19,10 @@ const BROWSERS = [
   ['Safari', /Version\/.*Safari\//],
 ]
 
-// iPhone·iPad UA 에는 "Mac OS X" 가 들어 있어 iOS 를 macOS 보다 먼저 본다.
-// Android UA 에는 "Linux" 가 들어 있어 Android 를 Linux 보다 먼저 본다.
+/**
+ * iPhone·iPad UA 에는 "Mac OS X" 가 들어 있어 iOS 를 macOS 보다 먼저 본다.
+ * Android UA 에는 "Linux" 가 들어 있어 Android 를 Linux 보다 먼저 본다.
+ */
 const OPERATING_SYSTEMS = [
   ['Windows', /Windows/],
   ['iOS', /iPhone|iPad|iPod/],

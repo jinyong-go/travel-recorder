@@ -3,7 +3,7 @@ import './StarRatingDisplay.css'
 
 const STARS = [1, 2, 3, 4, 5]
 
-// 읽기 전용 별점 표시. 입력 UI(StarRatingInput)와 같은 별 모양을 공유한다.
+/** 읽기 전용 별점 표시. 입력 UI(StarRatingInput)와 같은 별 모양을 공유한다. */
 export default function StarRatingDisplay({ value, size = 16 }) {
   return (
     <span className="star-rating-display" aria-label={`${value.toFixed(1)}점`}>

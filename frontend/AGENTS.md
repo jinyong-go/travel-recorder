@@ -16,6 +16,7 @@ npm run build     # 프로덕션 빌드
 - React 19 / Vite / react-router, **순수 JavaScript**. TypeScript(`.ts`·`.tsx`·타입 애너테이션)를 도입하지 않는다.
   타입 설명이 필요하면 JSDoc 을 쓴다.
 - 세미콜론 없음, 작은따옴표. 포매터가 없으므로 주변 코드에 맞춘다.
+- 파일 머리 주석과 모듈 최상위 선언(함수·컴포넌트·상수)의 주석은 `/** */`, 함수 본문 안은 `//` 를 쓴다.
 
 ## 파일 배치
 
@@ -35,6 +36,7 @@ npm run build     # 프로덕션 빌드
 
 - 일반 CSS 만 쓴다. CSS Modules·Tailwind·CSS-in-JS 를 도입하지 않는다.
 - `Foo.jsx` 의 스타일은 옆의 `Foo.css` 에 두고 컴포넌트가 import 한다.
+- 공유 CSS(`App.css`·`index.css`·`styles/`)는 머리 주석에 무엇을 담는지 적는다. 컴포넌트 CSS 는 설명할 것이 있을 때만 둔다.
 - 범용 UI(헤더·모달 틀·버튼·오류 문구·빈 상태·페이지네이션)는 `App.css`, 두 화면 이상이 쓰는 화면 틀은 `src/styles/`.
 - import 순서는 공유 CSS 먼저, 자기 CSS 마지막이다. 다른 화면의 CSS 를 가져다 쓰지 않는다.
   예외: 별점 표시는 입력의 `StarRatingInput.css` 를 함께 쓴다 (쓰는 곳이 둘뿐이다).

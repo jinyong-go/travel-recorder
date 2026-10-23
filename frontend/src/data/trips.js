@@ -1,12 +1,16 @@
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { effectiveVisibility } from './visibility.js'
 
-// 여행 표시용 값과 함수. 여행 데이터 자체는 서버에서 온다 (api/trips.js).
-//
-// 기간·인원·예산은 여행을 설명하는 값이다. 인원은 함께 간 사람 수일 뿐 공유 대상과 무관하다.
+/**
+ * 여행 표시용 값과 함수. 여행 데이터 자체는 서버에서 온다 (api/trips.js).
+ *
+ * 기간·인원·예산은 여행을 설명하는 값이다. 인원은 함께 간 사람 수일 뿐 공유 대상과 무관하다.
+ */
 
-// 목록의 세 범위. 성격이 달라 한 목록에 섞지 않고 탭으로 나눈다.
-// 목록에 들어가는 단위는 기록이 아니라 여행이다.
+/**
+ * 목록의 세 범위. 성격이 달라 한 목록에 섞지 않고 탭으로 나눈다.
+ * 목록에 들어가는 단위는 기록이 아니라 여행이다.
+ */
 export const SCOPES = [
   { key: 'mine', label: '내 여행', requiresLogin: true, empty: '아직 여행이 없어요. 다녀온 여행을 만들어 보세요.' },
   {

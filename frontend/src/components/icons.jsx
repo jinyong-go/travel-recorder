@@ -237,7 +237,7 @@ export function ChevronDownIcon(props) {
   )
 }
 
-// 네이버 로고의 N 글리프. 버튼 배경(네이버 그린) 위에 흰색으로 올려 쓴다.
+/** 네이버 로고의 N 글리프. 버튼 배경(네이버 그린) 위에 흰색으로 올려 쓴다. */
 export function NaverIcon(props) {
   return (
     <svg

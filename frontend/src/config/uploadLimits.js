@@ -1,5 +1,8 @@
-// 사진 업로드 제한. 백엔드 제한(application.yml의 spring.servlet.multipart,
-// app.upload)과 같은 값을 유지해야 하며, 환경변수로 덮어쓸 수 있다.
+/**
+ * 사진 업로드 제한. 백엔드 제한(application.yml의 spring.servlet.multipart,
+ * app.upload)과 같은 값을 유지해야 하며, 환경변수로 덮어쓸 수 있다.
+ */
+
 const positiveNumber = (raw, fallback) => {
   const parsed = Number(raw)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback

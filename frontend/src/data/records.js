@@ -1,4 +1,4 @@
-// 카테고리 코드는 API 와 같은 값을 쓰고, 화면 표기만 여기서 매핑한다.
+/** 카테고리 코드는 API 와 같은 값을 쓰고, 화면 표기만 여기서 매핑한다. */
 export const CATEGORIES = [
   { key: 'FOOD', label: '맛집' },
   { key: 'SHOPPING', label: '쇼핑' },
