@@ -79,7 +79,7 @@ class TripService(
         val counts = recordCounts(trips.content.mapNotNull { it.id })
         // 공유 그룹은 소유자 본인의 항목에만 필요하다. 그 여행들만 골라 한 번에 읽는다.
         val shares = sharesOf(trips.content.filter { userId != null && it.owner.id == userId })
-        // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 개발 중 눈으로 확인할 값이다.
+        // 범위 판정 결과를 건수로 확인할 수 있게 남긴다.
         log.debug("여행 목록 조회 scope={} userId={} count={}", query.scope, userId, trips.totalElements)
         return trips.toPageResult().map { it.toDomain(userId, counts[requireNotNull(it.id)] ?: 0L, shares) }
     }
@@ -199,13 +199,10 @@ class TripService(
     }
 
     /**
-     * 여행 삭제. **하위 기록도 함께 soft delete 한다** — 기록은 여행 없이 존재할 수 없어
-     * 남겨 둘 자리가 없다.
+     * 여행 삭제. **하위 기록도 함께 soft delete 한다** — 기록은 여행 없이 존재할 수 없다.
      *
-     * 공유 행은 물리 삭제한다. 여행이 조회에서 사라지므로 당장 새는 것은 아니지만, 남아 있는
-     * 공유 행이 권한 판정에 끼어들 여지를 만들지 않는다.
-     *
-     * 하위 기록의 사진은 메타데이터를 남기고 바이너리를 지운다. 기록 하나를 지울 때와 같은 이유다.
+     * 공유 행은 물리 삭제해 권한 판정에 끼어들 여지를 없앤다. 하위 기록의 사진은 기록 삭제와 같이
+     * 메타데이터만 남기고 바이너리를 지운다.
      *
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때
@@ -241,8 +238,6 @@ class TripService(
      *
      * 편집 관문([findEditableTrip])과 달리 볼 수 있는 남의 여행이어도 403 이 아니라 404 다.
      * 이 경로는 임의의 여행 id 를 넣어볼 수 있어, 403 으로 답하면 그 여행의 존재가 드러난다.
-     *
-     * 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 기록 서비스가 연관을 걸 때 쓰는 서비스 간 호출이다.
      *
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 요청자의 여행이 아닐 때
      */

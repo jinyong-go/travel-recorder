@@ -45,11 +45,8 @@ interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpeci
     /**
      * 여행 삭제에 딸려 가는 하위 기록의 soft delete.
      *
-     * 건건이 읽어 지우면 기록 수에 비례해 느려지므로 벌크 update 한 번으로 끝낸다.
-     * 그래서 @SQLRestriction 이 걸리지 않아 `deletedAt is null` 조건을 직접 적는다 —
-     * 이미 지워진 기록의 삭제 시각을 덮어쓰지 않기 위해서다.
-     * 영속성 컨텍스트는 비우지 않는다(clearAutomatically 없음) — 호출부가 이어서 쓰는 여행 엔티티가
-     * 준영속이 되면 그 삭제가 유실된다. 지워진 기록의 엔티티가 컨텍스트에 남아도 이후 쓰지 않는다.
+     * 벌크 update 에는 @SQLRestriction 이 걸리지 않아 `deletedAt is null` 을 직접 적는다 —
+     * 이미 지운 기록의 삭제 시각을 덮어쓰지 않는다.
      */
     @Modifying(flushAutomatically = true)
     @Query("update TripRecordEntity r set r.deletedAt = :now where r.trip.id = :tripId and r.deletedAt is null")

@@ -58,9 +58,6 @@ data class TripResponse(
         /**
          * 여행 → 응답.
          *
-         * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. `visibility` 와
-         * `sharedGroups` 는 서비스가 소유자에게만 채워 주므로 그대로 옮긴다.
-         *
          * @param requesterId 요청자의 사용자 id. 비로그인이면 null
          */
         fun from(trip: Trip, requesterId: Long?) = TripResponse(
@@ -102,7 +99,7 @@ data class TripSummaryResponse(
 ) {
     companion object {
         /**
-         * 여행 목록 항목 → 응답. `isOwner` 를 여기서 정하는 이유는 [TripResponse.from] 과 같다.
+         * 여행 목록 항목 → 응답.
          *
          * @param requesterId 요청자의 사용자 id. 비로그인이면 null
          */

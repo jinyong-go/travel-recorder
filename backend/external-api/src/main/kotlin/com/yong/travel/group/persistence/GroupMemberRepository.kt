@@ -41,10 +41,6 @@ interface GroupMemberRepository : JpaRepository<GroupMemberEntity, Long> {
 
     /**
      * 그룹 삭제에 딸린 멤버 행 삭제.
-     *
-     * 이름 기반 삭제(`deleteBy…`)는 행을 먼저 읽어 와 한 건씩 DELETE 하므로 벌크 삭제로 둔다.
-     * 영속성 컨텍스트는 비우지 않는다(clearAutomatically 없음) — 호출부가 이어서 쓰는 엔티티가
-     * 준영속이 되면 그 뒤의 변경이 유실된다. 지워진 행의 엔티티가 컨텍스트에 남아도 이후 쓰지 않는다.
      */
     @Modifying(flushAutomatically = true)
     @Query("delete from GroupMemberEntity m where m.group.id = :groupId")

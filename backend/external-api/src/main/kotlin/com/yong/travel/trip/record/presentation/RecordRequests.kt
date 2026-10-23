@@ -74,7 +74,10 @@ data class TripRecordCreateRequest(
     )
 }
 
-/** 기록 수정 요청. 소속 여행은 담지 않는다 — 여행 이동은 [TripChangeRequest] 로 한다. */
+/**
+ * 기록 수정 요청. 소속 여행은 담지 않는다 — 여행 이동은 [TripChangeRequest] 로 한다.
+ * 필드 규칙은 [TripRecordCreateRequest] 와 같다.
+ */
 data class TripRecordUpdateRequest(
     @field:NotBlank
     @field:Size(max = 255)
@@ -83,7 +86,6 @@ data class TripRecordUpdateRequest(
     @field:NotNull
     val category: Category,
 
-    /** 기록당 10개, 각 20자 이하. 개수는 요청에 담긴 그대로 센다. 길이는 [isTagLengthValid]. */
     @field:Size(max = 10)
     val tags: List<String> = emptyList(),
 
@@ -94,10 +96,6 @@ data class TripRecordUpdateRequest(
     @field:Size(max = 255)
     val roadAddress: String? = null,
 
-    /**
-     * 화면에서 링크로 열리는 값이라 웹 주소만 받는다. `javascript:` 같은 스킴을
-     * 받아 두면 링크를 누른 사람의 브라우저에서 스크립트가 실행될 수 있다.
-     */
     @field:Size(max = 255)
     @field:Pattern(regexp = "^https?://\\S+$", flags = [Pattern.Flag.CASE_INSENSITIVE])
     val externalLink: String? = null,

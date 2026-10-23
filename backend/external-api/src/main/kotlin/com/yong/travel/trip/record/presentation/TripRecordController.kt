@@ -35,12 +35,10 @@ class TripRecordController(
     /**
      * 기록 목록 조회.
      *
-     * `scope` 는 `tripId` 가 없으면 필수다. "무엇을 보는 목록인지" 가 화면마다 다르고, 기본값을
-     * 두면 실수로 넓은 범위를 조회하는 쪽이 조용히 기본이 되기 때문이다. `tripId` 만 주면 그 여행의
-     * 하위 기록이다 — 열람자는 남의 여행이 공유인지 공개인지 몰라 scope 를 고를 수 없다.
+     * `scope` 는 `tripId` 가 없으면 필수다 ([RecordScope]). `tripId` 만 주면 그 여행의 하위 기록이다 —
+     * 열람자는 남의 여행이 공유인지 공개인지 몰라 scope 를 고를 수 없다.
      * MINE/SHARED 는 로그인해야 하며, 비로그인은 PUBLIC 과 tripId 조회만 할 수 있다.
      *
-     * @param scope 조회 범위. `tripId` 가 없으면 필수
      * @param tag 태그 이름 완전 일치 필터
      * @param keyword 이름·주소 부분 일치 검색어
      * @param lat 기준 위도. 거리 계산·거리순 정렬에만 쓴다. 거리순이면 필수

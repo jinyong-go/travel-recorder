@@ -113,6 +113,8 @@ docker compose down -v            # 로컬 DB 초기화 (볼륨 삭제)
 - 수정 응답에 `updatedAt` 을 담으면 `saveAndFlush` 를 쓴다 — `@PreUpdate` 가 flush 시점에 돈다.
 - 평점 단위와 여행 기간 역전은 Bean Validation 과 DB `CHECK` 양쪽에서 막는다.
 - 동적 조회 조건은 `XxxSpecifications` 에 모은다.
+- 여러 행 삭제·수정은 `@Modifying @Query` 벌크로 한다 — `deleteBy…` 는 행을 읽어 한 건씩 지운다.
+  `clearAutomatically` 는 켜지 않는다(호출부가 이어 쓰는 엔티티가 준영속이 된다). 켜야 하면 이유를 남긴다.
 - 거리 정렬은 `PostgisFunctions.knn_distance` 로 하며, 식이 위치 인덱스 표현식과 같아야 한다.
 
 ## 테스트

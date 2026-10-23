@@ -16,8 +16,6 @@ data class TripCreateCommand(
     val budget: Long?,
     val memo: String?,
     val visibility: TripVisibility,
-
-    /** visibility = GROUP 일 때만 의미가 있다. 그 외 값이면 무시된다. */
     val groupIds: List<Long>,
 )
 

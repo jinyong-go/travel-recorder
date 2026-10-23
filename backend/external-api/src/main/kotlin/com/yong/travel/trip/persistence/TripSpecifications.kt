@@ -26,11 +26,7 @@ object TripSpecifications {
         Specification { root, _, cb -> TripVisibilityPredicates.ownedBy(root, cb, userId) }
 
     /**
-     * 조회 범위 조건.
-     *
-     * 공개 범위 판정을 조회 쿼리에 실어 보내는 것이 핵심이다. 전부 읽어 온 뒤 애플리케이션에서
-     * 걸러 내면 페이지네이션 건수가 어긋나고, 거르는 걸 한 번 빠뜨리는 순간 곧바로 정보 유출이 된다.
-     * 판정식 자체는 [TripVisibilityPredicates] 에 있다.
+     * 조회 범위 조건. 판정식은 [TripVisibilityPredicates] 에 있다.
      *
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
      */

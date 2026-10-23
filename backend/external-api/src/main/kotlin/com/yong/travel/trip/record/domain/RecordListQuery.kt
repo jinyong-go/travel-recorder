@@ -3,9 +3,7 @@ package com.yong.travel.trip.record.domain
 /**
  * 목록 조회 범위. 세 범위는 성격이 달라 한 목록에 섞지 않는다.
  *
- * 권한을 넓히는 수단이 아니라 이미 볼 수 있는 것 중에서 고르는 수단이다 —
- * 어떤 값을 줘도 서버는 요청자가 볼 권한이 있는 기록만 반환한다.
- *
+ * 성격과 필수인 이유는 [com.yong.travel.trip.domain.TripScope] 와 같다.
  * 판정 근거는 기록이 아니라 소속 여행에 있다.
  */
 enum class RecordScope {

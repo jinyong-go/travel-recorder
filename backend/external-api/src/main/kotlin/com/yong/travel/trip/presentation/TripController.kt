@@ -31,8 +31,7 @@ class TripController(
     /**
      * 여행 목록 조회.
      *
-     * `scope` 는 필수다. "무엇을 보는 목록인지" 가 화면마다 다르고, 기본값을 두면
-     * 실수로 넓은 범위를 조회하는 쪽이 조용히 기본이 되기 때문이다.
+     * `scope` 는 필수다 ([TripScope]).
      * MINE/SHARED 는 로그인해야 하며, 비로그인은 PUBLIC 만 조회할 수 있다.
      *
      * @param keyword 여행 이름 부분 일치 검색어

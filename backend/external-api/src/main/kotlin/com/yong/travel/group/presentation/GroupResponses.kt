@@ -18,7 +18,7 @@ data class GroupSummaryResponse(
     val isOwner: Boolean,
 ) {
     companion object {
-        /** 그룹 요약 → 응답. `isOwner` 를 여기서 정하는 이유는 [GroupResponse.from] 과 같다. */
+        /** 그룹 요약 → 응답. */
         fun from(group: Group, requesterId: Long) = GroupSummaryResponse(
             id = group.id,
             name = group.name,
@@ -62,9 +62,6 @@ data class GroupResponse(
     companion object {
         /**
          * 그룹 상세 → 응답.
-         *
-         * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 그래서 `requesterId`
-         * 를 받는다 — 서비스가 아니라 컨트롤러가 요청자를 알고 있는 계층이다.
          *
          * @param group 멤버 명단까지 담긴 그룹
          */

@@ -94,7 +94,7 @@ class TripRecordService(
             it.toDomain(photos[recordId].orEmpty(), tags[recordId].orEmpty(), query.origin?.let { origin -> distanceOf(it, origin) })
         }
 
-        // 범위 판정이 쿼리 단계에 있어 건수가 어긋나면 곧 유출이다. 기준 좌표는 남기지 않는다.
+        // 범위 판정 결과를 건수로 확인할 수 있게 남긴다. 기준 좌표는 남기지 않는다.
         log.debug(
             "기록 목록 조회 scope={} tripId={} userId={} count={}",
             query.scope, query.tripId, userId, found.totalElements,
@@ -208,13 +208,10 @@ class TripRecordService(
     }
 
     /**
-     * soft delete. 사진 메타데이터는 남기고 바이너리는 지운다. 남겨 두면 지운 기록의 사진을 URL 로
-     * 계속 받아 갈 수 있고 저장 공간도 돌아오지 않는다. 그래서 기록을 되살려도 사진은 돌아오지 않는다.
+     * soft delete. 사진은 메타데이터만 남기고 바이너리를 지운다 — 남기면 URL 로 계속 받아 갈 수 있다.
+     * 그래서 기록을 되살려도 사진은 돌아오지 않는다.
      *
-     * 다만 이 기록의 사진이 여행 커버였다면 지정을 푼다. 지워진 기록의 사진이 여행을 계속
-     * 대표하게 두면 "커버는 그 여행의 하위 기록에 속한 사진" 이라는 불변식이 깨진다.
-     *
-     * 공유 관계는 손대지 않는다 — 공유는 여행에 걸려 있고 기록은 갖고 있지 않다.
+     * 이 기록의 사진이 여행 커버였다면 지정을 푼다. 공유는 여행에 걸려 있어 손대지 않는다.
      *
      * @param authorId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
@@ -233,10 +230,8 @@ class TripRecordService(
     /**
      * 편집할 기록을 읽는다. 기록 수정·이동·삭제와 사진 업로드·삭제가 함께 쓰는 관문이다.
      *
-     * 고칠 수 있는 사람은 소속 여행의 소유자뿐이다 — 기록에는 작성자 컬럼이 없다.
-     *
-     * 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 PhotoService 가 사진을 기록에 걸 때 쓰는
-     * 서비스 간 호출이기 때문이다. 판정을 여기 하나로 모아 사진과 기록의 실패 응답이 갈라지지 않게 한다.
+     * 고칠 수 있는 사람은 소속 여행의 소유자뿐이다. 판정을 여기 하나로 모아 사진과 기록의 실패 응답이
+     * 갈라지지 않게 한다.
      *
      * @param userId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때

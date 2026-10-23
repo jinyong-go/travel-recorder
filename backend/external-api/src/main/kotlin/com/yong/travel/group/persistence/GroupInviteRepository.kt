@@ -13,11 +13,10 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
     /**
      * 소유자가 보는 대기 초대 목록.
      *
-     * 정원 판정이 수락 시점이라 정원을 넘겨 초대할 수 있어 건수 상한이 없다. 그래서 페이지로 끊는다.
+     * 정원을 넘겨 초대할 수 있어 건수 상한이 없으므로 페이지로 끊는다.
      *
-     * 받는 사람·보낸 사람을 fetch join 한다. 받는 사람은 행마다 달라, 빠뜨리면 행마다 사용자 조회가
-     * 따로 나간다. 그룹은 호출부가 권한 확인 때 이미 읽어 두므로 조인하지 않는다.
-     * fetch join 이 든 쿼리로는 건수를 셀 수 없어 countQuery 를 따로 둔다 (아래 목록도 같다).
+     * 받는 사람·보낸 사람은 fetch join 하고, 그룹은 호출부가 권한 확인 때 읽어 두어 조인하지 않는다.
+     * fetch join 쿼리로는 건수를 셀 수 없어 countQuery 를 따로 둔다 (아래 목록도 같다).
      *
      * @return 오래된 순의 대기 초대 한 페이지
      */
@@ -59,11 +58,8 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
     /**
      * 내가 보낸 대기 초대를 그룹을 가로질러 모은다.
      *
-     * 그룹을 조인해 소유자로 거르는 것과 결과가 같지만(소유자는 바뀌지 않는다) 조인 없이 인덱스
-     * 하나로 끝나고, 남이 보낸 초대가 섞일 수 없어 인가가 조건 자체로 보장된다.
-     * 아래 fetch join 은 결과를 거르지 않고 응답에 쓸 그룹·사람을 함께 읽기 위한 것이라 이 판단과 무관하다.
-     *
-     * 그룹·받는 사람은 행마다 다르고 보낸 사람(나)도 응답 변환에서 읽으므로 셋 다 fetch join 한다.
+     * 그룹 소유자 대신 보낸 사람으로 거른다. 결과는 같지만(소유자는 바뀌지 않는다) 인덱스 하나로 끝나고
+     * 남이 보낸 초대가 섞일 수 없다. 응답에 쓰는 그룹·두 사람은 fetch join 한다.
      *
      * @return 오래된 순의 보낸 초대 한 페이지
      */
@@ -101,10 +97,8 @@ interface GroupInviteRepository : JpaRepository<GroupInviteEntity, Long> {
     /**
      * 그룹 삭제에 딸린 대기 초대 삭제. 호출부가 먼저 [findByGroupId] 로 읽어 이력으로 옮긴다.
      *
-     * 이름 기반 삭제(`deleteBy…`)는 행을 먼저 읽어 와 한 건씩 DELETE 하므로 벌크 삭제로 둔다.
-     * **다른 벌크 삭제와 달리 영속성 컨텍스트를 비운다.** 호출부가 읽어 둔 초대 엔티티가 컨텍스트에
-     * 남은 채 그룹 엔티티를 지우면, 지워진 그룹을 가리키는 초대 때문에 flush 가 실패한다.
-     * 그룹은 이 호출 뒤 준영속이 되며, 호출부의 `groupRepository.delete` 가 다시 찾아 지운다.
+     * **다른 벌크 삭제와 달리 영속성 컨텍스트를 비운다.** 읽어 둔 초대가 남아 있으면 그룹 삭제 flush 가
+     * 실패한다. 그룹은 준영속이 되어 호출부의 `groupRepository.delete` 가 다시 찾아 지운다.
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from GroupInviteEntity i where i.group.id = :groupId")

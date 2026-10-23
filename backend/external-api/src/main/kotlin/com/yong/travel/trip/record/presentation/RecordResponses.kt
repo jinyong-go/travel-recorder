@@ -39,9 +39,6 @@ data class TripRecordResponse(
         /**
          * 기록 상세 → 응답.
          *
-         * `isAuthor` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 필드 이름은 이전 판
-         * 그대로 유지한다.
-         *
          * @param requesterId 요청자의 사용자 id. 비로그인이면 null
          */
         fun from(record: TripRecord, requesterId: Long?) = TripRecordResponse(
@@ -87,7 +84,7 @@ data class TripRecordSummaryResponse(
 ) {
     companion object {
         /**
-         * 기록 목록 항목 → 응답. `isAuthor` 를 여기서 정하는 이유는 [TripRecordResponse.from] 과 같다.
+         * 기록 목록 항목 → 응답.
          *
          * @param requesterId 요청자의 사용자 id. 비로그인이면 null
          */

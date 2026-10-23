@@ -210,10 +210,6 @@ class GroupService(
     /**
      * 여행을 이 그룹들에 공유해도 되는지 확인하고 그룹 엔티티를 돌려준다.
      *
-     * 여기만 도메인 객체가 아니라 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 `TripService`
-     * 가 `TripShareEntity` 행을 만들 때 쓰는 서비스 간 호출이라, 도메인 객체로 감싸면 곧바로 엔티티를
-     * 다시 찾아야 한다.
-     *
      * @param groupIds 공유 대상 그룹 id 목록. 중복은 무시한다
      * @return 요청한 그룹 엔티티 목록. `groupIds` 가 비었으면 빈 목록
      * @throws ApiException `GROUP_NOT_FOUND` — 요청자가 속하지 않은 그룹이 하나라도 섞였을 때.
