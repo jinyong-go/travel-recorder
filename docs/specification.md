@@ -15,7 +15,8 @@
 | 문서 | 다루는 범위 |
 |---|---|
 | 본 문서 (`specification.md`) | 서비스 정의, 도메인 개념과 규칙, 핵심 행위, 공개 범위 정책, 외부 API 제약, 모듈 간 계약 |
-| [`backend-specification.md`](./backend-specification.md) | 엔티티·테이블, 인가 구현, REST API 명세(경로·파라미터·응답), 오류 코드, 페이지네이션 규격, 사진 저장소 설계 |
+| [`backend-specification.md`](./backend-specification.md) | 엔티티·테이블, 인가 구현, 사진 저장소 설계 |
+| [`api-specification.md`](./api-specification.md) | REST API 명세(경로·파라미터·응답), 오류 코드, 페이지네이션 규격 |
 | [`frontend-specification.md`](./frontend-specification.md) | 화면·라우트, 탭·폼·모달 동작, 문구, 테마, 접근성, 클라이언트 검증 |
 
 **충돌 시 본 문서가 우선한다.** 모듈 명세는 본 문서의 규칙을 구체화할 수는 있어도 뒤집을 수 없다.
@@ -608,7 +609,7 @@
 ## 7. 제약사항 및 향후 과제
 
 도메인 차원의 미결 사항만 둔다. 모듈별 구현 잔여 작업은
-[backend §8](./backend-specification.md)과 [frontend §10](./frontend-specification.md)에 있다.
+[backend §6](./backend-specification.md)과 [frontend §10](./frontend-specification.md)에 있다.
 
 ### 7.1 명세와 구현이 어긋나 있는 것
 - **로그인 수단이 임시로 대체되어 있다** (§2.1, §3.1). 네이버 OAuth 는 비활성이고 고정 계정으로

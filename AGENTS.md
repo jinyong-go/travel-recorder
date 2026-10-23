@@ -46,7 +46,8 @@
 | 문서 | 소유 범위 |
 |---|---|
 | [`specification.md`](./docs/specification.md) | 서비스가 무엇인지 — 도메인 개념·규칙, 핵심 행위, 공개 범위 정책, 외부 API 제약, 모듈 간 계약 |
-| [`backend-specification.md`](./docs/backend-specification.md) | 엔티티·테이블, 인가 구현, REST API 시그니처, 오류 코드, 저장소 설계 |
+| [`backend-specification.md`](./docs/backend-specification.md) | 엔티티·테이블, 인가 구현, 저장소 설계 |
+| [`api-specification.md`](./docs/api-specification.md) | REST API 시그니처, 요청·응답 스키마, 페이지네이션, 오류 응답 형식과 오류 코드 |
 | [`frontend-specification.md`](./docs/frontend-specification.md) | 화면·라우트, 폼·모달 동작, 문구, 테마, 접근성, 클라이언트 검증 |
 | [`reference.md`](./docs/reference.md) | 설계 결정의 근거와 유사 서비스 조사 기록 |
 | [`architecture.md`](./docs/architecture.md) | 서버·DB·외부 서비스 구성, 구조·기술 스택을 고른 이유, 실행 환경(Docker Compose, 프로파일별 구성) |

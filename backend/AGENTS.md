@@ -90,7 +90,7 @@ docker compose down -v            # 로컬 DB 초기화 (볼륨 삭제)
 
 - 도메인 실패는 `throw ApiException(ErrorCode.XXX)`. 컨트롤러가 오류 상태 코드를 직접 만들지 않는다
   (성공 응답의 201·204 는 `ResponseEntity` 로 만든다).
-- 새 `ErrorCode` 는 명세의 오류 표에도 함께 적는다.
+- 새 `ErrorCode` 는 `api-specification.md` 의 오류 표에도 함께 적는다.
 - 변환은 `GlobalExceptionHandler` 하나가 한다. 핸들러를 새로 만들지 않는다.
 - `500`·`409` 메시지는 고정 문구다. 예외 메시지(테이블·제약 이름)는 로그로만 남긴다.
 

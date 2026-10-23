@@ -18,7 +18,7 @@
 
 | 모듈 | 기술 | 문서 |
 |---|---|---|
-| [`backend/`](./backend) | Kotlin 2.3 / Spring Boot 4.1 / JPA / PostgreSQL + PostGIS / Flyway | [README](./backend/README.md) · [명세](./docs/backend-specification.md) |
+| [`backend/`](./backend) | Kotlin 2.3 / Spring Boot 4.1 / JPA / PostgreSQL + PostGIS / Flyway | [README](./backend/README.md) · [명세](./docs/backend-specification.md) · [API](./docs/api-specification.md) |
 | [`frontend/`](./frontend) | React 19 / Vite / react-router | [README](./frontend/README.md) · [명세](./docs/frontend-specification.md) |
 
 모듈 README는 실행 방법·환경 변수·디렉터리 구조, 모듈 명세는 요구사항과 설계 결정을 다룸.
@@ -81,5 +81,5 @@ cd frontend && npm install && npm run dev
     - 시큐리티 인가 정책이 `permitAll()`로 열려 있어, 인증이 필요한 엔드포인트는 컨트롤러가 직접 차단
 - **스키마**: Flyway 마이그레이션으로 관리. Flyway 도입 전에 만든 개발용 DB는 재생성 필요
 - **다음 단계**: 네이버 OAuth 복구, 시큐리티 인가 정책 복원, 장소 검색 API 연동.
-  상세는 [backend-specification.md §8](./docs/backend-specification.md)과
+  상세는 [backend-specification.md §6](./docs/backend-specification.md)과
   [frontend-specification.md §10](./docs/frontend-specification.md) 참고

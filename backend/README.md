@@ -6,7 +6,7 @@
 - 공개 범위는 `PRIVATE` / `GROUP` / `PUBLIC` 중 **여행 단위로** 지정, 하위 기록은 소속 여행의 범위를 따름
 - 기록 등록용 장소 검색은 NAVER API HUB 지역 검색을 백엔드가 프록시·집계해 제공
 
-상세 요구사항은 [backend-specification.md](../docs/backend-specification.md) 참고. 작업 규칙은 [AGENTS.md](./AGENTS.md) 참고.
+상세 요구사항은 [backend-specification.md](../docs/backend-specification.md), API 계약은 [api-specification.md](../docs/api-specification.md) 참고. 작업 규칙은 [AGENTS.md](./AGENTS.md) 참고.
 
 ## 기술 스택
 
@@ -152,7 +152,7 @@ external-api/
 역할이 다른 **두 종류의 키**가 필요하며, 각각 별도 애플리케이션에서 발급.
 
 > **키 없이도 `local` 프로파일로 기동·사용 가능.** 로그인은 임시 계정, 장소 검색만 동작하지 않음.
-> 네이버 로그인 키는 OAuth 복구 전까지 사용되지 않음 (backend-specification.md 8.1).
+> 네이버 로그인 키는 OAuth 복구 전까지 사용되지 않음 (backend-specification.md 6.1).
 
 | 용도 | 발급처 | 비고 |
 |---|---|---|
@@ -302,7 +302,7 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 
 ## API 개요
 
-전체 스펙과 요청/응답 스키마는 [backend-specification.md](../docs/backend-specification.md) 4장 참고.
+전체 스펙과 요청/응답 스키마는 [api-specification.md](../docs/api-specification.md) 2장 참고.
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
@@ -355,7 +355,7 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 실패도 모두 같은 형식으로 변환** — 매핑되지 않은 주소(404), 메서드 불일치(405), `Content-Type` 불일치(415),
 본문 파싱 실패·파라미터 타입 불일치(400), 업로드 용량 초과(400), DB 제약 위반(409), 마지막
 `Exception` 캐치올(500). 500과 409는 내부 정보가 새지 않도록 고정 문구로 응답하고 스택은 로그에만 기록.
-전체 목록은 [backend-specification.md](../docs/backend-specification.md) 6장 참고.
+전체 목록은 [api-specification.md](../docs/api-specification.md) 3장 참고.
 
 ## 프론트엔드 연동
 
@@ -374,7 +374,7 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 - NAVER API HUB 지역 검색 프록시 (중복 제거, 좌표 변환, 페이징)
 - 사진 DB 저장(`photo_data`, `BYTEA`) 및 `/api/files/photos/{photoId}` 서빙, 공통 예외 처리
 
-미구현 / 예정 (상세는 backend-specification.md 8장)
+미구현 / 예정 (상세는 backend-specification.md 6장)
 - **네이버 OAuth 로그인 복구** — `SecurityConfig`의 `oauth2Login` 블록이 주석 처리된 상태. 복구 시 `LocalLoginConfig`·`LocalLoginController` 제거
 - **인가 정책 적용** — `SecurityConfig`가 개발 편의를 위해 `anyRequest().permitAll()`로 열린 상태. 인증은 컨트롤러가 `requireLogin`으로 직접 차단하며, backend-specification.md 2.2의 정책대로 필터체인의 `authenticated()`로 복원 필요
 - `trips.cover_photo_id` 외래키 복원 — Flyway 도입으로 가능해짐. 복원 시 `ON DELETE SET NULL`로 사진 삭제 경로의 커버 해제를 DB에 맡길 수 있음

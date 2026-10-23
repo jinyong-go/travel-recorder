@@ -1,7 +1,7 @@
 # frontend/AGENTS.md
 
 프론트엔드 모듈 규칙이다. 공통 규칙은 [루트 AGENTS.md](../AGENTS.md), 요구사항은 [`frontend-specification.md`](../docs/frontend-specification.md),
-API 시그니처는 [`backend-specification.md`](../docs/backend-specification.md)를 따른다.
+API 시그니처는 [`api-specification.md`](../docs/api-specification.md)를 따른다.
 
 ## 명령
 
