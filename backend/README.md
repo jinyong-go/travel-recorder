@@ -6,7 +6,7 @@
 - 공개 범위는 `PRIVATE` / `GROUP` / `PUBLIC` 중 **여행 단위로** 지정, 하위 기록은 소속 여행의 범위를 따름
 - 기록 등록용 장소 검색은 NAVER API HUB 지역 검색을 백엔드가 프록시·집계해 제공
 
-상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md) 참고. 작업 규칙은 [AGENTS.md](./AGENTS.md) 참고.
+상세 요구사항은 [backend-specification.md](../docs/backend-specification.md) 참고. 작업 규칙은 [AGENTS.md](./AGENTS.md) 참고.
 
 ## 기술 스택
 
@@ -152,7 +152,7 @@ external-api/
 역할이 다른 **두 종류의 키**가 필요하며, 각각 별도 애플리케이션에서 발급.
 
 > **키 없이도 `local` 프로파일로 기동·사용 가능.** 로그인은 임시 계정, 장소 검색만 동작하지 않음.
-> 네이버 로그인 키는 OAuth 복구 전까지 사용되지 않음 (SPECIFICATION.md 8.1).
+> 네이버 로그인 키는 OAuth 복구 전까지 사용되지 않음 (backend-specification.md 8.1).
 
 | 용도 | 발급처 | 비고 |
 |---|---|---|
@@ -281,9 +281,9 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 - 모든 프로파일이 `ddl-auto: validate`라 **엔티티와 스키마가 어긋나면 기동 실패.** 엔티티 변경 시 마이그레이션도 함께 추가.
 - **이미 적용된 마이그레이션 파일은 수정하지 않음.** 변경은 다음 버전(`V2__…`) 파일로 추가.
 - Flyway 도입 전에 `schema.sql`로 만든 개발·dev DB에는 이력 테이블이 없어 **재생성 필요.**
-- **`trips.cover_photo_id`에는 외래키 없음.** 사진이 여행에서 사라지는 경로(사진 삭제·기록 삭제·기록의 소속 여행 변경)에서 애플리케이션이 커버 지정을 직접 해제. 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3 참고.
+- **`trips.cover_photo_id`에는 외래키 없음.** 사진이 여행에서 사라지는 경로(사진 삭제·기록 삭제·기록의 소속 여행 변경)에서 애플리케이션이 커버 지정을 직접 해제. 근거는 [backend-specification.md](../docs/backend-specification.md) 3 참고.
 - PostgreSQL은 외래키에 인덱스를 자동 생성하지 않으므로, 조회·삭제에 쓰이는 FK 컬럼에 인덱스를 명시.
-- `trips`와 `trip_records`는 **soft delete.** `deleted_at`이 `NULL`인 행만 유효하며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동 제외. 두 테이블의 인덱스는 `WHERE deleted_at IS NULL` 부분 인덱스. 여행 삭제 시 하위 기록도 같은 시각으로 함께 삭제하고, 하위 사진의 바이너리(`photo_data`)는 물리 삭제. 그룹·멤버·초대·공유 관계는 반대로 물리 삭제 — 탈퇴와 공유 해제는 즉시 조회 권한을 없애야 하기 때문. 정책과 근거는 [SPECIFICATION.md](./SPECIFICATION.md) 3.2 참고.
+- `trips`와 `trip_records`는 **soft delete.** `deleted_at`이 `NULL`인 행만 유효하며, 엔티티의 `@SQLRestriction("deleted_at is null")`이 조회에서 자동 제외. 두 테이블의 인덱스는 `WHERE deleted_at IS NULL` 부분 인덱스. 여행 삭제 시 하위 기록도 같은 시각으로 함께 삭제하고, 하위 사진의 바이너리(`photo_data`)는 물리 삭제. 그룹·멤버·초대·공유 관계는 반대로 물리 삭제 — 탈퇴와 공유 해제는 즉시 조회 권한을 없애야 하기 때문. 정책과 근거는 [backend-specification.md](../docs/backend-specification.md) 3.2 참고.
 - **`trip_records`에는 `visibility`와 `author_id` 컬럼 없음.** 둘 다 소속 여행에서 파생되며, 같은 사실을 두 곳에 적으면 어긋나는 순간 어느 쪽이 맞는지 알 수 없기 때문. 그래서 기록 조회는 **항상 `trip_id`로 여행을 조인해** 공개 범위 판정.
 - 확장: `postgis`(기록 거리순 정렬의 KNN 위치 인덱스), `pg_trgm`(이름·주소·태그 부분 일치 검색 인덱스).
 
@@ -302,7 +302,7 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 
 ## API 개요
 
-전체 스펙과 요청/응답 스키마는 [SPECIFICATION.md](./SPECIFICATION.md) 4장 참고.
+전체 스펙과 요청/응답 스키마는 [backend-specification.md](../docs/backend-specification.md) 4장 참고.
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
@@ -349,13 +349,13 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 `ErrorCode`에 정의된 코드(`UNAUTHENTICATED`, `FORBIDDEN`, `TRIP_NOT_FOUND`, `RECORD_NOT_FOUND`,
 `GROUP_NOT_FOUND`, `VALIDATION_ERROR`, `PLACE_SEARCH_UNAVAILABLE` 등)를 함께 반환.
 **열람 권한이 없으면 `403`이 아니라 `404`** — 없는 것과 응답이 구분되지 않아야 하기 때문.
-단 그룹은 예외로 멤버가 아니면 `403` (SPECIFICATION.md 2.2.2).
+단 그룹은 예외로 멤버가 아니면 `403` (backend-specification.md 2.2.2).
 
 `GlobalExceptionHandler`는 컨트롤러가 던지는 `ApiException`뿐 아니라 **컨트롤러에 도달하기 전의
 실패도 모두 같은 형식으로 변환** — 매핑되지 않은 주소(404), 메서드 불일치(405), `Content-Type` 불일치(415),
 본문 파싱 실패·파라미터 타입 불일치(400), 업로드 용량 초과(400), DB 제약 위반(409), 마지막
 `Exception` 캐치올(500). 500과 409는 내부 정보가 새지 않도록 고정 문구로 응답하고 스택은 로그에만 기록.
-전체 목록은 [SPECIFICATION.md](./SPECIFICATION.md) 6장 참고.
+전체 목록은 [backend-specification.md](../docs/backend-specification.md) 6장 참고.
 
 ## 프론트엔드 연동
 
@@ -374,9 +374,9 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 - NAVER API HUB 지역 검색 프록시 (중복 제거, 좌표 변환, 페이징)
 - 사진 DB 저장(`photo_data`, `BYTEA`) 및 `/api/files/photos/{photoId}` 서빙, 공통 예외 처리
 
-미구현 / 예정 (상세는 SPECIFICATION.md 8장)
+미구현 / 예정 (상세는 backend-specification.md 8장)
 - **네이버 OAuth 로그인 복구** — `SecurityConfig`의 `oauth2Login` 블록이 주석 처리된 상태. 복구 시 `LocalLoginConfig`·`LocalLoginController` 제거
-- **인가 정책 적용** — `SecurityConfig`가 개발 편의를 위해 `anyRequest().permitAll()`로 열린 상태. 인증은 컨트롤러가 `requireLogin`으로 직접 차단하며, SPECIFICATION.md 2.2의 정책대로 필터체인의 `authenticated()`로 복원 필요
+- **인가 정책 적용** — `SecurityConfig`가 개발 편의를 위해 `anyRequest().permitAll()`로 열린 상태. 인증은 컨트롤러가 `requireLogin`으로 직접 차단하며, backend-specification.md 2.2의 정책대로 필터체인의 `authenticated()`로 복원 필요
 - `trips.cover_photo_id` 외래키 복원 — Flyway 도입으로 가능해짐. 복원 시 `ON DELETE SET NULL`로 사진 삭제 경로의 커버 해제를 DB에 맡길 수 있음
 - 사진 저장소의 AWS S3 전환 — 현재는 DB 저장, 저장 추상화는 전환 시점에 도입
 - 사진 서빙에 공개 범위 미적용 — URL을 아는 사람은 비공개 여행의 사진도 열람 가능하며, 현재는 추측 불가능한 사진 id(UUID)에만 의존

@@ -7,12 +7,12 @@
 REST API 시그니처, 오류 코드, 사진 저장소 설계.
 
 **서비스가 무엇인지는 여기서 정의하지 않는다.** 도메인 개념과 규칙, 공개 범위 정책, 외부 API의
-구조적 제약, 모듈 간 계약은 [`../SPECIFICATION.md`](../SPECIFICATION.md) 가 소유하며
+구조적 제약, 모듈 간 계약은 [`specification.md`](./specification.md) 가 소유하며
 **충돌 시 공통 명세가 우선한다.** 본 문서는 그 규칙을 코드로 옮기는 방법만 적고, 규칙 자체를
 다시 서술하지 않는다. 화면 요구사항은
-[`frontend/SPECIFICATION.md`](../frontend/SPECIFICATION.md) 를 따른다.
+[`frontend-specification.md`](./frontend-specification.md) 를 따른다.
 
-용어는 [공통 명세 §3](../SPECIFICATION.md) 을 그대로 쓴다. 본 문서에서만 이름이 다른 것은
+용어는 [공통 명세 §3](./specification.md) 을 그대로 쓴다. 본 문서에서만 이름이 다른 것은
 없다. 본문의 `Trip`·`TripRecord`·`Group` … 은 §3의 괄호 표기를 따른 개념 이름이며, JPA 엔티티
 클래스는 여기에 `Entity` 접미사를 붙인다 (`TripEntity`, `TripRecordEntity`, `GroupEntity` …).
 접미사 없는 이름은 서비스가 주고받는 도메인 객체의 몫이다.
@@ -32,7 +32,7 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
 
 ### 1.3 NAVER API HUB 지역 검색 — 구현에 필요한 사실
 제품 구분·구조적 제약(검색어당 5건 상한, 거리순 정렬 미지원, CORS 미지원, 고유 장소 ID 부재)과 공식
-문서 링크는 [공통 명세 §4](../SPECIFICATION.md) 에 있다. 여기서는 **백엔드가 코드로 처리해야 하는 것만** 적는다.
+문서 링크는 [공통 명세 §4](./specification.md) 에 있다. 여기서는 **백엔드가 코드로 처리해야 하는 것만** 적는다.
 
 | 다뤄야 할 것 | 처리 |
 |---|---|
@@ -94,7 +94,7 @@ REST API 시그니처, 오류 코드, 사진 저장소 설계.
 
 ### 2.2 인가 정책
 
-권한 규칙 자체는 [공통 명세 §2.6](../SPECIFICATION.md) 에 있다. 여기서는 **그 규칙을 코드에서
+권한 규칙 자체는 [공통 명세 §2.6](./specification.md) 에 있다. 여기서는 **그 규칙을 코드에서
 어떻게 판정하고 어떤 상태 코드로 응답하는지**를 정의한다.
 
 #### 2.2.1 판정식
@@ -1122,7 +1122,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 ## 7. 비기능 요구사항
 
-세션 쿠키·CSRF·CORS의 **원칙**은 [공통 명세 §6.1](../SPECIFICATION.md) 에 있다. 여기서는
+세션 쿠키·CSRF·CORS의 **원칙**은 [공통 명세 §6.1](./specification.md) 에 있다. 여기서는
 백엔드가 지켜야 할 구현 수단과, 공통 명세에 없는 서버 측 규칙만 적는다.
 
 **보안 구현**
@@ -1201,7 +1201,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 ## 8. 제약사항 및 향후 과제
 
 도메인 차원의 미결 사항(공동 편집, 공개 링크, 방문일, 예산 범위 등)은
-[공통 명세 §7](../SPECIFICATION.md) 에 있다. 여기서는 **백엔드가 해야 할 일**만 둔다.
+[공통 명세 §7](./specification.md) 에 있다. 여기서는 **백엔드가 해야 할 일**만 둔다.
 
 ### 8.1 구현 잔여 작업
 - **네이버 OAuth 로그인을 복구한다** (§2.1). 임시 인메모리 로그인으로 대체된 상태이며,

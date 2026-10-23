@@ -1,7 +1,7 @@
 # 아키텍처 구성도
 
 서비스를 이루는 서버·DB·외부 서비스와 그것이 어떤 환경에서 실행되는지를 정리한다.
-규칙·정책은 [SPECIFICATION.md](./SPECIFICATION.md)와 모듈 명세가 기준이고, 실행 방법은 각 README 에 있다.
+규칙·정책은 [specification.md](./specification.md)와 모듈 명세가 기준이고, 실행 방법은 각 README 에 있다.
 
 ## 1. 전체 구성
 
@@ -174,7 +174,7 @@ sequenceDiagram
 ```
 
 - 검색 한 번에 외부 API 를 **한 번** 부른다. 원본이 검색어당 5건까지만 주므로 결과도 최대 5건이다.
-  후보를 늘리는 검색어 변형 호출은 아직 없다 (설계 전제는 [명세 §4.2](./SPECIFICATION.md)).
+  후보를 늘리는 검색어 변형 호출은 아직 없다 (설계 전제는 [명세 §4.2](./specification.md)).
 - 기준 위치는 서버로 보내지 않는다. 거리순 정렬은 받은 페이지 안에서만 이뤄진다.
 - 키는 API 서버에만 있다. 키가 없거나 호출이 실패하면 `PLACE_SEARCH_UNAVAILABLE` 로 실패를 알린다.
 - 외부 호출은 `http.client.requests` 지표로 남고, 검색어는 지표 라벨에 남기지 않는다.

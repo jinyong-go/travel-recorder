@@ -1,7 +1,7 @@
 # frontend/AGENTS.md
 
-프론트엔드 모듈 규칙이다. 공통 규칙은 [루트 AGENTS.md](../AGENTS.md), 요구사항은 [`SPECIFICATION.md`](./SPECIFICATION.md),
-API 시그니처는 [`backend/SPECIFICATION.md`](../backend/SPECIFICATION.md)를 따른다.
+프론트엔드 모듈 규칙이다. 공통 규칙은 [루트 AGENTS.md](../AGENTS.md), 요구사항은 [`frontend-specification.md`](../docs/frontend-specification.md),
+API 시그니처는 [`backend-specification.md`](../docs/backend-specification.md)를 따른다.
 
 ## 명령
 
@@ -59,7 +59,7 @@ npm run build     # 프로덕션 빌드
 
 ## 공개 범위 UI — 가장 조심할 자리
 
-명세 §9 를 따른다.
+`frontend-specification.md` 의 "공개 범위 관련 UI 원칙" 절을 따른다.
 
 - **공개 범위 기본 선택은 언제나 "나만 보기"다.**
 - 공개 범위는 여행에만 있다. 기록 화면에 범위를 바꾸는 수단을 두지 않고, 표시되는 범위가 소속 여행의 것임이 드러나야 한다.

@@ -14,13 +14,13 @@
 
 | 문서 | 다루는 범위 |
 |---|---|
-| 본 문서 (`SPECIFICATION.md`) | 서비스 정의, 도메인 개념과 규칙, 핵심 행위, 공개 범위 정책, 외부 API 제약, 모듈 간 계약 |
-| [`backend/SPECIFICATION.md`](./backend/SPECIFICATION.md) | 엔티티·테이블, 인가 구현, REST API 명세(경로·파라미터·응답), 오류 코드, 페이지네이션 규격, 사진 저장소 설계 |
-| [`frontend/SPECIFICATION.md`](./frontend/SPECIFICATION.md) | 화면·라우트, 탭·폼·모달 동작, 문구, 테마, 접근성, 클라이언트 검증 |
+| 본 문서 (`specification.md`) | 서비스 정의, 도메인 개념과 규칙, 핵심 행위, 공개 범위 정책, 외부 API 제약, 모듈 간 계약 |
+| [`backend-specification.md`](./backend-specification.md) | 엔티티·테이블, 인가 구현, REST API 명세(경로·파라미터·응답), 오류 코드, 페이지네이션 규격, 사진 저장소 설계 |
+| [`frontend-specification.md`](./frontend-specification.md) | 화면·라우트, 탭·폼·모달 동작, 문구, 테마, 접근성, 클라이언트 검증 |
 
 **충돌 시 본 문서가 우선한다.** 모듈 명세는 본 문서의 규칙을 구체화할 수는 있어도 뒤집을 수 없다.
 
-> **이 개정판은 [설계 검토 문서](./REFERENCE.md)의 결론을 반영한다.** 두 차례의 모델 전환이 누적되어 있다.
+> **이 개정판은 [설계 검토 문서](./reference.md)의 결론을 반영한다.** 두 차례의 모델 전환이 누적되어 있다.
 >
 > 1. "모두가 공유하는 여행지 + 여러 사용자의 리뷰" → **개인 소유의 방문 기록 + 공개 범위** (검토 1·2)
 > 2. 평면적인 방문 기록 목록 → **여행(Trip)을 상위 그룹으로 두는 2계층 구조**, 공유의 단위도 여행 (검토 3)
@@ -43,7 +43,7 @@
 
 ### 1.2 구성
 프론트엔드와 백엔드가 분리된 2모듈 구조이며, 브라우저 ↔ 백엔드는 JSON REST API + 세션 쿠키로
-통신한다 (§6). 각 모듈의 기술 스택은 [README](./README.md)를 참고한다.
+통신한다 (§6). 각 모듈의 기술 스택은 [README](../README.md)를 참고한다.
 
 ## 2. 핵심 행위
 
@@ -608,12 +608,12 @@
 ## 7. 제약사항 및 향후 과제
 
 도메인 차원의 미결 사항만 둔다. 모듈별 구현 잔여 작업은
-[backend §8](./backend/SPECIFICATION.md)과 [frontend §10](./frontend/SPECIFICATION.md)에 있다.
+[backend §8](./backend-specification.md)과 [frontend §10](./frontend-specification.md)에 있다.
 
 ### 7.1 명세와 구현이 어긋나 있는 것
 - **로그인 수단이 임시로 대체되어 있다** (§2.1, §3.1). 네이버 OAuth 는 비활성이고 고정 계정으로
   로그인한다. 계정이 최초 로그인 시 만들어지는 것도, 네이버 계정 하나로만 만들어지는 것도 지금은
-  성립하지 않는다. 임시 구현의 내용과 복구 지점은 [backend §2.1](./backend/SPECIFICATION.md) 에 있다.
+  성립하지 않는다. 임시 구현의 내용과 복구 지점은 [backend §2.1](./backend-specification.md) 에 있다.
 
 > 이전 판에 적혀 있던 다섯 가지 — 초대의 링크 모델, 소유자 전용 예산, 여행(Trip) 계층 미구현,
 > 초대 이력 미반영, 프론트엔드의 목업 동작 — 은 모두 해소되어 이 목록에서 내렸다.

@@ -42,7 +42,7 @@ visit_record_share (visit_record_id, group_id)  -- visibility=GROUP일 때만 �
 > 상위 `trip` 으로 올라갔고, `visit_record_share` 는 `trip_share` 가 되었다. 편집 권한의 근거도
 > `visit_record.author_user_id` → `trip.owner_user_id` 다. 엔티티 이름도 `VisitRecord` →
 > **`TripRecord`** 로 바뀌었다. 최신 모델은 검토 3의 결론표와
-> [백엔드 명세 §3](./backend/SPECIFICATION.md)을 따른다.
+> [백엔드 명세 §3](./backend-specification.md)을 따른다.
 
 ## 검토 3: 여행(Trip) 단위 그룹화
 

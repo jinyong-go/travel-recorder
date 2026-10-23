@@ -10,24 +10,16 @@
 
 ## 문서 구성
 
-이 저장소는 **명세가 코드보다 우선**함. 서비스가 **무엇인지**는 루트 명세, **어떻게 만드는지**는
+이 저장소는 **명세가 코드보다 우선**함. 서비스가 **무엇인지**는 공통 명세, **어떻게 만드는지**는
 각 모듈 명세가 담당.
 
-| 문서 | 담당 범위 |
-|---|---|
-| [`SPECIFICATION.md`](./SPECIFICATION.md) | 도메인 개념·규칙, 핵심 행위, 공개 범위 정책, 외부 API 제약, 모듈 간 계약 |
-| [`backend/SPECIFICATION.md`](./backend/SPECIFICATION.md) | 엔티티·테이블, 인가 구현, REST API, 오류 코드, 저장소 설계 |
-| [`frontend/SPECIFICATION.md`](./frontend/SPECIFICATION.md) | 화면·라우트, 폼·모달 동작, 문구, 테마, 접근성 |
-| [`REFERENCE.md`](./REFERENCE.md) | 공개 범위·공유 모델과 여행 계층의 설계 근거, 유사 서비스 조사 |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | 서버·DB·외부 서비스 구성, 구조·기술 스택을 고른 이유, 실행 환경(Docker Compose, 프로파일별 구성) |
-| [`AGENTS.md`](./AGENTS.md) | 작업 규칙 — 승인 절차, 커밋 메시지 형식, 명세 작성 원칙, 코드·주석 원칙 |
-
-두 모듈 명세가 어긋나면 루트 [SPECIFICATION.md](./SPECIFICATION.md)가 우선.
+문서별 담당 범위는 [`AGENTS.md`의 "명세" 절](./AGENTS.md#3-명세), 작업 규칙(승인 절차, 커밋 메시지,
+코드·주석 원칙)은 [`AGENTS.md`](./AGENTS.md) 참고.
 
 | 모듈 | 기술 | 문서 |
 |---|---|---|
-| [`backend/`](./backend) | Kotlin 2.3 / Spring Boot 4.1 / JPA / PostgreSQL + PostGIS / Flyway | [README](./backend/README.md) · [명세](./backend/SPECIFICATION.md) |
-| [`frontend/`](./frontend) | React 19 / Vite / react-router | [README](./frontend/README.md) · [명세](./frontend/SPECIFICATION.md) |
+| [`backend/`](./backend) | Kotlin 2.3 / Spring Boot 4.1 / JPA / PostgreSQL + PostGIS / Flyway | [README](./backend/README.md) · [명세](./docs/backend-specification.md) |
+| [`frontend/`](./frontend) | React 19 / Vite / react-router | [README](./frontend/README.md) · [명세](./docs/frontend-specification.md) |
 
 모듈 README는 실행 방법·환경 변수·디렉터리 구조, 모듈 명세는 요구사항과 설계 결정을 다룸.
 
@@ -73,7 +65,7 @@ cd frontend && npm install && npm run dev
 
 ## 현재 상태
 
-[설계 검토 노트](./REFERENCE.md)를 거쳐 모델이 두 번 변경됨.
+[설계 검토 노트](./docs/reference.md)를 거쳐 모델이 두 번 변경됨.
 
 1. "모두가 공유하는 여행지 + 여러 사용자의 리뷰" → **"개인 소유 방문 기록 + 공개 범위"**
 2. 평면적인 방문 기록 목록 → **"여행(Trip) → 여행 기록(TripRecord)" 2계층, 공유 단위도 여행**
@@ -89,5 +81,5 @@ cd frontend && npm install && npm run dev
     - 시큐리티 인가 정책이 `permitAll()`로 열려 있어, 인증이 필요한 엔드포인트는 컨트롤러가 직접 차단
 - **스키마**: Flyway 마이그레이션으로 관리. Flyway 도입 전에 만든 개발용 DB는 재생성 필요
 - **다음 단계**: 네이버 OAuth 복구, 시큐리티 인가 정책 복원, 장소 검색 API 연동.
-  상세는 [backend/SPECIFICATION.md §8](./backend/SPECIFICATION.md)과
-  [frontend/SPECIFICATION.md §10](./frontend/SPECIFICATION.md) 참고
+  상세는 [backend-specification.md §8](./docs/backend-specification.md)과
+  [frontend-specification.md §10](./docs/frontend-specification.md) 참고

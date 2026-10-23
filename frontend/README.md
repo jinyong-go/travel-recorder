@@ -6,7 +6,7 @@
 - 공개 범위(나만 보기 / 그룹 공유 / 전체 공개)는 **여행 단위로** 지정, 하위 기록 전체가 함께 적용
 - 목록은 내 여행·공유받은 여행·둘러보기로 구분
 
-상세 요구사항은 [SPECIFICATION.md](./SPECIFICATION.md) 참고. 작업 규칙은 [AGENTS.md](./AGENTS.md) 참고.
+상세 요구사항은 [frontend-specification.md](../docs/frontend-specification.md) 참고. 작업 규칙은 [AGENTS.md](./AGENTS.md) 참고.
 
 ## 기술 스택
 
@@ -199,7 +199,7 @@ SPA 라우팅(`/trips/:tripId` 등)을 사용하므로, 서버에서 **알 수 �
 - 지도 연동 — 네이버 지도. 설정 메뉴에서 "새 창으로 열기"(지도 검색)와 "페이지 내 지도 보기"(SDK v3 + 마커, Client ID 필요) 중 선택
 - 라이트/다크 테마 토글(시스템 설정 기본값, 선택 시 로컬 저장), 기준 위치(Geolocation → 수동 지정 → 서울역) 처리
 
-미구현 / 예정 (상세는 SPECIFICATION.md 10장)
+미구현 / 예정 (상세는 frontend-specification.md 10장)
 - 네이버 로그인 복구 — 백엔드 OAuth 복구 후 로그인 화면에 네이버 버튼을 다시 두고 임시 폼 제거
 - 여행 대표 사진 지정, 기록의 소속 여행 변경(다른 여행으로 옮기기)
 - 태그 입력·필터 UI (백엔드는 지원하지만 화면이 없어 등록 요청이 항상 빈 태그 목록으로 전송)

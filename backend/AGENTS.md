@@ -1,6 +1,6 @@
 # backend/AGENTS.md
 
-백엔드 모듈 규칙이다. 공통 규칙은 [루트 AGENTS.md](../AGENTS.md), 요구사항은 [`SPECIFICATION.md`](./SPECIFICATION.md)를 따른다.
+백엔드 모듈 규칙이다. 공통 규칙은 [루트 AGENTS.md](../AGENTS.md), 요구사항은 [`backend-specification.md`](../docs/backend-specification.md)를 따른다.
 
 ## 명령
 
@@ -76,7 +76,7 @@ docker compose down -v            # 로컬 DB 초기화 (볼륨 삭제)
 
 ## 인가 — 가장 조심할 자리
 
-빠뜨리는 순간 곧바로 정보 유출이다. 판정식은 명세 §2.2 를 따른다.
+빠뜨리는 순간 곧바로 정보 유출이다. 판정식은 `backend-specification.md` 의 "인가 정책" 절을 따른다.
 
 - **판정은 조회 쿼리 단계에서 한다.** 판정식은 `TripVisibilityPredicates` 하나뿐이고, 새 조회 경로도 이것을
   쓴다. 메모리 판정을 두지 않는다. 단건은 `findViewable*`·`findEditable*` 를 거친다.

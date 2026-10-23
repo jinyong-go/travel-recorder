@@ -45,10 +45,13 @@
 
 | 문서 | 소유 범위 |
 |---|---|
-| [`SPECIFICATION.md`](./SPECIFICATION.md) | 서비스가 무엇인지 — 도메인 개념·규칙, 핵심 행위, 공개 범위 정책, 외부 API 제약, 모듈 간 계약 |
-| [`backend/SPECIFICATION.md`](./backend/SPECIFICATION.md) | 엔티티·테이블, 인가 구현, REST API 시그니처, 오류 코드, 저장소 설계 |
-| [`frontend/SPECIFICATION.md`](./frontend/SPECIFICATION.md) | 화면·라우트, 폼·모달 동작, 문구, 테마, 접근성, 클라이언트 검증 |
-| [`REFERENCE.md`](./REFERENCE.md) | 설계 결정의 근거와 유사 서비스 조사 기록 |
+| [`specification.md`](./docs/specification.md) | 서비스가 무엇인지 — 도메인 개념·규칙, 핵심 행위, 공개 범위 정책, 외부 API 제약, 모듈 간 계약 |
+| [`backend-specification.md`](./docs/backend-specification.md) | 엔티티·테이블, 인가 구현, REST API 시그니처, 오류 코드, 저장소 설계 |
+| [`frontend-specification.md`](./docs/frontend-specification.md) | 화면·라우트, 폼·모달 동작, 문구, 테마, 접근성, 클라이언트 검증 |
+| [`reference.md`](./docs/reference.md) | 설계 결정의 근거와 유사 서비스 조사 기록 |
+| [`architecture.md`](./docs/architecture.md) | 서버·DB·외부 서비스 구성, 구조·기술 스택을 고른 이유, 실행 환경(Docker Compose, 프로파일별 구성) |
+
+모듈 명세가 공통 명세(`specification.md`)와 어긋나면 공통 명세가 우선한다.
 
 작성·수정은 대화형으로 한다.
 - 구조를 크게 바꾸거나 모델을 전환하는 결정은 선택지와 근거를 먼저 제시하고 확인받는다.
@@ -57,7 +60,7 @@
 
 고칠 때:
 - 같은 규칙을 두 문서에 적지 않는다. 소유 문서에 두고 나머지는 참조한다.
-- 루트 명세에 구현 수단(엔드포인트·컬럼·오류 코드·HTTP 상태·컴포넌트)을 쓰지 않는다.
+- 공통 명세에 구현 수단(엔드포인트·컬럼·오류 코드·HTTP 상태·컴포넌트)을 쓰지 않는다.
 - 절 번호를 바꾸면 `§` 참조를 전수 확인한다. 번호가 유효해도 가리키는 대상이 달라질 수 있다.
 
 구현할 때:
