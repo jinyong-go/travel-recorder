@@ -8,7 +8,7 @@ export default function RequiredNote() {
       <span className="required-mark" aria-hidden="true">
         *
       </span>{' '}
-      표시는 필수 항목입니다.
+      표시는 필수 항목이에요.
     </p>
   )
 }

@@ -10,7 +10,7 @@ import { CloseIcon } from './icons.jsx'
 import './RecordRegisterModal.css'
 
 const CREATE_ERROR = {
-  TRIP_NOT_FOUND: '여행을 찾을 수 없습니다. 이미 삭제되었을 수 있어요.',
+  TRIP_NOT_FOUND: '여행을 찾을 수 없어요. 이미 삭제되었을 수 있어요.',
 }
 
 /**
@@ -38,7 +38,7 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
     try {
       record = await createRecord({ tripId: trip.id, ...recordPayload(values) })
     } catch (err) {
-      setSubmitError(errorMessage(err, CREATE_ERROR, '여행지를 등록하지 못했습니다.'))
+      setSubmitError(errorMessage(err, CREATE_ERROR, '여행지를 등록하지 못했어요.'))
       setSubmitting(false)
       return
     }
@@ -83,7 +83,7 @@ export default function RecordRegisterModal({ trip, reference, onClose, onCreate
         <h2>여행지 남기기</h2>
         {/* 공개 여부를 모른 채 저장하지 않도록 이 여행의 범위를 먼저 보여준다. */}
         <p className="preset-trip">
-          {trip.name} 여행에 추가합니다. 이 기록은 여행의 공개 범위({visibility.label})를 따릅니다.
+          {trip.name} 여행에 추가해요. 이 기록은 여행의 공개 범위({visibility.label})를 따라요.
         </p>
 
         <RecordForm

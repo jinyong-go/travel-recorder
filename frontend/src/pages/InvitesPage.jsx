@@ -78,7 +78,7 @@ export default function InvitesPage({ tab }) {
       const code = err instanceof ApiError ? err.code : null
       if (code === 'GROUP_MEMBER_LIMIT_EXCEEDED') {
         // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다.
-        setInviteError('그룹 정원이 가득 찼습니다. 자리가 나면 다시 수락할 수 있습니다.')
+        setInviteError('그룹 정원이 가득 찼어요. 자리가 나면 다시 수락할 수 있어요.')
       } else {
         setInviteError(INVITE_GONE_MESSAGE)
         pending.reload()
@@ -153,7 +153,7 @@ export default function InvitesPage({ tab }) {
             <PagedListBody
               list={pending}
               loadingText="불러오는 중이에요…"
-              errorText="초대를 불러오지 못했습니다."
+              errorText="초대를 불러오지 못했어요."
               emptyText={tab === 'received' ? '받은 초대가 없어요.' : '보낸 초대가 없어요.'}
               noteClassName="invite-note"
               errorClassName="invite-error"
@@ -212,7 +212,7 @@ export default function InvitesPage({ tab }) {
             <PagedListBody
               list={history}
               loadingText="불러오는 중이에요…"
-              errorText="지난 초대를 불러오지 못했습니다."
+              errorText="지난 초대를 불러오지 못했어요."
               emptyText="아직 끝난 초대가 없어요."
               noteClassName="invite-note"
               errorClassName="invite-error"
@@ -264,7 +264,7 @@ export default function InvitesPage({ tab }) {
           onCancel={() => setRejecting(null)}
         >
           &apos;{rejecting.group.name}&apos; 초대가 지난 초대로 넘어가고,{' '}
-          <strong>거절한 사실이 보낸 사람에게도 보입니다.</strong> 다시 참여하려면 상대가 새로
+          <strong>거절한 사실이 보낸 사람에게도 보여요.</strong> 다시 참여하려면 상대가 새로
           초대해야 해요.
         </ConfirmDialog>
       )}

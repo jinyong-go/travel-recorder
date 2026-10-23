@@ -5,18 +5,6 @@ export const CATEGORIES = [
   { key: 'SIGHT', label: '관광지' },
 ]
 
-const CATEGORY_ICON = {
-  FOOD: '🍴',
-  SHOPPING: '🛍️',
-  SIGHT: '🏞️',
-}
-
-/** 카테고리가 없거나 정해지지 않은 자리(대표 사진이 없는 여행 등)에 쓰는 핀 이모지. */
-export const PLACE_ICON = '📍'
-
-/** 카테고리 이모지. 값이 없거나 모르는 카테고리면 핀(`PLACE_ICON`)이다. */
-export const categoryIcon = (key) => CATEGORY_ICON[key] ?? PLACE_ICON
-
 /** 카테고리 화면 이름. 모르는 값은 코드를 그대로 보인다. */
 export const categoryLabel = (key) => CATEGORIES.find((c) => c.key === key)?.label ?? key
 

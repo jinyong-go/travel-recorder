@@ -53,16 +53,14 @@
   background: var(--accent);
   color: var(--accent-contrast);
   padding: 12px 22px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 700;
   font-size: 15px;
-  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .notfound-home-btn:hover {
   background: var(--accent-strong);
-  transform: translateY(-2px);
 }
 
 .notfound-places-link {

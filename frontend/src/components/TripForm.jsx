@@ -9,7 +9,7 @@ import './TripForm.css'
 
 // 백엔드 요청 검증과 같은 값이다.
 // 제출 검증과 즉시 표시가 같은 문구를 쓴다.
-const DATE_ORDER_ERROR = '종료일은 시작일 이후여야 합니다.'
+const DATE_ORDER_ERROR = '종료일은 시작일 이후여야 해요.'
 
 const EMPTY = {
   name: '',
@@ -72,8 +72,8 @@ export default function TripForm({
     if (!startDate) next.startDate = '시작일을 선택해주세요.'
     if (!endDate) next.endDate = '종료일을 선택해주세요.'
     else if (dateOrderInvalid) next.endDate = DATE_ORDER_ERROR
-    if (!headcount || Number(headcount) < 1) next.headcount = '인원은 1명 이상이어야 합니다.'
-    if (budget !== '' && Number(budget) < 0) next.budget = '예산은 0 이상이어야 합니다.'
+    if (!headcount || Number(headcount) < 1) next.headcount = '인원은 1명 이상이어야 해요.'
+    if (budget !== '' && Number(budget) < 0) next.budget = '예산은 0 이상이어야 해요.'
     if (memo.length > TRIP_MEMO_MAX_LENGTH) next.memo = `여행 설명은 ${TRIP_MEMO_MAX_LENGTH}자 이하로 입력해주세요.`
     setErrors(next)
     return Object.keys(next).length === 0
@@ -153,7 +153,7 @@ export default function TripForm({
         />
         {errors.headcount && <p className="field-error">{errors.headcount}</p>}
         {/* 인원과 공유 그룹을 혼동하는 것이 이 화면에서 가장 흔한 오해다. */}
-        <p className="field-hint">함께 간 사람 수입니다 (공유 대상과 무관)</p>
+        <p className="field-hint">함께 간 사람 수예요 (공유 대상과 무관)</p>
       </div>
 
       <div className="form-field">
@@ -167,7 +167,7 @@ export default function TripForm({
           onChange={(e) => setBudget(e.target.value)}
         />
         {errors.budget && <p className="field-error">{errors.budget}</p>}
-        <p className="field-hint">여행 전체 총액입니다. 여행을 볼 수 있는 사람에게 함께 보입니다.</p>
+        <p className="field-hint">여행 전체 총액이에요. 여행을 볼 수 있는 사람에게 함께 보여요.</p>
       </div>
 
       <div className="form-field">

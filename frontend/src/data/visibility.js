@@ -6,17 +6,17 @@ export const VISIBILITIES = [
   {
     key: 'PRIVATE',
     label: '나만 보기',
-    description: '나만 볼 수 있습니다',
+    description: '나만 볼 수 있어요',
   },
   {
     key: 'GROUP',
     label: '그룹 공유',
-    description: '선택한 그룹 멤버가 여행지와 예산을 모두 볼 수 있습니다',
+    description: '선택한 그룹 멤버가 여행지와 예산을 모두 볼 수 있어요',
   },
   {
     key: 'PUBLIC',
     label: '전체 공개',
-    description: '누구나 로그인 없이 여행지와 예산을 모두 볼 수 있습니다',
+    description: '누구나 로그인 없이 여행지와 예산을 모두 볼 수 있어요',
   },
 ]
 

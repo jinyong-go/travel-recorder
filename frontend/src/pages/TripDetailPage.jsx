@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { categoryIcon, categoryLabel, placeOf } from '../data/records.js'
+import { categoryLabel, placeOf } from '../data/records.js'
 import { DEFAULT_VISIBILITY, PHOTO_LINK_NOTICE, effectiveVisibility, isWideningVisibility } from '../data/visibility.js'
 import { formatDate } from '../utils/date.js'
 import { TRIP_STATUS_MESSAGE, budgetLabel, tripAudience, tripDurationLabel, tripPeriodLabel, tripVisibility } from '../data/trips.js'
@@ -21,7 +21,7 @@ import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import RecordRegisterModal from '../components/RecordRegisterModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import VisibilitySelect from '../components/VisibilitySelect.jsx'
-import { ArrowLeftIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
+import { ArrowLeftIcon, CategoryIcon, ChevronDownIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
 // 상세 화면의 공통 레이아웃(.detail-page / .detail-inner / .detail-section)은 기록 상세와 같다.
 import '../styles/detailPage.css'
 import './TripDetailPage.css'
@@ -39,11 +39,11 @@ export default function TripDetailPage() {
 }
 
 const DELETE_ERROR = {
-  TRIP_NOT_FOUND: '이미 삭제된 여행입니다.',
+  TRIP_NOT_FOUND: '이미 삭제된 여행이에요.',
 }
 
 const VISIBILITY_ERROR = {
-  GROUP_NOT_FOUND: '공유할 수 없는 그룹이 선택되어 있습니다. 그룹 선택을 다시 확인해주세요.',
+  GROUP_NOT_FOUND: '공유할 수 없는 그룹이 선택되어 있어요. 그룹 선택을 다시 확인해주세요.',
 }
 
 /** 공유 그룹 id 를 순서와 무관하게 비교할 수 있는 문자열로 만든다. */
@@ -109,7 +109,7 @@ function TripDetailView({ trip, onTripChange }) {
       await tripApi.deleteTrip(trip.id)
       navigate('/trips')
     } catch (err) {
-      setActionError(errorMessage(err, DELETE_ERROR, '여행을 삭제하지 못했습니다.'))
+      setActionError(errorMessage(err, DELETE_ERROR, '여행을 삭제하지 못했어요.'))
       setBusy(false)
     }
   }
@@ -129,7 +129,7 @@ function TripDetailView({ trip, onTripChange }) {
             {record.thumbnailUrl ? (
               <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
             ) : (
-              <span className="place-thumb-icon">{categoryIcon(record.category)}</span>
+              <CategoryIcon category={record.category} className="place-thumb-icon" />
             )}
             <span className="place-category-badge">{categoryLabel(record.category)}</span>
           </div>
@@ -173,6 +173,11 @@ function TripDetailView({ trip, onTripChange }) {
           </Link>
 
           <section className="trip-detail-head">
+            {/* 대표 사진은 지정된 경우에만 보인다. 없을 때 연·월 자리 표시를 두지 않는 것은
+                바로 아래에 기간이 적혀 있어 같은 정보를 두 번 보이게 되기 때문이다. */}
+            {trip.coverPhotoUrl && (
+              <img src={fileUrl(trip.coverPhotoUrl)} alt="" className="trip-detail-cover" />
+            )}
             <div className="trip-detail-title-row">
               <h1 className="detail-name">{trip.name}</h1>
               {isOwner && (
@@ -192,15 +197,14 @@ function TripDetailView({ trip, onTripChange }) {
               )}
             </div>
             <p className="trip-detail-period">
-              {tripPeriodLabel(trip)} ({tripDurationLabel(trip)}) · 인원 {trip.headcount}명 ·
-              여행지 {recordCount}곳
+              {tripPeriodLabel(trip)} ({tripDurationLabel(trip)})
             </p>
-            <p className="trip-detail-owner">
-              by {isOwner ? '나' : trip.owner.name}
+            <p className="trip-detail-facts">
+              <span>{trip.headcount}명</span>
+              <span>여행지 {recordCount}곳</span>
               {/* 예산은 여행을 볼 수 있는 사람에게 함께 보인다. */}
-              {trip.budget != null && (
-                <span className="trip-detail-budget">예산 {budgetLabel(trip.budget)}</span>
-              )}
+              {trip.budget != null && <span>예산 {budgetLabel(trip.budget)}</span>}
+              <span>by {isOwner ? '나' : trip.owner.name}</span>
             </p>
             {trip.memo && <p className="trip-detail-memo">{trip.memo}</p>}
           </section>
@@ -225,7 +229,7 @@ function TripDetailView({ trip, onTripChange }) {
 
             {photoFailedRecord && (
               <p className="field-error" role="status">
-                사진을 올리지 못했습니다.{' '}
+                사진을 올리지 못했어요.{' '}
                 <Link to={`/records/${photoFailedRecord.id}`}>기록 상세</Link>에서 다시 올려주세요.
               </p>
             )}
@@ -233,8 +237,8 @@ function TripDetailView({ trip, onTripChange }) {
             <PagedListBody
               list={records}
               loadingText="여행지를 불러오는 중이에요…"
-              errorText="여행지를 불러오지 못했습니다."
-              emptyText={`아직 등록된 여행지가 없습니다.${isOwner ? ' 다녀온 곳을 추가해보세요.' : ''}`}
+              errorText="여행지를 불러오지 못했어요."
+              emptyText={`아직 등록된 여행지가 없어요.${isOwner ? ' 다녀온 곳을 추가해보세요.' : ''}`}
               noteClassName="empty-state"
               errorClassName="empty-state"
             >
@@ -255,7 +259,7 @@ function TripDetailView({ trip, onTripChange }) {
           onCancel={closeDeleteConfirm}
         >
           {/* 하위 기록이 함께 지워진다는 사실과 건수를 반드시 문구에 담는다. */}
-          이 여행과 여행지 {recordCount}곳의 기록이 함께 삭제됩니다. 되돌릴 수 없어요.
+          이 여행과 여행지 {recordCount}곳의 기록이 함께 삭제돼요. 되돌릴 수 없어요.
         </ConfirmDialog>
       )}
 
@@ -277,9 +281,9 @@ function TripDetailView({ trip, onTripChange }) {
 
 /** 저장 결과 문구. 저장된 실제 범위(`effectiveVisibility`)로 고른다. */
 const SAVED_SCOPE_TEXT = {
-  PUBLIC: '전체 공개됩니다',
-  GROUP: '선택한 그룹에만 보입니다',
-  PRIVATE: '이제 나만 볼 수 있습니다',
+  PUBLIC: '전체 공개돼요',
+  GROUP: '선택한 그룹에만 보여요',
+  PRIVATE: '이제 나만 볼 수 있어요',
 }
 
 /**
@@ -336,7 +340,7 @@ function TripVisibilitySection({ trip, onTripChange }) {
       const notice = narrowing ? ` ${PHOTO_LINK_NOTICE}` : ''
       setMessage({ type: 'success', text: `여행지 ${recordCount}곳이 ${where}.${notice}` })
     } catch (err) {
-      setMessage({ type: 'error', text: errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했습니다.') })
+      setMessage({ type: 'error', text: errorMessage(err, VISIBILITY_ERROR, '공개 범위를 바꾸지 못했어요.') })
     } finally {
       setSaving(false)
       setConfirmingWiden(false)
@@ -347,8 +351,8 @@ function TripVisibilitySection({ trip, onTripChange }) {
   const withBudget = trip.budget != null ? '과 예산' : ''
   const widenText =
     visibilityDraft === 'PUBLIC'
-      ? `여행지 ${recordCount}곳${withBudget}이 누구에게나 공개됩니다. 로그인하지 않은 사람도 둘러보기에서 볼 수 있어요.`
-      : `선택한 그룹 ${groupDraft.length}곳의 멤버가 여행지 ${recordCount}곳${withBudget}을 볼 수 있게 됩니다.`
+      ? `여행지 ${recordCount}곳${withBudget}이 누구에게나 공개돼요. 로그인하지 않은 사람도 둘러보기에서 볼 수 있어요.`
+      : `선택한 그룹 ${groupDraft.length}곳의 멤버가 여행지 ${recordCount}곳${withBudget}을 볼 수 있게 돼요.`
 
   return (
     <>
@@ -358,6 +362,7 @@ function TripVisibilitySection({ trip, onTripChange }) {
       */}
       <details className="detail-section collapsible-section">
         <summary className="collapsible-summary">
+          <ChevronDownIcon className="collapsible-chevron" aria-hidden="true" />
           <span className="detail-section-title">공개 범위</span>
           <span className="detail-visibility-current">
             <VisibilityBadge visibility={tripVisibility(trip)} />

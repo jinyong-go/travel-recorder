@@ -7,16 +7,16 @@ import AppLogoMark from '../components/AppLogoMark.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
 import './LoginPage.css'
 
-const LOGIN_FAILED = '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.'
+const LOGIN_FAILED = '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.'
 
 // 주소의 `?error=` 로 넘어오는 안내. 세션 만료는 AuthContext 가 이 화면으로 보낼 때 붙인다.
 const QUERY_ERROR = {
-  access_denied: '네이버 로그인 동의가 취소되었습니다. 다시 시도해 주세요.',
-  session_expired: '세션이 만료되었습니다. 다시 로그인해 주세요.',
+  access_denied: '네이버 로그인 동의가 취소되었어요. 다시 시도해 주세요.',
+  session_expired: '세션이 만료되었어요. 다시 로그인해 주세요.',
 }
 
 const LOGIN_ERROR = {
-  UNAUTHENTICATED: '아이디 또는 비밀번호가 올바르지 않습니다.',
+  UNAUTHENTICATED: '아이디 또는 비밀번호가 올바르지 않아요.',
 }
 
 /**
@@ -74,7 +74,7 @@ export default function LoginPage() {
           <p className="login-desc">
             네이버 로그인을 준비하는 동안 임시 계정으로 로그인할 수 있어요.
             <br />
-            로그인하면 여행을 만들고 다녀온 곳을 기록할 수 있습니다.
+            로그인하면 여행을 만들고 다녀온 곳을 기록할 수 있어요.
           </p>
 
           {shownError && (

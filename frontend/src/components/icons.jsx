@@ -329,3 +329,72 @@ export function VisibilityIcon({ visibility, ...props }) {
   const Icon = VISIBILITY_ICONS[visibility] ?? LockIcon
   return <Icon {...props} />
 }
+
+export function FoodIcon(props) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="18"
+      height="18"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M4.5 3v5a2.5 2.5 0 0 0 5 0V3" />
+      <path d="M7 3v18" />
+      <path d="M17.5 21V3c-2 1.5-3.5 4-3.5 7.5V14h3.5" />
+    </svg>
+  )
+}
+
+export function ShoppingIcon(props) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="18"
+      height="18"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M5 8h14l-1.2 12.1a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9L5 8Z" />
+      <path d="M9 8V6.5a3 3 0 0 1 6 0V8" />
+    </svg>
+  )
+}
+
+export function SightIcon(props) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="18"
+      height="18"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M2.5 19.5 9 10l4 5.5 2.5-3 6 7H2.5Z" />
+      <circle cx="16.5" cy="6" r="2" />
+    </svg>
+  )
+}
+
+const CATEGORY_ICONS = { FOOD: FoodIcon, SHOPPING: ShoppingIcon, SIGHT: SightIcon }
+
+/** 여행지 카테고리 아이콘. 값이 없거나 모르는 카테고리면 위치 핀으로 그린다. */
+export function CategoryIcon({ category, ...props }) {
+  const Icon = CATEGORY_ICONS[category] ?? MapPinIcon
+  return <Icon aria-hidden="true" {...props} />
+}

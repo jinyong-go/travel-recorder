@@ -12,7 +12,7 @@
   max-width: 720px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 28px;
 }
 
 /* 존재하지 않는 여행지 */
@@ -44,25 +44,34 @@
   text-decoration: underline;
 }
 
-/* 요약 카드 */
+/* 상세의 섹션은 카드로 감싸지 않고 위쪽 구분선으로만 나눈다. 카드를 쌓으면 모든 섹션이
+   같은 무게로 보여 무엇이 본문인지 흐려진다. */
 .detail-summary,
 .detail-section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: clamp(18px, 3vw, 26px);
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
+/* 기록 상세의 첫 섹션이라 위에 나눌 대상이 없다. */
+.detail-summary {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* 사용자가 지은 이름이라 본문과 다른 서체로 둔다. */
 .detail-name {
-  font-size: clamp(20px, 3.5vw, 26px);
-  letter-spacing: -0.4px;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(26px, 4.5vw, 36px);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .detail-section-title {
-  font-size: 16px;
+  font-size: 17px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -85,8 +94,8 @@
 .detail-delete-btn {
   border: 1px solid var(--danger-border);
   background: var(--surface);
-  color: var(--danger);
-  border-radius: var(--radius-pill);
+  color: var(--danger-text);
+  border-radius: var(--radius-sm);
   padding: 8px 16px;
   font-size: 0.875rem;
   cursor: pointer;
@@ -101,9 +110,14 @@
 
 .detail-shared-groups,
 .detail-trip-link {
-  margin-left: 8px;
   font-size: 0.9rem;
   color: var(--text-muted);
+}
+
+.detail-trip-link a {
+  color: var(--accent);
+  font-weight: 600;
+  text-underline-offset: 3px;
 }
 
 /* 수정과 삭제를 제목 줄 오른쪽에 묶는다 — 여행·기록 상세가 같은 자리에 둔다. 삭제는 테두리만

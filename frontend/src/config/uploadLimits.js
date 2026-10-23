@@ -34,17 +34,17 @@ export const validatePhotoFiles = (files, selectedBytes = 0) => {
 
   files.forEach((file) => {
     if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
-      errors.push(`${file.name}: JPG · PNG · WEBP 형식만 업로드할 수 있습니다.`)
+      errors.push(`${file.name}: JPG · PNG · WEBP 형식만 업로드할 수 있어요.`)
       return
     }
     if (file.size > MAX_PHOTO_SIZE_BYTES) {
       errors.push(
-        `${file.name}: ${formatMb(file.size)} — 한 장당 ${MAX_PHOTO_SIZE_MB}MB 이하만 업로드할 수 있습니다.`,
+        `${file.name}: ${formatMb(file.size)} — 한 장당 ${MAX_PHOTO_SIZE_MB}MB 이하만 업로드할 수 있어요.`,
       )
       return
     }
     if (total + file.size > MAX_PHOTO_TOTAL_BYTES) {
-      errors.push(`${file.name}: 전체 첨부 용량 ${MAX_PHOTO_TOTAL_MB}MB를 초과합니다.`)
+      errors.push(`${file.name}: 전체 첨부 용량 ${MAX_PHOTO_TOTAL_MB}MB를 넘어요.`)
       return
     }
     total += file.size

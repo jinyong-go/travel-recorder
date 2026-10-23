@@ -9,7 +9,7 @@ import { haversineDistanceKm } from '../utils/geo.js'
 import './PlaceSearchModal.css'
 
 const SEARCH_ERROR = {
-  PLACE_SEARCH_UNAVAILABLE: '지금은 장소 검색을 할 수 없습니다. 잠시 후 다시 시도해주세요.',
+  PLACE_SEARCH_UNAVAILABLE: '지금은 장소 검색을 할 수 없어요. 잠시 후 다시 시도해주세요.',
 }
 
 /** 검색 결과 거리의 기준이 무엇인지. 확인 중이면 출처보다 그 사실을 먼저 알린다. */
@@ -144,7 +144,7 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
 
           {status === REQUEST_STATUS.ERROR && (
             <p className="place-search-hint field-error">
-              {errorMessage(error, SEARCH_ERROR, '장소를 검색하지 못했습니다.')}{' '}
+              {errorMessage(error, SEARCH_ERROR, '장소를 검색하지 못했어요.')}{' '}
               <button type="button" className="link-button" onClick={reload}>
                 다시 시도
               </button>
@@ -152,7 +152,7 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
           )}
 
           {status === REQUEST_STATUS.COMPLETE && totalCount === 0 && (
-            <p className="place-search-hint">검색 결과가 없습니다.</p>
+            <p className="place-search-hint">검색 결과가 없어요.</p>
           )}
 
           {data && totalCount > 0 && (

@@ -8,7 +8,7 @@
   max-width: 720px;
   margin: 0 auto;
   display: grid;
-  gap: 16px;
+  gap: 24px;
 }
 
 .groups-title {
@@ -25,11 +25,10 @@
   color: var(--text-muted);
 }
 
+/* 섹션은 카드로 감싸지 않고 위쪽 구분선으로 나눈다 (여행·기록 상세와 같은 원칙). */
 .group-section {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  padding: 16px 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
   display: grid;
   gap: 10px;
 }
@@ -45,7 +44,7 @@
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-muted);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   padding: 4px 12px;
   font-size: 0.8rem;
   cursor: pointer;
@@ -53,7 +52,7 @@
 
 .member-remove:hover {
   border-color: var(--danger-border);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .invite-list {

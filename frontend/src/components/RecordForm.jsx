@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { fileUrl } from '../api/client.js'
-import { CATEGORIES, categoryIcon } from '../data/records.js'
+import { CATEGORIES } from '../data/records.js'
 import { RECORD_MEMO_MAX_LENGTH } from '../config/inputLimits.js'
 import {
   ALLOWED_PHOTO_ACCEPT,
@@ -13,7 +13,7 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 import PlaceSearchModal from './PlaceSearchModal.jsx'
 import StarRatingInput from './StarRatingInput.jsx'
 import RequiredNote from './RequiredNote.jsx'
-import { CloseIcon, PhotoIcon, SearchIcon } from './icons.jsx'
+import { CategoryIcon, CloseIcon, PhotoIcon, SearchIcon } from './icons.jsx'
 import '../styles/form.css'
 import './RecordForm.css'
 
@@ -156,7 +156,8 @@ export default function RecordForm({
                 className={`category-choice${category === c.key ? ' active' : ''}`}
                 onClick={() => setCategory(c.key)}
               >
-                {categoryIcon(c.key)} {c.label}
+                <CategoryIcon category={c.key} />
+                {c.label}
               </button>
             ))}
           </div>
@@ -263,8 +264,8 @@ export default function RecordForm({
             }}
             onCancel={() => setRemovingPhotoIndex(null)}
           >
-            사진 {removingPhotoIndex + 1}번을 목록에서 뺍니다. 저장을 눌러야 실제로 지워지며, 취소하면
-            되돌아옵니다.
+            사진 {removingPhotoIndex + 1}번을 목록에서 빼요. 저장을 눌러야 실제로 지워지며, 취소하면
+            되돌아와요.
           </ConfirmDialog>,
           document.body,
         )}

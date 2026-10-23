@@ -18,8 +18,8 @@ import { INVITE_GONE_MESSAGE } from '../data/invites.js'
 import { PHOTO_LINK_NOTICE } from '../data/visibility.js'
 
 const INVITE_ERROR = {
-  USER_NOT_FOUND: '해당 이메일로 가입한 사용자가 없습니다. 주소를 다시 확인해주세요.',
-  ALREADY_MEMBER: '이미 이 그룹의 멤버입니다.',
+  USER_NOT_FOUND: '해당 이메일로 가입한 사용자가 없어요. 주소를 다시 확인해주세요.',
+  ALREADY_MEMBER: '이미 이 그룹의 멤버예요.',
 }
 
 /**
@@ -27,11 +27,11 @@ const INVITE_ERROR = {
  * 숨기지 않기 때문이다.
  */
 const LOAD_ERROR = {
-  FORBIDDEN: { title: '이 그룹의 멤버만 볼 수 있습니다', desc: '초대를 받아 참여하면 볼 수 있어요.' },
-  GROUP_NOT_FOUND: { title: '존재하지 않는 그룹입니다', desc: '주소를 다시 확인해주세요.' },
+  FORBIDDEN: { title: '이 그룹의 멤버만 볼 수 있어요', desc: '초대를 받아 참여하면 볼 수 있어요.' },
+  GROUP_NOT_FOUND: { title: '존재하지 않는 그룹이에요', desc: '주소를 다시 확인해주세요.' },
 }
 
-const DEFAULT_LOAD_ERROR = { title: '그룹을 불러오지 못했습니다', desc: '잠시 후 다시 시도해주세요.' }
+const DEFAULT_LOAD_ERROR = { title: '그룹을 불러오지 못했어요', desc: '잠시 후 다시 시도해주세요.' }
 
 /**
  * 확인 모달을 거치는 동작. `confirming.type` 으로 고르며, 문구와 요청과 끝난 뒤의 이동을 함께 둔다.
@@ -42,7 +42,7 @@ const DEFAULT_LOAD_ERROR = { title: '그룹을 불러오지 못했습니다', de
 const CONFIRM_ACTIONS = {
   delete: {
     title: '그룹을 삭제할까요?',
-    desc: `이 그룹으로만 공유한 여행은 나만 보기 상태가 됩니다. 여행과 기록 자체는 삭제되지 않습니다. ${PHOTO_LINK_NOTICE}`,
+    desc: `이 그룹으로만 공유한 여행은 나만 보기 상태가 돼요. 여행과 기록 자체는 삭제되지 않아요. ${PHOTO_LINK_NOTICE}`,
     ok: '삭제',
     okBusy: '삭제하는 중…',
     run: (groupId) => api.deleteGroup(groupId),
@@ -50,7 +50,7 @@ const CONFIRM_ACTIONS = {
   },
   leave: {
     title: '그룹에서 나갈까요?',
-    desc: `이 그룹으로 공유된 여행은 더 이상 보이지 않습니다. 내가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않습니다. ${PHOTO_LINK_NOTICE}`,
+    desc: `이 그룹으로 공유된 여행은 더 이상 보이지 않아요. 내가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않아요. ${PHOTO_LINK_NOTICE}`,
     ok: '나가기',
     okBusy: '나가는 중…',
     run: (groupId) => api.leaveGroup(groupId),
@@ -58,7 +58,7 @@ const CONFIRM_ACTIONS = {
   },
   member: {
     title: '멤버를 제외할까요?',
-    desc: `제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없습니다. 이 멤버가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않습니다. ${PHOTO_LINK_NOTICE}`,
+    desc: `제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없어요. 이 멤버가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않아요. ${PHOTO_LINK_NOTICE}`,
     ok: '제외',
     okBusy: '제외하는 중…',
     run: (groupId, { memberId }) => api.removeMember(groupId, memberId),
@@ -121,11 +121,11 @@ export default function GroupDetailPage() {
       // 이미 초대한 상대를 다시 초대한 것은 오류가 아니다. 서버가 201 이 아닌 200 으로 답한다.
       setInviteMessage({
         type: 'info',
-        text: status === 200 ? '이미 초대한 상대입니다.' : '초대를 보냈습니다.',
+        text: status === 200 ? '이미 초대한 상대예요.' : '초대를 보냈어요.',
       })
       pending.reload()
     } catch (err) {
-      setInviteMessage({ type: 'error', text: errorMessage(err, INVITE_ERROR, '초대를 보내지 못했습니다.') })
+      setInviteMessage({ type: 'error', text: errorMessage(err, INVITE_ERROR, '초대를 보내지 못했어요.') })
     } finally {
       setProcessing(null)
     }
@@ -152,7 +152,7 @@ export default function GroupDetailPage() {
     try {
       await pendingAction.run(group.id, confirming)
     } catch {
-      setActionError('요청을 처리하지 못했습니다. 다시 시도해주세요.')
+      setActionError('요청을 처리하지 못했어요. 다시 시도해주세요.')
       return
     } finally {
       setProcessing(null)
@@ -173,7 +173,7 @@ export default function GroupDetailPage() {
             <ArrowLeftIcon /> 그룹 목록으로
           </Link>
 
-          <h1 className="groups-title">{group.name}</h1>
+          <h1 className="groups-title group-detail-name">{group.name}</h1>
           {group.memo && <p className="group-memo">{group.memo}</p>}
           <p className="groups-desc">
             멤버 {group.memberCount}/{group.memberLimit}명
@@ -258,7 +258,7 @@ export default function GroupDetailPage() {
               <PagedListBody
                 list={pending}
                 loadingText="불러오는 중이에요…"
-                errorText="대기 중인 초대를 불러오지 못했습니다."
+                errorText="대기 중인 초대를 불러오지 못했어요."
                 noteClassName="invite-note"
                 errorClassName="invite-error"
               >

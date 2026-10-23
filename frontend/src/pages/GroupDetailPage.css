@@ -81,3 +81,9 @@
   display: flex;
   justify-content: flex-end;
 }
+
+/* 사용자가 지은 이름이라 본문과 다른 서체로 둔다. "초대함"·"공유 그룹" 같은 화면 제목은 그대로다. */
+.group-detail-name {
+  font-family: var(--serif);
+  font-weight: 600;
+}

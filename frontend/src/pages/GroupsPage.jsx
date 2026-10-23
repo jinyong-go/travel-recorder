@@ -67,7 +67,7 @@ export default function GroupsPage() {
       closeCreate()
     } catch {
       // 입력 규칙은 위에서 이미 걸렀으므로 코드별로 나눠 안내할 실패가 없다.
-      setError('그룹을 만들지 못했습니다.')
+      setError('그룹을 만들지 못했어요.')
     } finally {
       setSubmitting(false)
     }
@@ -94,7 +94,7 @@ export default function GroupsPage() {
           <h1 className="groups-title">공유 그룹</h1>
           <p className="groups-desc">
             그룹은 여행을 보여줄 대상 목록이에요. 멤버는 공유받은 여행을 볼 수만 있고,
-            수정하거나 삭제할 수는 없습니다.
+            수정하거나 삭제할 수는 없어요.
           </p>
 
           <div className="groups-actions">
@@ -108,7 +108,7 @@ export default function GroupsPage() {
 
           {status === REQUEST_STATUS.ERROR && (
             <div className="empty-state">
-              그룹을 불러오지 못했습니다.{' '}
+              그룹을 불러오지 못했어요.{' '}
               <button type="button" className="link-button" onClick={reloadGroups}>
                 다시 시도
               </button>
@@ -118,7 +118,7 @@ export default function GroupsPage() {
           {status === REQUEST_STATUS.COMPLETE &&
             (groups.length === 0 ? (
               <div className="empty-state">
-                공유 그룹을 만들면 특정 여행을 원하는 사람에게만 보여줄 수 있습니다.
+                공유 그룹을 만들면 특정 여행을 원하는 사람에게만 보여줄 수 있어요.
               </div>
             ) : (
               <ul className="group-list">
@@ -176,7 +176,7 @@ export default function GroupsPage() {
                 placeholder="예: 설 연휴 사진 공유용"
                 onChange={(e) => setMemo(e.target.value)}
               />
-              <p className="field-hint">멤버에게도 보입니다.</p>
+              <p className="field-hint">멤버에게도 보여요.</p>
 
               {error && <p className="field-error">{error}</p>}
 

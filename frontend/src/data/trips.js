@@ -8,20 +8,20 @@ import { effectiveVisibility } from './visibility.js'
 // 목록의 세 범위. 성격이 달라 한 목록에 섞지 않고 탭으로 나눈다.
 // 목록에 들어가는 단위는 기록이 아니라 여행이다.
 export const SCOPES = [
-  { key: 'mine', label: '내 여행', requiresLogin: true, empty: '아직 여행이 없습니다. 다녀온 여행을 만들어보세요.' },
+  { key: 'mine', label: '내 여행', requiresLogin: true, empty: '아직 여행이 없어요. 다녀온 여행을 만들어 보세요.' },
   {
     key: 'shared',
     label: '공유받은 여행',
     requiresLogin: true,
-    empty: '공유받은 여행이 없습니다. 그룹에 참여하면 여기에 표시됩니다.',
+    empty: '공유받은 여행이 없어요. 그룹에 참여하면 여기에 보여요.',
   },
-  { key: 'public', label: '둘러보기', requiresLogin: false, empty: '공개된 여행이 없습니다.' },
+  { key: 'public', label: '둘러보기', requiresLogin: false, empty: '공개된 여행이 없어요.' },
 ]
 
 export const TRIP_SORT_OPTIONS = [
-  { key: 'recent', label: '최근 등록순' },
+  { key: 'recent', label: '최근 만든 순' },
   // 거리순은 없다. 여행은 좌표를 갖지 않는다.
-  { key: 'startDate', label: '시작일순' },
+  { key: 'startDate', label: '여행 시작일 순' },
 ]
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -49,6 +49,12 @@ export const tripPeriodLabel = (trip) => {
   return `${sy}.${sm}.${sd} – ${ey}.${em}.${ed}`
 }
 
+/** "2026년 9월" — 대표 사진이 없는 여행 카드의 자리 표시에 쓴다. */
+export const tripMonthLabel = (trip) => {
+  const [year, month] = trip.startDate.split('-')
+  return `${year}년 ${Number(month)}월`
+}
+
 /**
  * 여행 응답의 공개 범위를 `effectiveVisibility`·`isWideningVisibility` 가 받는 모양
  * (`{ visibility, groupIds }`)으로 바꾼다. 공유 그룹은 소유자에게만 내려오므로 없으면 빈 목록이다.
@@ -71,6 +77,6 @@ export const budgetLabel = (budget) =>
  */
 export const TRIP_STATUS_MESSAGE = {
   [REQUEST_STATUS.LOADING]: { title: '여행을 불러오는 중이에요…' },
-  [REQUEST_STATUS.ERROR]: { title: '여행을 불러오지 못했습니다', desc: '잠시 후 다시 시도해주세요.' },
-  [REQUEST_STATUS.MISSING]: { title: '여행을 찾을 수 없습니다', desc: '존재하지 않거나 볼 수 없는 여행입니다.' },
+  [REQUEST_STATUS.ERROR]: { title: '여행을 불러오지 못했어요', desc: '잠시 후 다시 시도해주세요.' },
+  [REQUEST_STATUS.MISSING]: { title: '여행을 찾을 수 없어요', desc: '존재하지 않거나 볼 수 없는 여행이에요.' },
 }

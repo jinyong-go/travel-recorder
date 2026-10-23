@@ -42,7 +42,7 @@ export default function VisibilitySelect({
     if (groupsStatus === REQUEST_STATUS.ERROR) {
       return (
         <p className="visibility-groups-empty">
-          그룹을 불러오지 못했습니다.{' '}
+          그룹을 불러오지 못했어요.{' '}
           <button type="button" className="link-button" onClick={reloadGroups}>
             다시 시도
           </button>
@@ -55,7 +55,7 @@ export default function VisibilitySelect({
     if (groups.length === 0) {
       return (
         <p className="visibility-groups-empty">
-          아직 공유 그룹이 없습니다.{' '}
+          아직 공유 그룹이 없어요.{' '}
           <button type="button" className="link-button" onClick={onCreateGroupClick}>
             그룹 만들기
           </button>
@@ -81,7 +81,7 @@ export default function VisibilitySelect({
         </ul>
         {effectiveVisibility({ visibility: value, groupIds: selectedGroupIds }) === 'PRIVATE' && (
           <p className="visibility-groups-warning" role="status">
-            선택한 그룹이 없어 나만 볼 수 있습니다.
+            선택한 그룹이 없어 나만 볼 수 있어요.
           </p>
         )}
       </>

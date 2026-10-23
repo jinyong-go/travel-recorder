@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { errorMessage, fileUrl } from '../api/client.js'
 import * as recordApi from '../api/records.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
-import { categoryIcon, categoryLabel, placeOf, recordPayload } from '../data/records.js'
+import { categoryLabel, placeOf, recordPayload } from '../data/records.js'
 import { formatDate } from '../utils/date.js'
 import { tripVisibility } from '../data/trips.js'
 import useResource from '../hooks/useResource.js'
@@ -19,16 +19,16 @@ import StarRatingDisplay from '../components/StarRatingDisplay.jsx'
 import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import RecordForm from '../components/RecordForm.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
-import { ArrowLeftIcon, MapViewIcon } from '../components/icons.jsx'
+import { ArrowLeftIcon, CategoryIcon, MapViewIcon } from '../components/icons.jsx'
 import '../styles/detailPage.css'
 import './RecordDetailPage.css'
 
 const DELETE_ERROR = {
-  RECORD_NOT_FOUND: '이미 삭제된 기록입니다.',
+  RECORD_NOT_FOUND: '이미 삭제된 기록이에요.',
 }
 
 const SAVE_ERROR = {
-  RECORD_NOT_FOUND: '기록을 찾을 수 없습니다. 이미 삭제되었을 수 있어요.',
+  RECORD_NOT_FOUND: '기록을 찾을 수 없어요. 이미 삭제되었을 수 있어요.',
 }
 
 /**
@@ -65,7 +65,7 @@ export default function RecordDetailPage() {
   const { trip } = useTrip(isAuthor ? record.trip.id : null)
 
   if (recordStatus === REQUEST_STATUS.ERROR) {
-    return <DetailStatus title="기록을 불러오지 못했습니다" desc="잠시 후 다시 시도해주세요." />
+    return <DetailStatus title="기록을 불러오지 못했어요" desc="잠시 후 다시 시도해주세요." />
   }
 
   if (recordStatus === REQUEST_STATUS.MISSING) {
@@ -73,7 +73,7 @@ export default function RecordDetailPage() {
     // 문구가 달라지는 순간 그 차이만으로 비공개 기록의 존재가 드러난다.
     return (
       <DetailStatus
-        title="기록을 찾을 수 없습니다"
+        title="기록을 찾을 수 없어요"
         desc="존재하지 않거나 볼 수 없는 기록이에요."
         backTo="/trips"
         backLabel="여행 목록으로"
@@ -112,7 +112,7 @@ export default function RecordDetailPage() {
       await recordApi.deleteRecord(record.id)
       navigate(`/trips/${record.trip.id}`)
     } catch (err) {
-      setDeleteError(errorMessage(err, DELETE_ERROR, '기록을 삭제하지 못했습니다.'))
+      setDeleteError(errorMessage(err, DELETE_ERROR, '기록을 삭제하지 못했어요.'))
       setBusy(false)
     }
   }
@@ -136,7 +136,7 @@ export default function RecordDetailPage() {
     try {
       await recordApi.updateRecord(record.id, { ...recordPayload(values), tags: record.tags })
     } catch (err) {
-      setEditError(errorMessage(err, SAVE_ERROR, '기록을 저장하지 못했습니다.'))
+      setEditError(errorMessage(err, SAVE_ERROR, '기록을 저장하지 못했어요.'))
       setBusy(false)
       return
     }
@@ -169,7 +169,7 @@ export default function RecordDetailPage() {
     setEditing(false)
     setBusy(false)
     if (failures.length > 0) {
-      setSaveNotice(`기록은 저장했지만 ${failures.join('·')}에 실패했습니다. 수정에서 다시 시도해주세요.`)
+      setSaveNotice(`기록은 저장했지만 ${failures.join('·')}에 실패했어요. 수정에서 다시 시도해주세요.`)
     }
   }
 
@@ -207,7 +207,7 @@ export default function RecordDetailPage() {
                 <div className="detail-section-head">
                   <div className="detail-summary-head">
                     <span className="detail-category-badge">
-                      <span aria-hidden="true">{categoryIcon(record.category)}</span>{' '}
+                      <CategoryIcon category={record.category} />
                       {categoryLabel(record.category)}
                     </span>
                     <h1 className="detail-name">{record.name}</h1>
@@ -266,7 +266,7 @@ export default function RecordDetailPage() {
                 <div className="detail-subsection">
                   <h2 className="detail-section-title">사진</h2>
                   {photos.length === 0 ? (
-                    <p className="detail-empty">등록된 사진이 없습니다.</p>
+                    <p className="detail-empty">등록된 사진이 없어요.</p>
                   ) : (
                     <ul className="detail-photo-grid">
                       {photos.map((photo, i) => (
@@ -291,7 +291,7 @@ export default function RecordDetailPage() {
                   {record.memo ? (
                     <p className="detail-memo">{record.memo}</p>
                   ) : (
-                    <p className="detail-empty">메모가 없습니다.</p>
+                    <p className="detail-empty">메모가 없어요.</p>
                   )}
                 </div>
               </>
@@ -313,7 +313,7 @@ export default function RecordDetailPage() {
               </p>
             )}
             <p className="detail-empty">
-              공개 범위는 여행 단위로 정해집니다. 바꾸려면 여행 화면에서 변경해주세요.
+              공개 범위는 여행 단위로 정해져요. 바꾸려면 여행 화면에서 변경해주세요.
             </p>
           </section>
         </div>

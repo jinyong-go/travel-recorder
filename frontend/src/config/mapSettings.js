@@ -1,8 +1,8 @@
 import { readStorage, writeStorage } from '../utils/storage.js'
 
 export const MAP_MODES = [
-  { key: 'link', label: '새 창으로 열기', description: 'API 키 없이 네이버 지도 앱/웹을 새 탭으로 엽니다.' },
-  { key: 'embed', label: '페이지 내 지도 보기', description: '카드에서 바로 지도를 볼 수 있어요. 네이버 지도 Client ID 가 필요합니다.' },
+  { key: 'link', label: '새 창으로 열기', description: 'API 키 없이 네이버 지도 앱/웹을 새 탭으로 열어요.' },
+  { key: 'embed', label: '페이지 내 지도 보기', description: '카드에서 바로 지도를 볼 수 있어요. 네이버 지도 Client ID 가 필요해요.' },
 ]
 
 const STORAGE_KEY = 'travel-recorder:mapMode'

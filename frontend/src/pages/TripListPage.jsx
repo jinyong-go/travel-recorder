@@ -1,8 +1,6 @@
 import { useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { PLACE_ICON } from '../data/records.js'
 import { SCOPES, TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel, tripVisibility } from '../data/trips.js'
-import { fileUrl } from '../api/client.js'
 import { fetchTrips } from '../api/trips.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -11,6 +9,7 @@ import useResource from '../hooks/useResource.js'
 import AppHeader from '../components/AppHeader.jsx'
 import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
+import TripCover from '../components/TripCover.jsx'
 import { PlusIcon } from '../components/icons.jsx'
 import './TripListPage.css'
 import { AUTH_STATUS } from '../context/authStatus.js'
@@ -60,14 +59,14 @@ export default function TripListPage() {
   const totalCount = result?.totalElements ?? 0
   const totalPages = Math.max(1, result?.totalPages ?? 1)
 
-  const emptyMessage = SCOPES.find((s) => s.key === scope)?.empty ?? '표시할 여행이 없습니다.'
+  const emptyMessage = SCOPES.find((s) => s.key === scope)?.empty ?? '표시할 여행이 없어요.'
 
   /** 목록 자리. 읽는 중·실패·빈 목록이면 안내 한 줄이고, 아니면 여행 카드다. */
   const renderTrips = () => {
     if (listStatus === REQUEST_STATUS.ERROR) {
       return (
         <div className="empty-state">
-          여행을 불러오지 못했습니다.{' '}
+          여행을 불러오지 못했어요.{' '}
           <button type="button" className="link-button" onClick={reload}>
             다시 시도
           </button>
@@ -85,15 +84,7 @@ export default function TripListPage() {
           const isOwner = trip.isOwner
           return (
             <li key={trip.id} className="trip-card">
-              <div className="trip-cover">
-                {trip.coverPhotoUrl ? (
-                  <img src={fileUrl(trip.coverPhotoUrl)} alt="" className="trip-cover-img" />
-                ) : (
-                  // 대표 사진이 없으면 플레이스홀더를 둔다. 무엇을 보여줄지는 화면이
-                  // 정한다 — 서버는 대체 이미지를 고르지 않는다.
-                  <span className="trip-cover-icon">{PLACE_ICON}</span>
-                )}
-              </div>
+              <TripCover trip={trip} />
               <div className="trip-body">
                 <h3 className="trip-name">
                   {/* 카드 전체가 눌리도록 링크를 카드 위에 덮는다 (.trip-card-link::after) */}
@@ -102,8 +93,14 @@ export default function TripListPage() {
                   </Link>
                 </h3>
                 <p className="trip-period">
-                  {tripPeriodLabel(trip)} ({tripDurationLabel(trip)}) · 인원{' '}
-                  {trip.headcount}명 · 여행지 {trip.recordCount}곳
+                  {tripPeriodLabel(trip)} ({tripDurationLabel(trip)})
+                </p>
+                <p className="trip-facts">
+                  <span>{trip.headcount}명</span>
+                  {/* 0곳은 숫자 대신 문장으로 쓴다. "여행지 0곳"은 고장 난 값처럼 읽힌다. */}
+                  <span>
+                    {trip.recordCount > 0 ? `여행지 ${trip.recordCount}곳` : '아직 등록된 여행지가 없어요'}
+                  </span>
                 </p>
                 <div className="trip-meta">
                   <span className="trip-owner">by {isOwner ? '나' : trip.owner?.name}</span>
@@ -145,21 +142,31 @@ export default function TripListPage() {
         <section className="list-section">
           <div className="list-toolbar">
             <span className="list-count">
-              총 <strong>{totalCount}</strong>건
+              총 <strong>{totalCount}</strong>개의 여행
             </span>
-            <div className="sort-select-wrap">
-              <select
-                className="sort-select"
-                value={sortKey}
-                onChange={(e) => updateParams({ sort: e.target.value, page: 1 })}
-                aria-label="정렬 기준"
-              >
-                {TRIP_SORT_OPTIONS.map((opt) => (
-                  <option key={opt.key} value={opt.key}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+            <div className="list-toolbar-actions">
+              <div className="sort-select-wrap">
+                <select
+                  className="sort-select"
+                  value={sortKey}
+                  onChange={(e) => updateParams({ sort: e.target.value, page: 1 })}
+                  aria-label="정렬 기준"
+                >
+                  {TRIP_SORT_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* 넓은 화면에서는 툴바에, 좁은 화면에서는 떠 있는 버튼(.register-fab)으로 둔다.
+                  둘 중 하나만 보이도록 CSS 가 가린다. 비로그인에게는 둘 다 그리지 않는다. */}
+              {isLoggedIn && (
+                <Link to="/trips/new" className="btn-primary list-create-btn">
+                  <PlusIcon />
+                  여행 만들기
+                </Link>
+              )}
             </div>
           </div>
 

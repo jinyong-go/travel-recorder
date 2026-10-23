@@ -1,43 +1,31 @@
+/* 랜딩 — 왼쪽 정렬. 헤더와 같은 좌우 여백을 써서 로고와 제목이 한 줄 위에 선다. */
 .landing-page {
   flex: 1;
-  padding: 8px clamp(16px, 4vw, 48px) 64px;
+  padding: clamp(24px, 8vh, 88px) clamp(16px, 4vw, 48px) 64px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 32px;
+  gap: clamp(48px, 10vh, 96px);
 }
 
-/* 히어로 */
 .landing-hero {
-  width: 100%;
-  max-width: 720px;
-  margin-top: clamp(16px, 5vh, 48px);
+  max-width: 640px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  text-align: center;
-}
-
-.landing-eyebrow {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--accent-strong);
-  background: var(--surface-soft);
-  border-radius: var(--radius-pill);
-  padding: 6px 14px;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .landing-headline {
-  font-size: clamp(28px, 6vw, 44px);
-  line-height: 1.25;
-  letter-spacing: -1px;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(34px, 6.5vw, 56px);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .landing-sub {
-  max-width: 520px;
-  font-size: 15px;
+  max-width: 32em;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--text-muted);
 }
@@ -45,113 +33,103 @@
 .landing-cta {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
-.landing-cta-primary,
-.landing-cta-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 13px 26px;
-  border-radius: var(--radius-pill);
-  font-weight: 700;
+/* 첫 화면의 주 동작이라 공통 버튼보다 한 단계 크게 둔다. */
+.landing-cta .btn-primary,
+.landing-cta .btn-secondary {
+  padding: 14px 22px;
   font-size: 15px;
-  text-decoration: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
-.landing-cta-primary {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border: 1px solid var(--accent);
-  box-shadow: var(--shadow-sm);
-}
-
-.landing-cta-primary:hover {
-  background: var(--accent-strong);
-  border-color: var(--accent-strong);
-  transform: translateY(-2px);
-}
-
-.landing-cta-secondary {
-  background: var(--surface);
-  color: var(--accent-strong);
-  border: 1px solid var(--border);
-}
-
-.landing-cta-secondary:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-}
-
-.landing-stat {
-  font-size: 13.5px;
-  color: var(--text-faint);
-}
-
-.landing-stat strong {
-  color: var(--accent-strong);
-}
-
-.landing-category-chips {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* 최근 공개된 여행 */
+.landing-recent {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.landing-category-chip {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  border-radius: var(--radius-pill);
-  padding: 7px 16px;
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-/* 기능 소개 카드 */
-.landing-features {
-  width: 100%;
-  max-width: 900px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  flex-direction: column;
   gap: 16px;
 }
 
-.landing-feature-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 22px 20px;
+.landing-recent-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+
+.landing-recent-title {
+  font-size: 18px;
+}
+
+.landing-recent-count {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.landing-recent-more {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.landing-recent-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px 16px;
+}
+
+.landing-trip {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
-.landing-feature-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--surface-soft);
-  color: var(--accent-strong);
+/* 여행 이름은 사용자가 지은 이름이라 본문과 다른 서체로 둔다. */
+.landing-trip-name {
+  margin: 8px 0 0;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.4;
 }
 
-.landing-feature-title {
-  font-size: 16px;
+.landing-trip-link {
+  color: inherit;
+  text-decoration: none;
 }
 
-.landing-feature-desc {
+.landing-trip-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.landing-trip-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+}
+
+/* 카드를 띄우지 않고 이름에 밑줄을 그어 누를 수 있음을 알린다. */
+.landing-trip:hover .landing-trip-link {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.landing-trip-period {
   font-size: 13.5px;
-  line-height: 1.6;
   color: var(--text-muted);
+}
+
+@media (max-width: 860px) {
+  .landing-recent-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

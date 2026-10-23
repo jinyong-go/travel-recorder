@@ -5,36 +5,32 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+  gap: 28px 16px;
 }
 
+/* 여행지 카드 — 여행 카드와 같은 원칙: 테두리·떠오르는 효과 없이 사진과 글로 둔다. */
 .place-card {
   position: relative;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--surface);
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
-}
-
-.place-card:hover {
-  box-shadow: var(--shadow);
-  transform: translateY(-2px);
+  gap: 10px;
 }
 
 .place-thumb {
   position: relative;
-  height: 120px;
-  background: linear-gradient(135deg, var(--thumb-grad-a), var(--thumb-grad-b));
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--accent-soft);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .place-thumb-icon {
-  font-size: 40px;
+  width: 36px;
+  height: 36px;
+  color: var(--accent-strong);
 }
 
 .place-thumb-img {
@@ -56,7 +52,7 @@
 }
 
 .place-body {
-  padding: 14px 16px 16px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -85,11 +81,13 @@
 
 .place-card-link:focus-visible::after {
   outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
 }
 
 .place-card:hover .place-card-link {
-  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .place-region {
@@ -131,22 +129,32 @@
   gap: 6px;
   margin-top: 8px;
   border: 1px solid var(--border);
-  background: var(--surface-soft);
-  color: var(--accent-strong);
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 12.5px;
 }
 
 .place-map-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
+  background: var(--surface-soft);
+  border-color: var(--text-faint);
 }
 
-/* 접을 수 있는 섹션 (공개 범위, 여행 정보 수정) */
+/* 접을 수 있는 섹션 (공개 범위). 이 화면의 유일한 설정 영역이라 연한 바탕의 패널로 두고,
+   다른 섹션의 구분선은 쓰지 않는다. */
+/* .detail-section 의 flex 간격이 접힌 내용에도 잡혀 아래가 비므로 block 으로 둔다.
+   펼친 내용과의 간격은 .collapsible-body 의 margin-top 이 맡는다. */
+.collapsible-section {
+  display: block;
+  border-top: none;
+  padding: 16px 20px;
+  background: var(--surface-soft);
+  border-radius: var(--radius-md);
+}
+
 .collapsible-section > summary {
   list-style: none;
   cursor: pointer;
@@ -163,16 +171,15 @@
   flex-wrap: wrap;
 }
 
-/* 펼침 상태를 삼각형으로 알린다. 열리면 아래를 가리킨다. */
-.collapsible-summary::before {
-  content: '▸';
+/* 펼침 상태를 화살표로 알린다. 접혀 있으면 오른쪽, 열리면 아래를 가리킨다. */
+.collapsible-chevron {
   color: var(--text-muted);
-  font-size: 0.95rem;
-  line-height: 1;
+  flex-shrink: 0;
+  transform: rotate(-90deg);
 }
 
-.collapsible-section[open] .collapsible-summary::before {
-  content: '▾';
+.collapsible-section[open] .collapsible-chevron {
+  transform: none;
 }
 
 .collapsible-summary:focus-visible {
@@ -195,17 +202,28 @@
   gap: 8px;
 }
 
-.trip-detail-period,
-.trip-detail-owner {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-muted);
+.trip-detail-cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
 }
 
-.trip-detail-budget {
-  margin-left: 10px;
-  padding-left: 10px;
-  border-left: 1px solid var(--border);
+.trip-detail-period {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.trip-detail-facts {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  font-size: 14px;
+  color: var(--text-muted);
 }
 
 .trip-detail-memo {

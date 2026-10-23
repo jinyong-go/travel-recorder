@@ -64,8 +64,8 @@ export default function MyInfoPage() {
             <PagedListBody
               list={loginHistory}
               loadingText="불러오는 중이에요…"
-              errorText="로그인 기록을 불러오지 못했습니다."
-              emptyText="로그인 기록이 없습니다."
+              errorText="로그인 기록을 불러오지 못했어요."
+              emptyText="로그인 기록이 없어요."
               noteClassName="my-info-note"
               errorClassName="field-error"
               showMore={false}

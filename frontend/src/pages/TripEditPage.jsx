@@ -30,7 +30,7 @@ export default function TripEditPage() {
 }
 
 const UPDATE_ERROR = {
-  TRIP_NOT_FOUND: '여행을 찾을 수 없습니다. 이미 삭제되었을 수 있어요.',
+  TRIP_NOT_FOUND: '여행을 찾을 수 없어요. 이미 삭제되었을 수 있어요.',
 }
 
 /** 폼 제출은 확인 모달을 여는 데서 끝나고, 확인을 누르면 저장한 뒤 상세로 돌아간다. */
@@ -56,7 +56,7 @@ function TripEditView({ trip }) {
       navigate(detailPath, { replace: true })
     } catch (err) {
       // 모달을 닫지 않는다. 입력값이 pendingEdit 에 남아 있어 그대로 다시 시도할 수 있다.
-      setError(errorMessage(err, UPDATE_ERROR, '여행 정보를 수정하지 못했습니다.'))
+      setError(errorMessage(err, UPDATE_ERROR, '여행 정보를 수정하지 못했어요.'))
       setBusy(false)
     }
   }
@@ -96,7 +96,7 @@ function TripEditView({ trip }) {
           onCancel={closeConfirm}
         >
           {/* 공개 범위는 이 폼에 없다는 사실을 문구로 확인시킨다. */}
-          입력한 내용으로 여행 정보가 바뀝니다. 공개 범위는 그대로입니다.
+          입력한 내용으로 여행 정보가 바뀌어요. 공개 범위는 그대로예요.
         </ConfirmDialog>
       )}
     </>

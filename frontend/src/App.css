@@ -173,9 +173,9 @@
   justify-content: center;
   gap: 6px;
   text-decoration: none;
-  border-radius: var(--radius-pill);
-  padding: 11px 24px;
-  font-weight: 700;
+  border-radius: var(--radius-sm);
+  padding: 11px 18px;
+  font-weight: 600;
   font-size: 14.5px;
   line-height: 1;
   cursor: pointer;
@@ -191,12 +191,13 @@
 .btn-secondary {
   border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--text-muted);
+  color: var(--text);
 }
 
+/* 녹색은 주 버튼과 링크만 쓴다. 보조 버튼은 회색 안에서만 반응해 주 동작과 구분된다. */
 .btn-secondary:hover {
-  border-color: var(--accent);
-  color: var(--accent-strong);
+  border-color: var(--text-faint);
+  background: var(--surface-soft);
 }
 
 .btn-primary {

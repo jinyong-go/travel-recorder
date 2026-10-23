@@ -1,29 +1,38 @@
-:root {
-  --green-50: #f3faf1;
-  --green-100: #e6f5e2;
-  --green-200: #d3eeca;
-  --green-300: #b9e3a8;
-  --green-400: #9bd689;
-  --green-500: #7bc76a;
-  --green-600: #5fae4f;
-  --green-700: #497f3d;
+/* 마루 부리는 여행 이름·큰 제목에만 쓰므로 굵기 하나만 받는다. 네이버가 주는 CSS 는 굵기마다
+   파일을 다 걸고 font-display 가 없어, 받는 동안 글자가 비어 보인다 — 그래서 직접 선언한다. */
+@font-face {
+  font-family: 'MaruBuri';
+  font-weight: 600;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2') format('woff2');
+}
 
-  --bg: var(--green-50);
+:root {
+  --bg: #fbfcf8;
   --surface: #ffffff;
-  --surface-soft: var(--green-100);
-  --text: #2f3a2c;
-  --text-muted: #74836d;
-  --text-faint: #9caa95;
-  --border: var(--green-200);
-  --accent: var(--green-500);
-  --accent-strong: var(--green-600);
+  --surface-soft: #f0f5ec;
+  /* 브랜드 연두 파스텔. 면(선택 표시·배지 바탕·플레이스홀더)에만 쓴다 — 글자색이나 흰 글자를
+     얹는 바탕으로 쓰면 대비가 2:1 남짓이라 읽히지 않는다. */
+  --accent-soft: #d4ecc6;
+  --text: #1f2a1d;
+  --text-muted: #56644f;
+  --text-faint: #636f5d;
+  /* 테두리는 연두가 아니라 회녹색이다. 테두리까지 연두면 화면 전체가 강조색으로 덮인다. */
+  --border: #dde4d6;
+  /* 글자·버튼·링크용 녹색. 흰 바탕 위 글자로도, 흰 글자를 얹는 바탕으로도 4.5:1 을 넘긴다. */
+  --accent: #2f6b33;
+  --accent-strong: #24552a;
   --accent-contrast: #ffffff;
   /* 되돌릴 수 없는 동작(삭제·거절)에만 쓰는 색. 연두 브랜드 컬러와 구분되어야 하므로
      라이트·다크가 같은 값을 쓴다 — 테마별 재정의를 두지 않는다. */
-  --danger: #c55a5a;
+  --danger: #b34c4c;
   --danger-border: #d97b7b;
-  --danger-hover: #b34c4c;
+  --danger-hover: #9a3d3d;
   --danger-contrast: #ffffff;
+  /* 되돌릴 수 없는 동작을 글자로 쓸 때(삭제 버튼 글자, 실패 배지)의 붉은색. 채움·테두리의
+     --danger 는 테마와 무관하지만, 글자는 같은 값으로 어두운 바탕에서 대비가 3:1 남짓이라
+     --error 처럼 테마별로 둔다. */
+  --danger-text: #b34c4c;
   /* 오류 안내 문구. 되돌릴 수 없는 동작의 --danger 와 용도가 다르고, 어두운 배경 위의
      글자라 다크에서 밝게 올려야 대비(4.5:1)가 나온다 — 그래서 테마별 값을 둔다. */
   --error: #c0453c;
@@ -34,23 +43,24 @@
      어두운 배경에서 대비가 4.5:1 에 못 미쳐 --error 처럼 테마별로 둔다. */
   --info-border: #7ba0d1;
   --info-text: #416ca8;
-  --shadow: 0 6px 20px -8px rgba(76, 130, 58, 0.28);
-  --shadow-sm: 0 2px 8px -2px rgba(76, 130, 58, 0.18);
-  --thumb-grad-a: var(--green-100);
-  --thumb-grad-b: var(--green-300);
+  --shadow: 0 8px 24px -10px rgba(31, 42, 29, 0.25);
+  --shadow-sm: 0 2px 6px -2px rgba(31, 42, 29, 0.15);
   --badge-bg: rgba(255, 255, 255, 0.85);
-  --overlay: rgba(20, 30, 18, 0.4);
+  --overlay: rgba(20, 26, 19, 0.45);
   /* 사진 위에 얹는 조작 버튼. 사진은 테마와 무관하므로 다크 값을 두지 않는다. */
   --photo-control-bg: rgba(20, 30, 18, 0.6);
   --photo-control-text: #ffffff;
 
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
+  /* 모양으로 역할을 나눈다. 조작(버튼·입력·탭) < 사진·카드 < 모달. 알약은 상태 배지 전용이다. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-pill: 999px;
 
-  --sans: 'Pretendard', 'Apple SD Gothic Neo', system-ui, 'Segoe UI', Roboto,
-    sans-serif;
+  --sans: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', system-ui,
+    'Segoe UI', Roboto, sans-serif;
+  /* 여행 이름·큰 제목 전용. 사용자가 지은 이름을 본문과 다른 결로 보이게 한다. */
+  --serif: 'MaruBuri', 'AppleMyungjo', 'Noto Serif KR', 'Nanum Myeongjo', serif;
 
   font: 16px/1.5 var(--sans);
   color-scheme: light;
@@ -63,25 +73,25 @@
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* 다크 테마 — 검은색 기반, 연두는 테두리/액센트로 유지 */
+/* 다크 테마 — 짙은 녹회색 바탕. 어두운 바탕에서는 연두 파스텔이 그대로 대비를 내므로 글자·버튼에 쓴다. */
 [data-theme='dark'] {
-  --bg: #0b0b0b;
-  --surface: #141414;
-  --surface-soft: #1c1f1b;
-  --text: #edf3ea;
-  --text-muted: #a2aa9d;
-  --text-faint: #6d746a;
-  --border: #3c5c33;
+  --bg: #141913;
+  --surface: #1b2119;
+  --surface-soft: #232b21;
+  --accent-soft: #2e4128;
+  --text: #e8efe4;
+  --text-muted: #a9b4a3;
+  --text-faint: #959f8f;
+  --border: #323c2f;
   --accent: #9bd689;
   --accent-strong: #b9e3a8;
-  --accent-contrast: #0b0b0b;
+  --accent-contrast: #141913;
   --error: #ff9a92;
+  --danger-text: #ff8a80;
   --info-text: #7ba0d1;
   --shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.75);
   --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
-  --thumb-grad-a: #161a14;
-  --thumb-grad-b: #22301e;
-  --badge-bg: rgba(11, 11, 11, 0.8);
+  --badge-bg: rgba(20, 25, 19, 0.8);
   --overlay: rgba(0, 0, 0, 0.6);
   color-scheme: dark;
 }

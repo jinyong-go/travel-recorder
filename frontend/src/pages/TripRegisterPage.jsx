@@ -7,7 +7,7 @@ import { ArrowLeftIcon } from '../components/icons.jsx'
 import '../styles/formPage.css'
 
 const CREATE_ERROR = {
-  GROUP_NOT_FOUND: '공유할 수 없는 그룹이 선택되어 있습니다. 그룹 선택을 다시 확인해주세요.',
+  GROUP_NOT_FOUND: '공유할 수 없는 그룹이 선택되어 있어요. 그룹 선택을 다시 확인해주세요.',
 }
 
 /** 여행 만들기 화면. 공개 범위까지 함께 받아 한 번에 만든다. */
@@ -24,7 +24,7 @@ export default function TripRegisterPage() {
       const trip = await createTrip(values)
       navigate(`/trips/${trip.id}`)
     } catch (err) {
-      setError(errorMessage(err, CREATE_ERROR, '여행을 만들지 못했습니다.'))
+      setError(errorMessage(err, CREATE_ERROR, '여행을 만들지 못했어요.'))
       setSubmitting(false)
     }
   }
