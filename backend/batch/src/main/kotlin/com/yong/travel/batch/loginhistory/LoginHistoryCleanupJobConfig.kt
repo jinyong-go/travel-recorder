@@ -31,26 +31,14 @@ class LoginHistoryCleanupJobConfig(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /**
-     * 로그인 이력 정리 잡. 스텝 하나로 끝난다.
-     *
-     * @param jobRepository 잡 실행 저장소
-     * @param loginHistoryCleanupStep 정리 스텝
-     * @return 잡
-     */
+    /** 로그인 이력 정리 잡. 스텝 하나로 끝난다. */
     @Bean
     fun loginHistoryCleanupJob(jobRepository: JobRepository, loginHistoryCleanupStep: Step): Job =
         JobBuilder(JOB_NAME, jobRepository)
             .start(loginHistoryCleanupStep)
             .build()
 
-    /**
-     * 보관 기간이 지난 이력을 한 문장으로 지우는 스텝.
-     *
-     * @param jobRepository 잡 실행 저장소
-     * @param transactionManager 삭제를 묶을 트랜잭션 관리자
-     * @return 스텝
-     */
+    /** 보관 기간이 지난 이력을 한 문장으로 지우는 스텝. */
     @Bean
     fun loginHistoryCleanupStep(jobRepository: JobRepository, transactionManager: PlatformTransactionManager): Step =
         StepBuilder("loginHistoryCleanupStep", jobRepository)

@@ -21,7 +21,6 @@ class AuthService(
     /**
      * 로그인한 본인의 정보를 조회한다.
      *
-     * @param userId 세션이 가리키는 사용자 id
      * @return 이메일까지 포함한 본인 정보
      * @throws ApiException `UNAUTHENTICATED` — 세션은 살아 있는데 사용자 행이 없을 때
      */

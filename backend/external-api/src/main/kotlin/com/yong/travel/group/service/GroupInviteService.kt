@@ -49,7 +49,6 @@ class GroupInviteService(
     /**
      * 그 그룹의 대기 중인 초대 목록을 조회한다. 소유자만 볼 수 있다.
      *
-     * @param groupId 대상 그룹 id
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
      * @param page 0부터 시작하는 페이지 번호
      * @return 오래된 순의 대기 초대 한 페이지
@@ -68,7 +67,6 @@ class GroupInviteService(
      * 정원은 여기서 보지 않는다. 대기 중인 초대는 자리를 차지하지 않으므로 정원을 넘겨 보낼 수 있고,
      * 판정은 수락 시점에만 한다.
      *
-     * @param groupId 초대할 그룹 id
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
      * @param email 초대 대상 이메일. 앞뒤 공백을 지우고 대소문자 구분 없이 찾는다
      * @return 초대와 새로 만들었는지 여부. 기존 대기 초대를 돌려줬으면 `created = false`
@@ -115,7 +113,6 @@ class GroupInviteService(
      * 사람에게는 `inviteId` 가 무엇이든 같은 403 이라, 초대의 존재가 드러나지 않는다.
      *
      * @param groupId 경로의 그룹 id. 초대의 그룹과 같아야 한다
-     * @param inviteId 철회할 초대 id
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
@@ -136,7 +133,6 @@ class GroupInviteService(
     /**
      * 내 앞으로 온 대기 초대를 조회한다.
      *
-     * @param userId 요청자의 사용자 id
      * @param page 0부터 시작하는 페이지 번호
      * @return 오래된 순의 받은 초대 한 페이지
      */
@@ -147,7 +143,6 @@ class GroupInviteService(
     /**
      * 내가 보낸 대기 초대를 그룹을 가로질러 조회한다. 조건이 `invited_by = 나` 라 남의 초대가 섞일 수 없다.
      *
-     * @param userId 요청자의 사용자 id
      * @param page 0부터 시작하는 페이지 번호
      * @return 오래된 순의 보낸 초대 한 페이지
      */
@@ -161,8 +156,6 @@ class GroupInviteService(
      * 그룹의 생존 여부는 **페이지 전체의 그룹 id 를 모아 한 번에** 확인한다. 항목마다 조회하면
      * 페이지 크기만큼 쿼리가 늘고, 이력은 지워지지 않아 목록이 계속 길어지는 자리다.
      *
-     * @param userId 요청자의 사용자 id
-     * @param role 받은 관점인지 보낸 관점인지
      * @param page 0부터 시작하는 페이지 번호
      * @return 끝난 시각의 최신순 이력 한 페이지
      */
@@ -188,7 +181,6 @@ class GroupInviteService(
      * 정원이 차 있으면 거부하되 **초대 행은 지우지 않는다.** 자리가 난 뒤 같은 초대로 다시 수락할 수
      * 있어야 하기 때문이다.
      *
-     * @param inviteId 수락할 초대 id
      * @param userId 요청자의 사용자 id. 초대받은 본인이어야 한다
      * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나 받은 본인이 아닐 때
      * @throws ApiException `GROUP_MEMBER_LIMIT_EXCEEDED` — 그룹 정원이 가득 찼을 때
@@ -218,7 +210,6 @@ class GroupInviteService(
      * 사라진 것으로 추론되므로, 절반만 가린 이력을 만들지 않는다. 거절한 상대를 다시 초대하는
      * 것은 그대로 허용된다 — 대기 초대 행이 사라져 유니크 제약이 비기 때문이다.
      *
-     * @param inviteId 거절할 초대 id
      * @param userId 요청자의 사용자 id. 초대받은 본인이어야 한다
      * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나 받은 본인이 아닐 때
      */

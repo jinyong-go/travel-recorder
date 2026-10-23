@@ -28,9 +28,6 @@ class InviteController(
      * 내 앞으로 온 초대 목록을 조회한다.
      *
      * @param page 0부터 시작하는 페이지 번호
-     * @param principal 로그인 사용자. 비로그인이면 null
-     * @return 받은 초대 한 페이지
-     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
      */
     @GetMapping
     fun received(
@@ -44,9 +41,6 @@ class InviteController(
      * 내가 보낸 대기 초대 목록을 그룹을 가로질러 조회한다.
      *
      * @param page 0부터 시작하는 페이지 번호
-     * @param principal 로그인 사용자. 비로그인이면 null
-     * @return 보낸 초대 한 페이지
-     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
      */
     @GetMapping("/sent")
     fun sent(
@@ -63,9 +57,6 @@ class InviteController(
      *
      * @param role 받은 관점(`RECEIVED`)인지 보낸 관점(`SENT`)인지
      * @param page 0부터 시작하는 페이지 번호
-     * @param principal 로그인 사용자. 비로그인이면 null
-     * @return 끝난 초대 이력 한 페이지
-     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
      */
     @GetMapping("/history")
     fun history(
@@ -76,16 +67,7 @@ class InviteController(
         PageResponse.of(groupInviteService.listHistory(requireLogin(principal), role, page))
             .map { InviteHistoryResponse.from(it) }
 
-    /**
-     * 초대를 수락해 그룹 멤버가 된다. 정원이 차 있으면 거부되고 초대는 남는다.
-     *
-     * @param inviteId 수락할 초대 id
-     * @param principal 로그인 사용자. 비로그인이면 null
-     * @return 본문 없는 `204`
-     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
-     * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나 받은 본인이 아닐 때
-     * @throws ApiException `GROUP_MEMBER_LIMIT_EXCEEDED` — 그룹 정원이 가득 찼을 때
-     */
+    /** 초대를 수락해 그룹 멤버가 된다. 정원이 차 있으면 거부되고 초대는 남는다. */
     @PostMapping("/{inviteId}/accept")
     fun accept(
         @PathVariable inviteId: Long,
@@ -95,15 +77,7 @@ class InviteController(
         return ResponseEntity.noContent().build()
     }
 
-    /**
-     * 초대를 거절한다. 대기 목록에서 지우고 이력에 `REJECTED` 로 남긴다 — 보낸 사람도 본다.
-     *
-     * @param inviteId 거절할 초대 id
-     * @param principal 로그인 사용자. 비로그인이면 null
-     * @return 본문 없는 `204`
-     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
-     * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나 받은 본인이 아닐 때
-     */
+    /** 초대를 거절한다. 대기 목록에서 지우고 이력에 `REJECTED` 로 남긴다 — 보낸 사람도 본다. */
     @PostMapping("/{inviteId}/reject")
     fun reject(
         @PathVariable inviteId: Long,

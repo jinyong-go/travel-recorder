@@ -18,7 +18,6 @@ class NaverLocalSearchClient(
     /**
      * 지역 검색 API 를 부른다. 호출당 최대 5건(display <= 5)까지만 반환된다.
      *
-     * @param query 검색어
      * @param display 받을 건수. 1~5 로 잘라 보낸다
      * @return 원본 검색 결과. 응답 본문이 없으면 빈 목록
      * @throws ApiException `PLACE_SEARCH_UNAVAILABLE` — 호출이 실패했을 때

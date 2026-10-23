@@ -43,7 +43,6 @@ class TagService(
      * 가 `TripRecordEntity.tags` 에 그대로 걸 연관을 받아 가는 서비스 간 호출이기 때문이다.
      *
      * @param names 태그 이름 목록. 앞뒤 공백을 지우고, 빈 이름과 중복은 무시한다
-     * @return 이름마다 하나씩의 태그 엔티티
      */
     @Transactional
     fun findOrCreateAll(names: List<String>): Set<TagEntity> {

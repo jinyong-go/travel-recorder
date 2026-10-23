@@ -18,7 +18,6 @@ object EnumParamConverterFactory : ConverterFactory<String, Enum<*>> {
     /**
      * 대상 열거형의 변환기를 만든다.
      *
-     * @param targetType 바꿀 열거형 타입
      * @return 명세 표기를 상수 이름으로 바꿔 찾는 변환기. 없는 값이면 `IllegalArgumentException` 을 던진다
      */
     override fun <T : Enum<*>> getConverter(targetType: Class<T>): Converter<String, T> =

@@ -15,7 +15,6 @@ interface GroupRepository : JpaRepository<GroupEntity, Long> {
      * 정원을 강제하는 DB 제약이 없어 애플리케이션 검사가 유일한 관문인데, 검사와 입력 사이에
      * 다른 수락이 끼어들면 6명짜리 그룹이 만들어진다.
      *
-     * @param id 그룹 id
      * @return 쓰기 잠금을 건 그룹. 없으면 null
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

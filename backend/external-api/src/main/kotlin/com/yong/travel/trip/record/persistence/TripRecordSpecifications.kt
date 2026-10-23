@@ -22,12 +22,7 @@ import java.time.Instant
 /** 기록 조회의 동적 조건. 목록과 단건 모두 공개 범위 판정이 소속 여행 조인과 함께 여기서 쿼리에 실린다. */
 object TripRecordSpecifications {
 
-    /**
-     * id 일치 조건. 단건 조회를 [visibleTo] 와 묶는다.
-     *
-     * @param recordId 기록 id
-     * @return id 조건
-     */
+    /** id 일치 조건. 단건 조회를 [visibleTo] 와 묶는다. */
     fun withId(recordId: Long): Specification<TripRecordEntity> =
         Specification { root, _, cb -> cb.equal(root.get<Long>("id"), recordId) }
 
@@ -37,7 +32,6 @@ object TripRecordSpecifications {
      * 소속 여행을 조인하므로 [withScope] 와 함께 쓰지 않는다. 함께 쓰면 trips 가 두 번 붙는다.
      *
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개 여행의 기록만 참이다
-     * @return 열람 가능 조건
      */
     fun visibleTo(userId: Long?): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
@@ -63,7 +57,6 @@ object TripRecordSpecifications {
      *        좁힐 때 쓴다. 서비스가 그 여행을 볼 수 있는지 먼저 확인하더라도 판정을 쿼리에서 빼지 않는다.
      *        사전 확인 한 줄에 안전을 맡기면, 그 줄이 빠지는 순간 남의 비공개 여행 기록이 전부 나간다
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
-     * @return 범위 조건
      */
     fun withScope(scope: RecordScope?, userId: Long?): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
@@ -86,7 +79,6 @@ object TripRecordSpecifications {
      * @param category 카테고리. null 이면 걸지 않는다
      * @param tag 태그 이름 완전 일치. 비었으면 걸지 않는다
      * @param keyword 이름·주소 부분 일치 검색어. 비었으면 걸지 않는다
-     * @return 주어진 필터를 AND 로 묶은 조건
      */
     fun withFilters(
         tripId: Long?,
@@ -129,7 +121,6 @@ object TripRecordSpecifications {
      * 페이지 요청의 정렬은 비워 둬야 한다 — 정렬이 있으면 Spring Data 가 이 정렬을 덮어쓴다.
      * 건수 쿼리에서는 Spring Data 가 정렬을 지운다.
      *
-     * @param origin 기준 위치
      * @return 걸러 내는 조건 없이 정렬만 거는 조건
      */
     fun orderByDistanceFrom(origin: GeoPoint): Specification<TripRecordEntity> =

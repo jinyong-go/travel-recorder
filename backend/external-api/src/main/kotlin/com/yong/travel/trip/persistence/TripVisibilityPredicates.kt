@@ -23,10 +23,7 @@ object TripVisibilityPredicates {
     /**
      * 요청자가 소유한 여행.
      *
-     * @param trip 판정할 여행 경로
-     * @param cb 조건 빌더
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 항상 거짓이다
-     * @return 소유 조건
      */
     fun ownedBy(trip: Path<TripEntity>, cb: CriteriaBuilder, userId: Long?): Predicate =
         if (userId == null) {
@@ -35,13 +32,7 @@ object TripVisibilityPredicates {
             cb.equal(trip.get<UserEntity>("owner").get<Long>("id"), userId)
         }
 
-    /**
-     * 전체 공개 여행.
-     *
-     * @param trip 판정할 여행 경로
-     * @param cb 조건 빌더
-     * @return 전체 공개 조건
-     */
+    /** 전체 공개 여행. */
     fun isPublic(trip: Path<TripEntity>, cb: CriteriaBuilder): Predicate =
         cb.equal(trip.get<TripVisibility>("visibility"), TripVisibility.PUBLIC)
 
@@ -50,11 +41,8 @@ object TripVisibilityPredicates {
      *
      * 소유자 본인 여부는 따지지 않는다 — 목록의 SHARED 범위는 [sharedByOthersWith] 가 본인 것을 뺀다.
      *
-     * @param trip 판정할 여행 경로
      * @param query 서브쿼리를 붙일 쿼리. 바깥 쿼리든 서브쿼리든 된다
-     * @param cb 조건 빌더
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 항상 거짓이다
-     * @return 그룹 공유 조건
      */
     fun sharedWith(
         trip: Path<TripEntity>,
@@ -80,11 +68,7 @@ object TripVisibilityPredicates {
      * 내 여행은 MINE 범위에서 전부 보이므로 여기서 빼 중복 노출을 막는다. 두 목록이 이 함수 하나를
      * 써야 한쪽만 고쳐져 노출이 갈라지는 일이 없다.
      *
-     * @param trip 판정할 여행 경로
-     * @param query 서브쿼리를 붙일 쿼리
-     * @param cb 조건 빌더
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 항상 거짓이다
-     * @return 남이 내 그룹에 공유한 여행 조건
      */
     fun sharedByOthersWith(
         trip: Path<TripEntity>,
@@ -97,11 +81,7 @@ object TripVisibilityPredicates {
     /**
      * 요청자가 볼 수 있는 여행 전부 — 내 여행이거나, 전체 공개이거나, 내 그룹에 공유됐거나 셋 중 하나다.
      *
-     * @param trip 판정할 여행 경로
-     * @param query 서브쿼리를 붙일 쿼리
-     * @param cb 조건 빌더
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개만 참이다
-     * @return 열람 가능 조건
      */
     fun visibleTo(
         trip: Path<TripEntity>,

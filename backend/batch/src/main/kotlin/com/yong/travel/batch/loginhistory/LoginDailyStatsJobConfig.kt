@@ -33,27 +33,14 @@ class LoginDailyStatsJobConfig(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /**
-     * 로그인 통계 잡. 스텝 하나로 끝난다.
-     *
-     * @param jobRepository 잡 실행 저장소
-     * @param loginDailyStatsStep 집계 스텝
-     * @return 잡
-     */
+    /** 로그인 통계 잡. 스텝 하나로 끝난다. */
     @Bean
     fun loginDailyStatsJob(jobRepository: JobRepository, loginDailyStatsStep: Step): Job =
         JobBuilder(JOB_NAME, jobRepository)
             .start(loginDailyStatsStep)
             .build()
 
-    /**
-     * 집계 태스크릿을 트랜잭션 하나로 도는 스텝.
-     *
-     * @param jobRepository 잡 실행 저장소
-     * @param transactionManager 집계를 묶을 트랜잭션 관리자
-     * @param loginDailyStatsTasklet 집계 태스크릿
-     * @return 스텝
-     */
+    /** 집계 태스크릿을 트랜잭션 하나로 도는 스텝. */
     @Bean
     fun loginDailyStatsStep(
         jobRepository: JobRepository,

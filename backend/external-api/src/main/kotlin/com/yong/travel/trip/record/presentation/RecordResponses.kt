@@ -42,9 +42,7 @@ data class TripRecordResponse(
          * `isAuthor` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. 필드 이름은 이전 판
          * 그대로 유지한다.
          *
-         * @param record 기록
          * @param requesterId 요청자의 사용자 id. 비로그인이면 null
-         * @return 응답 DTO
          */
         fun from(record: TripRecord, requesterId: Long?) = TripRecordResponse(
             id = record.id,
@@ -91,9 +89,7 @@ data class TripRecordSummaryResponse(
         /**
          * 기록 목록 항목 → 응답. `isAuthor` 를 여기서 정하는 이유는 [TripRecordResponse.from] 과 같다.
          *
-         * @param record 기록
          * @param requesterId 요청자의 사용자 id. 비로그인이면 null
-         * @return 응답 DTO
          */
         fun from(record: TripRecord, requesterId: Long?) = TripRecordSummaryResponse(
             id = record.id,

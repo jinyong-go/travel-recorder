@@ -17,12 +17,7 @@ import org.springframework.security.web.csrf.CsrfTokenRepository
 @Configuration
 class SecurityConfig {
 
-    /**
-     * 세션·CSRF·인가 규칙을 건 필터 체인을 만든다.
-     *
-     * @param http Spring Security 의 HTTP 보안 빌더
-     * @return 완성된 필터 체인
-     */
+    /** 세션·CSRF·인가 규칙을 건 필터 체인을 만든다. */
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http {
@@ -51,8 +46,6 @@ class SecurityConfig {
     /**
      * CSRF 토큰 저장소. 로그인·로그아웃 컨트롤러가 토큰을 비울 때 같은 쿠키 설정을 써야 하므로
      * 빈으로 꺼내 둔다 — 따로 만들면 쿠키 이름·경로가 어긋나 비우지 못할 수 있다.
-     *
-     * @return 쿠키 기반 토큰 저장소
      */
     @Bean
     fun csrfTokenRepository(): CsrfTokenRepository = CookieCsrfTokenRepository()

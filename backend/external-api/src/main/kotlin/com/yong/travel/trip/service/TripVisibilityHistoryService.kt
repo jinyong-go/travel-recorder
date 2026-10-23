@@ -30,8 +30,6 @@ class TripVisibilityHistoryService(
     /**
      * 소유자가 정한 상태를 남긴다. 값이 그대로여도 남긴다 — 상태 전체를 적는 행이라 되짚는 데 해가 없다.
      *
-     * @param trip 대상 여행
-     * @param visibility 바뀐 뒤의 공개 범위
      * @param groupIds 바뀐 뒤의 공유 그룹 id. GROUP 이 아니면 빈 목록
      */
     fun recordOwnerChange(trip: TripEntity, visibility: TripVisibility, groupIds: Collection<Long>) {
@@ -45,12 +43,7 @@ class TripVisibilityHistoryService(
         )
     }
 
-    /**
-     * 그룹 삭제로 그 그룹에 걸린 공유를 모두 풀고, 영향받은 여행마다 이력을 남긴다.
-     *
-     * @param groupId 삭제되는 그룹 id
-     * @return 푼 공유 행 수
-     */
+    /** 그룹 삭제로 그 그룹에 걸린 공유를 모두 풀고, 영향받은 여행마다 이력을 남긴다. */
     fun revokeGroupShares(groupId: Long): Int =
         revoke(tripShareRepository.findByGroupId(groupId), TripVisibilityChangeCause.GROUP_DELETED)
 
@@ -59,11 +52,6 @@ class TripVisibilityHistoryService(
      *
      * 여행은 소유자가 속한 그룹에만 공유할 수 있으므로, 나간 뒤에도 공유가 남으면 그룹 밖 사람이
      * 그룹 안에 여행을 계속 보여 주는 상태가 된다.
-     *
-     * @param groupId 나간 그룹 id
-     * @param ownerId 나간 사람의 사용자 id
-     * @param cause 탈퇴면 OWNER_LEFT, 제외면 OWNER_REMOVED
-     * @return 푼 공유 행 수
      */
     fun revokeOwnerShares(groupId: Long, ownerId: Long, cause: TripVisibilityChangeCause): Int =
         revoke(tripShareRepository.findByGroupIdAndTripOwnerId(groupId, ownerId), cause)

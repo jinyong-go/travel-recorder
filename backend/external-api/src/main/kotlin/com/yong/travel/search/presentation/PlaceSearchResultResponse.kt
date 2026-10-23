@@ -14,12 +14,7 @@ data class PlaceSearchResultResponse(
     val link: String?,
 ) {
     companion object {
-        /**
-         * 장소 후보 → 응답.
-         *
-         * @param candidate 장소 검색 후보
-         * @return 응답 DTO
-         */
+        /** 장소 후보 → 응답. */
         fun from(candidate: PlaceCandidate) = PlaceSearchResultResponse(
             name = candidate.name,
             category = candidate.category,

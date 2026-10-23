@@ -19,12 +19,7 @@ data class TripRefResponse(
     val name: String,
 ) {
     companion object {
-        /**
-         * 소속 여행 참조 → 응답.
-         *
-         * @param trip 여행 id 와 이름
-         * @return 응답 DTO
-         */
+        /** 소속 여행 참조 → 응답. */
         fun from(trip: TripRef) = TripRefResponse(trip.id, trip.name)
     }
 }
@@ -66,9 +61,7 @@ data class TripResponse(
          * `isOwner` 는 요청자마다 달라지므로 도메인 객체가 아니라 여기서 정한다. `visibility` 와
          * `sharedGroups` 는 서비스가 소유자에게만 채워 주므로 그대로 옮긴다.
          *
-         * @param trip 여행
          * @param requesterId 요청자의 사용자 id. 비로그인이면 null
-         * @return 응답 DTO
          */
         fun from(trip: Trip, requesterId: Long?) = TripResponse(
             id = trip.id,
@@ -111,9 +104,7 @@ data class TripSummaryResponse(
         /**
          * 여행 목록 항목 → 응답. `isOwner` 를 여기서 정하는 이유는 [TripResponse.from] 과 같다.
          *
-         * @param trip 여행
          * @param requesterId 요청자의 사용자 id. 비로그인이면 null
-         * @return 응답 DTO
          */
         fun from(trip: Trip, requesterId: Long?) = TripSummaryResponse(
             id = trip.id,

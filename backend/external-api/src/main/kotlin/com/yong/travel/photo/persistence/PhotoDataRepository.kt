@@ -12,7 +12,6 @@ interface PhotoDataRepository : JpaRepository<PhotoDataEntity, UUID> {
     /**
      * 서빙에 필요한 Content-Type 과 바이트를 한 번에 읽는다.
      *
-     * @param photoId 사진 id
      * @return 바이너리와 Content-Type. 없으면 null
      */
     @Query(
@@ -29,9 +28,6 @@ interface PhotoDataRepository : JpaRepository<PhotoDataEntity, UUID> {
      *
      * 네이티브 SQL 로 둔다. JPQL 로 사진 → 기록을 따라가면 TripRecordEntity 의 @SQLRestriction 이 붙어,
      * 기록을 먼저 soft delete 한 뒤에 부르면 아무것도 지우지 못한다. 호출 순서에 기대지 않게 한다.
-     *
-     * @param recordId 기록 id
-     * @return 지운 행 수
      */
     @Modifying(flushAutomatically = true)
     @Query(
@@ -43,9 +39,6 @@ interface PhotoDataRepository : JpaRepository<PhotoDataEntity, UUID> {
     /**
      * 여행의 하위 기록 전부에 달린 사진의 바이너리를 지운다. 여행 soft delete 에 딸려 간다.
      * 네이티브 SQL 로 두는 이유는 [deleteByRecordId] 와 같다.
-     *
-     * @param tripId 여행 id
-     * @return 지운 행 수
      */
     @Modifying(flushAutomatically = true)
     @Query(

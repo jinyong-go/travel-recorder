@@ -16,9 +16,6 @@ interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpeci
      * 기록 목록이 기록마다 태그 컬렉션을 따로 읽지 않도록 두었다. 태그는 컬렉션이라 목록 쿼리에서
      * fetch 하면 페이징이 메모리에서 일어나므로 이렇게 따로 읽는다. 태그가 없는 기록은 결과에
      * 나오지 않으므로 호출부가 빈 목록으로 채운다.
-     *
-     * @param recordIds 기록 id 목록
-     * @return 기록별 태그 이름 목록
      */
     @Query(
         """
@@ -34,9 +31,6 @@ interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpeci
      *
      * 목록 한 페이지(10건)마다 count 를 열 번 쏘지 않으려고 한 번에 묶는다.
      * 기록이 0건인 여행은 결과에 나오지 않으므로 호출부가 0으로 채운다.
-     *
-     * @param tripIds 여행 id 목록
-     * @return 여행별 기록 수 목록
      */
     @Query(
         """
@@ -56,10 +50,6 @@ interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpeci
      * 이미 지워진 기록의 삭제 시각을 덮어쓰지 않기 위해서다.
      * 영속성 컨텍스트는 비우지 않는다(clearAutomatically 없음) — 호출부가 이어서 쓰는 여행 엔티티가
      * 준영속이 되면 그 삭제가 유실된다. 지워진 기록의 엔티티가 컨텍스트에 남아도 이후 쓰지 않는다.
-     *
-     * @param tripId 지운 여행 id
-     * @param now 삭제 시각
-     * @return 지운 기록 수
      */
     @Modifying(flushAutomatically = true)
     @Query("update TripRecordEntity r set r.deletedAt = :now where r.trip.id = :tripId and r.deletedAt is null")

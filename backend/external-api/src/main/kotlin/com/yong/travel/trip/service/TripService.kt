@@ -57,10 +57,8 @@ class TripService(
      * 범위 판정은 조회 쿼리 단계에서 한다. 기록 수와 (소유자 본인 항목의) 공유 그룹은 페이지 전체를
      * 한 번에 모아 붙인다.
      *
-     * @param query 범위·검색어·정렬
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 PUBLIC 만 조회된다
      * @param page 0부터 시작하는 페이지 번호
-     * @return 여행 한 페이지
      */
     fun list(
         query: TripListQuery,
@@ -89,7 +87,6 @@ class TripService(
     /**
      * 여행 상세를 조회한다.
      *
-     * @param tripId 조회할 여행 id
      * @param userId 요청자의 사용자 id. 비로그인이면 null
      * @return 여행 상세. 공개 범위와 공유 그룹은 소유자에게만 채워진다
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때 (존재 은닉)
@@ -100,7 +97,6 @@ class TripService(
      * 여행을 만든다. 소유자는 요청자로 고정되며, GROUP 이면 공유 그룹도 함께 건다.
      *
      * @param ownerId 요청자의 사용자 id. 그대로 소유자가 된다
-     * @param command 여행 입력값
      * @return 만들어진 여행 상세
      * @throws ApiException `UNAUTHENTICATED` — 세션은 살아 있는데 사용자 행이 없을 때
      * @throws ApiException `GROUP_NOT_FOUND` — 공유 그룹에 요청자가 속하지 않은 그룹이 섞였을 때
@@ -129,10 +125,7 @@ class TripService(
     /**
      * 여행의 기본 정보를 바꾼다. 공개 범위는 [changeVisibility] 의 몫이다.
      *
-     * @param tripId 수정할 여행 id
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
-     * @param command 새 기본 정보
-     * @return 수정된 여행 상세
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소유자가 아닐 때
      */
@@ -156,11 +149,8 @@ class TripService(
     /**
      * 공개 범위를 바꾼다.
      *
-     * @param tripId 대상 여행 id
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
-     * @param visibility 새 공개 범위
      * @param groupIds 공유 그룹 id 목록. GROUP 일 때만 쓰이며 기존 공유 그룹을 통째로 대체한다
-     * @return 수정된 여행 상세
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소유자가 아닐 때
      * @throws ApiException `GROUP_NOT_FOUND` — 요청자가 속하지 않은 그룹이 섞였을 때
@@ -185,10 +175,8 @@ class TripService(
     /**
      * 커버 사진을 지정하거나 해제한다. 그 여행의 하위 기록에 속한 사진만 지정할 수 있다.
      *
-     * @param tripId 대상 여행 id
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
      * @param photoId 커버로 지정할 사진 id. null 이면 해제한다
-     * @return 수정된 여행 상세
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소유자가 아닐 때
      * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없거나 이 여행의 사진이 아닐 때 (존재 은닉)
@@ -219,7 +207,6 @@ class TripService(
      *
      * 하위 기록의 사진은 메타데이터를 남기고 바이너리를 지운다. 기록 하나를 지울 때와 같은 이유다.
      *
-     * @param tripId 삭제할 여행 id
      * @param ownerId 요청자의 사용자 id. 소유자여야 한다
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소유자가 아닐 때
@@ -242,7 +229,6 @@ class TripService(
      * 기록 목록을 `tripId` 로 좁힐 때 기록 서비스가 부른다. 여행 상세 조회와 같은
      * 판정을 거쳐야 목록으로 우회해 여행의 존재를 떠볼 수 없다.
      *
-     * @param tripId 판정할 여행 id
      * @param userId 요청자의 사용자 id. 비로그인이면 null
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 볼 권한이 없을 때
      */
@@ -258,9 +244,6 @@ class TripService(
      *
      * 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 기록 서비스가 연관을 걸 때 쓰는 서비스 간 호출이다.
      *
-     * @param tripId 대상 여행 id
-     * @param userId 요청자의 사용자 id
-     * @return 요청자의 여행
      * @throws ApiException `TRIP_NOT_FOUND` — 여행이 없거나 요청자의 여행이 아닐 때
      */
     fun findOwnedTrip(tripId: Long, userId: Long): TripEntity =

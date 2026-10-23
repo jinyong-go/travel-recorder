@@ -36,9 +36,7 @@ class LoggingFilter : OncePerRequestFilter() {
     /**
      * 요청을 그대로 넘기고, 끝난 뒤 한 줄을 남긴다.
      *
-     * @param request 들어온 요청
      * @param response 나갈 응답. 상태 코드를 읽는다
-     * @param filterChain 이어서 돌 필터 체인
      */
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -65,7 +63,6 @@ class LoggingFilter : OncePerRequestFilter() {
     /**
      * 로그를 남기지 않을 요청인지. 파일 서빙(`/api/files/` 아래)은 건당 한 줄을 남길 값어치가 없다.
      *
-     * @param request 들어온 요청
      * @return 건너뛸 요청이면 true
      */
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =

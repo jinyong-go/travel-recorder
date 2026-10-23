@@ -18,13 +18,7 @@ data class GroupSummaryResponse(
     val isOwner: Boolean,
 ) {
     companion object {
-        /**
-         * 그룹 요약 → 응답. `isOwner` 를 여기서 정하는 이유는 [GroupResponse.from] 과 같다.
-         *
-         * @param group 그룹
-         * @param requesterId 요청자의 사용자 id
-         * @return 응답 DTO
-         */
+        /** 그룹 요약 → 응답. `isOwner` 를 여기서 정하는 이유는 [GroupResponse.from] 과 같다. */
         fun from(group: Group, requesterId: Long) = GroupSummaryResponse(
             id = group.id,
             name = group.name,
@@ -44,12 +38,7 @@ data class GroupMemberResponse(
     val joinedAt: Instant,
 ) {
     companion object {
-        /**
-         * 멤버 → 응답. 이메일은 담지 않는다.
-         *
-         * @param member 그룹 멤버 한 명
-         * @return 응답 DTO
-         */
+        /** 멤버 → 응답. 이메일은 담지 않는다. */
         fun from(member: Group.Member) = GroupMemberResponse(
             id = member.user.id,
             name = member.user.name,
@@ -78,8 +67,6 @@ data class GroupResponse(
          * 를 받는다 — 서비스가 아니라 컨트롤러가 요청자를 알고 있는 계층이다.
          *
          * @param group 멤버 명단까지 담긴 그룹
-         * @param requesterId 요청자의 사용자 id
-         * @return 응답 DTO
          */
         fun from(group: Group, requesterId: Long) = GroupResponse(
             id = group.id,
@@ -105,12 +92,7 @@ data class GroupBriefResponse(
     val name: String,
 ) {
     companion object {
-        /**
-         * 그룹 참조 → 응답.
-         *
-         * @param group 그룹 id 와 이름
-         * @return 응답 DTO
-         */
+        /** 그룹 참조 → 응답. */
         fun from(group: GroupRef) = GroupBriefResponse(group.id, group.name)
     }
 }
@@ -127,12 +109,7 @@ data class PendingInviteResponse(
     val createdAt: Instant,
 ) {
     companion object {
-        /**
-         * 대기 초대 → 소유자가 보는 응답.
-         *
-         * @param invite 대기 초대
-         * @return 응답 DTO
-         */
+        /** 대기 초대 → 소유자가 보는 응답. */
         fun from(invite: GroupInvite) = PendingInviteResponse(
             id = invite.id,
             invitee = UserResponse.from(invite.invitee),
@@ -149,12 +126,7 @@ data class ReceivedInviteResponse(
     val createdAt: Instant,
 ) {
     companion object {
-        /**
-         * 대기 초대 → 받은 사람이 보는 응답.
-         *
-         * @param invite 대기 초대
-         * @return 응답 DTO
-         */
+        /** 대기 초대 → 받은 사람이 보는 응답. */
         fun from(invite: GroupInvite) = ReceivedInviteResponse(
             id = invite.id,
             group = GroupBriefResponse.from(invite.group),
@@ -177,12 +149,7 @@ data class SentInviteResponse(
     val createdAt: Instant,
 ) {
     companion object {
-        /**
-         * 대기 초대 → 보낸 사람이 보는 응답.
-         *
-         * @param invite 대기 초대
-         * @return 응답 DTO
-         */
+        /** 대기 초대 → 보낸 사람이 보는 응답. */
         fun from(invite: GroupInvite) = SentInviteResponse(
             id = invite.id,
             group = GroupBriefResponse.from(invite.group),
@@ -219,12 +186,7 @@ data class InviteHistoryResponse(
     val resolvedAt: Instant,
 ) {
     companion object {
-        /**
-         * 끝난 초대 → 응답.
-         *
-         * @param entry 끝난 초대 한 건
-         * @return 응답 DTO
-         */
+        /** 끝난 초대 → 응답. */
         fun from(entry: InviteHistoryEntry) = InviteHistoryResponse(
             id = entry.id,
             group = HistoryGroupResponse.from(entry),

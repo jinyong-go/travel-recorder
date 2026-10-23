@@ -36,8 +36,6 @@ class PhotoService(
      * 로그인도 공개 범위도 확인하지 않는다. 추측할 수 없는 UUID 에만 의존하며, 이것은 알려진 한계다.
      * 판정을 붙이려면 이 메서드에 붙인다 — 그래서 저장소를 컨트롤러가 직접 부르지 않고 여기를 거친다.
      *
-     * @param photoId 사진 id
-     * @return 사진 바이트와 그 Content-Type
      * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없을 때
      */
     fun load(photoId: UUID): PhotoContent = photoDatabaseService.load(photoId)
@@ -47,9 +45,7 @@ class PhotoService(
      *
      * 검증은 파일마다 저장 직전에 하며, 한 장이라도 실패하면 트랜잭션이 통째로 되돌아간다.
      *
-     * @param recordId 사진을 붙일 기록 id
      * @param requesterId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
-     * @param files 올릴 이미지 파일들
      * @return 저장된 사진들. 올린 순서 그대로다
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
@@ -90,8 +86,6 @@ class PhotoService(
     /**
      * 사진을 지운다. 그 사진이 여행 커버였다면 지정도 푼다.
      *
-     * @param recordId 사진이 달린 기록 id
-     * @param photoId 지울 사진 id
      * @param requesterId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때

@@ -17,7 +17,6 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
      * 응답에 그룹 이름이 실리므로 그룹을 fetch join 한다. 빠뜨리면 공유 행은 한 번에 읽어도
      * 그룹마다 조회가 따로 나간다.
      *
-     * @param tripIds 여행 id 목록
      * @return 그룹을 함께 읽은 공유 행
      */
     @Query("select s from TripShareEntity s join fetch s.group where s.trip.id in :tripIds")
@@ -29,28 +28,14 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
      * 이름 기반 삭제(`deleteBy…`)는 행을 먼저 읽어 와 한 건씩 DELETE 하므로 벌크 삭제로 둔다.
      * 영속성 컨텍스트는 비우지 않는다(clearAutomatically 없음) — 호출부가 이어서 쓰는 엔티티가
      * 준영속이 되면 그 뒤의 변경이 유실된다. 지워진 행의 엔티티가 컨텍스트에 남아도 이후 쓰지 않는다.
-     *
-     * @param tripId 여행 id
-     * @return 지운 행 수
      */
     @Modifying(flushAutomatically = true)
     @Query("delete from TripShareEntity s where s.trip.id = :tripId")
     fun deleteByTripId(@Param("tripId") tripId: Long): Int
 
-    /**
-     * 한 그룹으로 걸린 공유 행 전부. 그룹 삭제가 공유를 풀기 전에 이력을 남기려고 읽는다.
-     *
-     * @param groupId 그룹 id
-     * @return 공유 행
-     */
+    /** 한 그룹으로 걸린 공유 행 전부. 그룹 삭제가 공유를 풀기 전에 이력을 남기려고 읽는다. */
     fun findByGroupId(groupId: Long): List<TripShareEntity>
 
-    /**
-     * 한 그룹에 특정 사용자가 걸어 둔 공유 행. 탈퇴·제외가 나간 사람의 공유만 풀 때 쓴다.
-     *
-     * @param groupId 그룹 id
-     * @param ownerId 여행 소유자의 사용자 id
-     * @return 공유 행
-     */
+    /** 한 그룹에 특정 사용자가 걸어 둔 공유 행. 탈퇴·제외가 나간 사람의 공유만 풀 때 쓴다. */
     fun findByGroupIdAndTripOwnerId(groupId: Long, ownerId: Long): List<TripShareEntity>
 }

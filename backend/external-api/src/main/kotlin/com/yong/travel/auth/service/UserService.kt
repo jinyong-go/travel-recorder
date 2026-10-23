@@ -30,7 +30,6 @@ class UserService(
     /**
      * 제공자 프로필로 계정을 만들거나 갱신한다.
      *
-     * @param userRequest OAuth 제공자 등록 정보와 액세스 토큰
      * @return DB 사용자 PK 를 함께 실은 principal
      */
     @Transactional

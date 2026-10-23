@@ -20,8 +20,6 @@ interface TripRepository : JpaRepository<TripEntity, Long>, JpaSpecificationExec
      * 범위 판정이 Specification 에 있어 `@Query` fetch join 으로 옮길 수 없으므로 엔티티 그래프를 쓴다.
      * 엔티티 그래프는 건수 쿼리에 적용되지 않아 페이지 건수 계산에 영향이 없다.
      *
-     * @param spec 범위·검색어 조건
-     * @param pageable 페이지 요청
      * @return 소유자를 함께 읽은 여행 한 페이지
      */
     @EntityGraph(attributePaths = ["owner"])

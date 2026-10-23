@@ -11,12 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository
  */
 interface LoginHistoryRepository : JpaRepository<LoginHistoryEntity, Long> {
 
-    /**
-     * 한 사용자의 로그인 이력을 최신순으로 읽는다. 응답에 사용자를 싣지 않으므로 fetch join 이 필요 없다.
-     *
-     * @param userId 사용자 id
-     * @param pageable 페이지 요청
-     * @return 로그인 이력 한 페이지
-     */
+    /** 한 사용자의 로그인 이력을 최신순으로 읽는다. 응답에 사용자를 싣지 않으므로 fetch join 이 필요 없다. */
     fun findByUserIdOrderByLoggedInAtDesc(userId: Long, pageable: Pageable): Page<LoginHistoryEntity>
 }

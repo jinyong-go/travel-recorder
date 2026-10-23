@@ -45,7 +45,6 @@ class GroupService(
     /**
      * 요청자가 소유하거나 속한 그룹 목록을 조회한다.
      *
-     * @param userId 조회를 요청한 사용자 id
      * @return 그룹 목록. 멤버 행에서 출발하므로 소유자도 자기 그룹을 여기서 본다. 없으면 빈 목록
      */
     fun list(userId: Long): List<Group> {
@@ -58,8 +57,6 @@ class GroupService(
     /**
      * 그룹 상세를 멤버 명단과 함께 조회한다.
      *
-     * @param groupId 조회할 그룹 id
-     * @param userId 조회를 요청한 사용자 id
      * @return 멤버 명단까지 담긴 그룹 상세
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 그룹은 있으나 요청자가 멤버가 아닐 때
@@ -79,7 +76,6 @@ class GroupService(
      * @param userId 그룹을 만드는 사용자 id. 그대로 소유자가 된다
      * @param name 그룹 이름. 앞뒤 공백을 지워 저장한다
      * @param memo 메모. 공백만 있으면 `null` 로 저장된다
-     * @return 소유자 한 명이 멤버로 들어간 그룹 상세
      * @throws ApiException `UNAUTHENTICATED` — 세션은 살아 있는데 사용자 행이 없을 때.
      *         계정이 지워진 뒤의 요청이라 다시 로그인하는 것 말고 할 수 있는 일이 없다
      */
@@ -102,11 +98,8 @@ class GroupService(
     /**
      * 그룹의 이름과 메모를 바꾼다. 소유자만 할 수 있다.
      *
-     * @param groupId 수정할 그룹 id
-     * @param userId 수정을 요청한 사용자 id
      * @param name 새 이름. 앞뒤 공백을 지워 저장한다
      * @param memo 새 메모. **이름과 함께 덮어쓰므로 `null` 이면 기존 메모가 지워진다**
-     * @return 수정된 그룹 상세
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
      */
@@ -128,8 +121,6 @@ class GroupService(
      * 대기 중이던 초대는 받는 쪽에서 이유 없이 사라지는 일이라 `GROUP_DELETED` 이력으로 남긴다.
      * 남아 있던 멤버와 공유도 지우기 전에 권한 변경 이력으로 남긴다.
      *
-     * @param groupId 삭제할 그룹 id
-     * @param userId 삭제를 요청한 사용자 id
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
      */
@@ -159,8 +150,6 @@ class GroupService(
     /**
      * 소유자가 다른 멤버를 그룹에서 내보낸다. 그 멤버가 이 그룹에 걸어 둔 여행 공유도 함께 푼다.
      *
-     * @param groupId 대상 그룹 id
-     * @param targetUserId 내보낼 멤버의 사용자 id
      * @param requesterId 요청자의 사용자 id. 소유자여야 한다
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `MEMBER_NOT_FOUND` — 지목한 사용자가 이 그룹의 멤버가 아닐 때
@@ -194,8 +183,6 @@ class GroupService(
      * [removeMember] 와 달리 소유자 확인을 하지 않는다. 요청자가 곧 대상이라 남의 멤버십을
      * 건드릴 경로가 없기 때문이다.
      *
-     * @param groupId 나갈 그룹 id
-     * @param userId 나가려는 사용자 id
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 요청자가 소유자이거나(나가면 주인 없는 그룹이 남아 삭제만 가능),
      *         그룹은 있으나 멤버가 아닐 때
@@ -228,7 +215,6 @@ class GroupService(
      * 다시 찾아야 한다.
      *
      * @param groupIds 공유 대상 그룹 id 목록. 중복은 무시한다
-     * @param userId 공유를 요청한 사용자 id
      * @return 요청한 그룹 엔티티 목록. `groupIds` 가 비었으면 빈 목록
      * @throws ApiException `GROUP_NOT_FOUND` — 요청자가 속하지 않은 그룹이 하나라도 섞였을 때.
      *         `FORBIDDEN` 이 아닌 것은 그룹의 존재를 알리지 않기 위해서다 (존재 은닉)

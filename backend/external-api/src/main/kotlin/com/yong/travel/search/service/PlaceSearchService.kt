@@ -22,9 +22,7 @@ class PlaceSearchService(
      *
      * 거리순 정렬은 하지 않는다. 기준 위치를 서버로 받지 않고 프론트엔드가 받은 후보로 직접 계산한다.
      *
-     * @param keyword 검색어
      * @param page 0부터 시작하는 페이지 번호
-     * @return 장소 후보 한 페이지
      * @throws ApiException `PLACE_SEARCH_UNAVAILABLE` — 외부 검색 API 호출이 실패했을 때
      */
     fun search(keyword: String, page: Int): PageResult<PlaceCandidate> {

@@ -15,11 +15,7 @@ import org.hibernate.type.StandardBasicTypes
  */
 class PostgisFunctions : FunctionContributor {
 
-    /**
-     * 함수 레지스트리에 `knn_distance` 를 등록한다.
-     *
-     * @param contributions Hibernate 가 넘기는 함수·타입 레지스트리
-     */
+    /** 함수 레지스트리에 `knn_distance` 를 등록한다. */
     override fun contributeFunctions(contributions: FunctionContributions) {
         val doubleType = contributions.typeConfiguration.basicTypeRegistry.resolve(StandardBasicTypes.DOUBLE)
         contributions.functionRegistry

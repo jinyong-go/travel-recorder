@@ -9,7 +9,6 @@ interface TagRepository : JpaRepository<TagEntity, Long>, JpaSpecificationExecut
     /**
      * 이름이 일치하는 태그를 한 번에 읽는다.
      *
-     * @param names 태그 이름 목록
      * @return 이미 있는 태그들. 없는 이름은 결과에서 빠진다
      */
     fun findByNameIn(names: Collection<String>): List<TagEntity>

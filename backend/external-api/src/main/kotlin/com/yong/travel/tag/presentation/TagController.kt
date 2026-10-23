@@ -19,8 +19,6 @@ class TagController(
      * 태그 자동완성 후보를 조회한다. 후보는 요청자가 볼 수 있는 기록에 쓰인 태그로 제한된다.
      *
      * @param keyword 부분 일치 검색어. 없으면 전체에서 고른다
-     * @param principal 로그인 사용자. 비로그인이면 null
-     * @return 태그 후보 목록
      */
     @GetMapping
     fun search(

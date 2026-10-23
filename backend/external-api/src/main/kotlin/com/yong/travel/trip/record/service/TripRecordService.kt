@@ -53,10 +53,8 @@ class TripRecordService(
      * 범위 판정과 정렬은 모두 조회 쿼리 단계에서 한다. 거리순도 DB 가 기준 위치로 정렬하므로 페이지를
      * 넘어 이어진다.
      *
-     * @param query 범위·여행·카테고리·태그·검색어·정렬·기준 좌표
      * @param userId 요청자의 사용자 id. 비로그인이면 null
      * @param page 0부터 시작하는 페이지 번호
-     * @return 기록 한 페이지
      * @throws ApiException `TRIP_NOT_FOUND` — `tripId` 로 좁혔는데 그 여행이 없거나 볼 권한이 없을 때
      */
     fun list(
@@ -107,7 +105,6 @@ class TripRecordService(
     /**
      * 기록 상세를 조회한다.
      *
-     * @param recordId 조회할 기록 id
      * @param userId 요청자의 사용자 id. 비로그인이면 null
      * @return 사진·태그까지 담긴 기록 상세
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
@@ -117,9 +114,6 @@ class TripRecordService(
     /**
      * 기록을 등록한다. 소속 여행은 요청자가 소유한 것이어야 한다.
      *
-     * @param authorId 요청자의 사용자 id
-     * @param command 기록 입력값
-     * @return 등록된 기록 상세
      * @throws ApiException `TRIP_NOT_FOUND` — 소속 여행이 없거나 요청자의 여행이 아닐 때
      */
     @Transactional
@@ -149,10 +143,7 @@ class TripRecordService(
     /**
      * 기록 내용을 덮어쓴다. 소속 여행은 바꾸지 않으며, 그것은 [changeTrip] 의 몫이다.
      *
-     * @param recordId 수정할 기록 id
      * @param authorId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
-     * @param command 새 기록 내용
-     * @return 수정된 기록 상세
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      */
@@ -187,10 +178,7 @@ class TripRecordService(
      * 이 기록의 사진이 이전 여행의 커버였다면 그 지정을 푼다 — 커버는 자기 여행의 사진만
      * 가리킬 수 있기 때문이다.
      *
-     * @param recordId 옮길 기록 id
      * @param authorId 요청자의 사용자 id. 기록의 현재 여행과 새 여행 모두의 소유자여야 한다
-     * @param tripId 옮겨 갈 여행 id
-     * @return 옮겨진 기록 상세
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      * @throws ApiException `TRIP_NOT_FOUND` — 옮겨 갈 여행이 없거나 요청자의 여행이 아닐 때
@@ -228,7 +216,6 @@ class TripRecordService(
      *
      * 공유 관계는 손대지 않는다 — 공유는 여행에 걸려 있고 기록은 갖고 있지 않다.
      *
-     * @param recordId 삭제할 기록 id
      * @param authorId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
@@ -251,9 +238,7 @@ class TripRecordService(
      * 엔티티를 반환한다. 컨트롤러로 나가는 경계가 아니라 PhotoService 가 사진을 기록에 걸 때 쓰는
      * 서비스 간 호출이기 때문이다. 판정을 여기 하나로 모아 사진과 기록의 실패 응답이 갈라지지 않게 한다.
      *
-     * @param recordId 기록 id
      * @param userId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
-     * @return 편집할 기록
      * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
      * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
      */

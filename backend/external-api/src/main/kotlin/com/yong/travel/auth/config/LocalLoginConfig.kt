@@ -43,20 +43,11 @@ class LocalLoginConfig {
         LocalAccount("user3", "password", "사용자3", "user3@example.com"),
     )
 
-    /**
-     * 고정 계정 비밀번호를 해시·검증할 인코더.
-     *
-     * @return BCrypt 인코더
-     */
+    /** 고정 계정 비밀번호를 해시·검증할 인코더. */
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
-    /**
-     * `LocalLoginController` 가 직접 인증할 수 있도록 인증 관리자를 빈으로 꺼낸다.
-     *
-     * @param configuration Spring Security 가 구성한 인증 설정
-     * @return 인증 관리자
-     */
+    /** `LocalLoginController` 가 직접 인증할 수 있도록 인증 관리자를 빈으로 꺼낸다. */
     @Bean
     fun authenticationManager(configuration: AuthenticationConfiguration): AuthenticationManager =
         configuration.authenticationManager
@@ -66,9 +57,6 @@ class LocalLoginConfig {
      *
      * 로그인 시점에 만들지 않는 이유는 초대 때문이다 — 초대는 이메일로 상대를 찾으므로,
      * 상대가 한 번도 로그인하지 않았어도 행이 있어야 초대를 보낼 수 있다.
-     *
-     * @param userRepository 사용자 저장소
-     * @return 기동 시 한 번 도는 시더
      */
     @Bean
     fun localAccountSeeder(userRepository: UserRepository): ApplicationRunner = ApplicationRunner {
@@ -95,7 +83,6 @@ class LocalLoginConfig {
      * 시더가 먼저 돌기 때문에 로그인 시점에는 행이 반드시 있다.
      *
      * @param userRepository 사용자 PK 를 찾을 저장소
-     * @param passwordEncoder 고정 비밀번호를 해시할 인코더
      * @return 아이디로 principal 을 찾는 서비스. 없는 계정이면 `UsernameNotFoundException` 을 던진다
      */
     @Bean

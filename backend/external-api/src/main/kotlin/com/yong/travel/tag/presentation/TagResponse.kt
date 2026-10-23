@@ -8,12 +8,7 @@ data class TagResponse(
     val name: String,
 ) {
     companion object {
-        /**
-         * 태그 → 응답.
-         *
-         * @param tag 자동완성 후보 태그
-         * @return 응답 DTO
-         */
+        /** 태그 → 응답. */
         fun from(tag: Tag) = TagResponse(tag.id, tag.name)
     }
 }

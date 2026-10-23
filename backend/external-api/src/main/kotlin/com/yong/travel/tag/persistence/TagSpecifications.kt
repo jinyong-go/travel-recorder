@@ -23,7 +23,6 @@ object TagSpecifications {
      * 두 엔티티의 @SQLRestriction 이 서브쿼리에서도 걸러 낸다.
      *
      * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개 여행의 기록만 본다
-     * @return 열람 가능한 기록에 쓰인 태그 조건
      */
     fun usedInRecordVisibleTo(userId: Long?): Specification<TagEntity> =
         Specification { tag, query, cb ->
@@ -41,7 +40,6 @@ object TagSpecifications {
      * 이름의 대소문자 무시 부분 일치.
      *
      * @param keyword 검색어. 비었으면 조건을 걸지 않는다
-     * @return 이름 조건
      */
     fun nameContains(keyword: String?): Specification<TagEntity> =
         Specification { tag, _, cb ->

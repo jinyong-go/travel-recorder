@@ -29,12 +29,7 @@ class PlaceSearchController(
      * 로그인을 요구한다. 검색 한 번이 외부 API 를 여러 번 부르므로, 열어 두면
      * 익명 요청만으로 일일 호출 한도가 소진된다.
      *
-     * @param keyword 검색어
      * @param page 0부터 시작하는 페이지 번호
-     * @param principal 로그인 사용자. 비로그인이면 null
-     * @return 장소 후보 한 페이지
-     * @throws ApiException `UNAUTHENTICATED` — 로그인하지 않았을 때
-     * @throws ApiException `PLACE_SEARCH_UNAVAILABLE` — 외부 검색 API 호출이 실패했을 때
      */
     @GetMapping("/search")
     fun search(

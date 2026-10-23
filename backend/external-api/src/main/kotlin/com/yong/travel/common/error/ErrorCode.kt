@@ -37,9 +37,7 @@ enum class ErrorCode(val status: HttpStatus, val defaultMessage: String) {
     NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 주소를 찾을 수 없습니다."),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
 
-    /**
-     * 상태만 알려진 요청 실패 중 맞는 범용 코드가 없는 것(406·413·429 등). 응답의 HTTP 상태는 원래 값을 그대로 쓴다.
-     */
+    /** 상태만 알려진 요청 실패 중 맞는 범용 코드가 없는 것(406·413·429 등). 응답의 HTTP 상태는 원래 값을 그대로 쓴다. */
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "처리할 수 없는 요청입니다."),
     INVALID_FILE(HttpStatus.BAD_REQUEST, "허용되지 않는 파일입니다."),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 메서드입니다."),

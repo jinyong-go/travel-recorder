@@ -8,7 +8,6 @@ interface UserRepository : JpaRepository<UserEntity, Long> {
      * 로그인 수단과 수단 안의 식별자로 계정을 찾는다. 동일인 판정의 기준이다.
      *
      * @param provider 로그인 수단 (`naver`, `local`)
-     * @param providerId 그 수단이 준 사용자 식별자
      * @return 계정. 없으면 null
      */
     fun findByProviderAndProviderId(provider: String, providerId: String): UserEntity?

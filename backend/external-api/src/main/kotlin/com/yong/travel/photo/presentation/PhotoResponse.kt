@@ -9,12 +9,7 @@ data class PhotoResponse(
     val url: String,
 ) {
     companion object {
-        /**
-         * 사진 → 응답.
-         *
-         * @param photo 접근 URL 이 붙은 사진
-         * @return 응답 DTO
-         */
+        /** 사진 → 응답. */
         fun from(photo: Photo) = PhotoResponse(photo.id, photo.url)
     }
 }

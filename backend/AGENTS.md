@@ -92,6 +92,7 @@ docker compose down -v            # 로컬 DB 초기화 (볼륨 삭제)
   (성공 응답의 201·204 는 `ResponseEntity` 로 만든다).
 - 새 `ErrorCode` 는 `api-specification.md` 의 오류 표에도 함께 적는다.
 - 변환은 `GlobalExceptionHandler` 하나가 한다. 핸들러를 새로 만들지 않는다.
+- `@throws` 는 예외를 던지는 서비스에만 적는다. 컨트롤러는 같은 목록을 반복하지 않는다.
 - `500`·`409` 메시지는 고정 문구다. 예외 메시지(테이블·제약 이름)는 로그로만 남긴다.
 
 ## 로깅

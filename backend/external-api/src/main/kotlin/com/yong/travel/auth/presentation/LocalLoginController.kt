@@ -58,12 +58,6 @@ class LocalLoginController(
      *
      * 실패 사유(없는 계정 / 틀린 비밀번호)를 구분하지 않고 모두 `401 UNAUTHENTICATED` 로 답한다.
      * 구분해 주면 아이디 존재 여부가 드러난다.
-     *
-     * @param request 아이디와 비밀번호
-     * @param httpRequest 세션을 발급할 요청
-     * @param httpResponse 세션·CSRF 쿠키를 실을 응답
-     * @return 로그인한 본인 정보
-     * @throws ApiException `UNAUTHENTICATED` — 계정이 없거나 비밀번호가 틀렸을 때
      */
     @PostMapping("/login")
     fun login(

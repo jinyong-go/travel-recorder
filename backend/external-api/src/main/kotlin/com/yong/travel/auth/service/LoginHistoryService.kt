@@ -11,9 +11,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/**
- * 로그인 이력의 기록과 조회. 본인이 모르는 로그인을 알아차리게 하는 것이 목적이다.
- */
+/** 로그인 이력의 기록과 조회. 본인이 모르는 로그인을 알아차리게 하는 것이 목적이다. */
 @Service
 @Transactional(readOnly = true)
 class LoginHistoryService(
@@ -29,7 +27,6 @@ class LoginHistoryService(
      * 실패하면 예외가 그대로 올라가 로그인도 실패한다. 이력 없이 로그인이 성립하면 목록에 빈틈이
      * 생기고, 그 빈틈은 본인이 볼 때 드러나지 않는다.
      *
-     * @param userId 로그인한 사용자 id
      * @param ipAddress 요청의 원 클라이언트 주소
      * @param userAgent `User-Agent` 헤더 원문. 길면 잘라 저장하고, 없으면 null 로 둔다
      */
@@ -50,9 +47,7 @@ class LoginHistoryService(
     /**
      * 내 로그인 이력을 최신순으로 조회한다. 대상은 언제나 요청자 본인이다.
      *
-     * @param userId 요청자의 사용자 id
      * @param page 0부터 시작하는 페이지 번호
-     * @return 로그인 이력 한 페이지
      */
     fun list(userId: Long, page: Int): PageResult<LoginHistoryEntry> =
         loginHistoryRepository.findByUserIdOrderByLoggedInAtDesc(userId, listPageRequest(page))

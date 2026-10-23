@@ -11,12 +11,7 @@ data class LoginHistoryResponse(
     val userAgent: String?,
 ) {
     companion object {
-        /**
-         * 로그인 이력 → 응답.
-         *
-         * @param entry 로그인 이력 한 건
-         * @return 응답 DTO
-         */
+        /** 로그인 이력 → 응답. */
         fun from(entry: LoginHistoryEntry) =
             LoginHistoryResponse(entry.id, entry.loggedInAt, entry.ipAddress, entry.userAgent)
     }

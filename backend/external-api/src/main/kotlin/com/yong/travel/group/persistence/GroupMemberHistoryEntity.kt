@@ -54,9 +54,6 @@ class GroupMemberHistoryEntity(
          *
          * 기록 지점이 다섯이라(그룹 생성·초대 수락·탈퇴·제외·그룹 삭제) 만드는 방법을 한 곳에 모은다.
          *
-         * @param group 사건이 일어난 그룹
-         * @param user 멤버가 되거나 멤버가 아니게 된 사람
-         * @param event 사건
          * @return 그룹 id·이름을 복사해 둔 이력 행. 아직 저장되지 않았다
          */
         fun of(group: GroupEntity, user: UserEntity, event: GroupMemberEvent) = GroupMemberHistoryEntity(

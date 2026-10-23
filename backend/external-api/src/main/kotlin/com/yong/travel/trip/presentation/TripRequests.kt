@@ -49,11 +49,7 @@ data class TripCreateRequest(
     val isValidPeriod: Boolean
         get() = !endDate.isBefore(startDate)
 
-    /**
-     * 검증을 마친 요청을 서비스 입력으로 옮긴다.
-     *
-     * @return 여행 생성 입력
-     */
+    /** 검증을 마친 요청을 서비스 입력으로 옮긴다. */
     fun toCommand() = TripCreateCommand(name, startDate, endDate, headcount, budget, memo, visibility, groupIds)
 }
 
@@ -86,11 +82,7 @@ data class TripUpdateRequest(
     val isValidPeriod: Boolean
         get() = !endDate.isBefore(startDate)
 
-    /**
-     * 검증을 마친 요청을 서비스 입력으로 옮긴다.
-     *
-     * @return 여행 수정 입력
-     */
+    /** 검증을 마친 요청을 서비스 입력으로 옮긴다. */
     fun toCommand() = TripUpdateCommand(name, startDate, endDate, headcount, budget, memo)
 }
 
