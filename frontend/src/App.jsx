@@ -42,8 +42,10 @@ function App() {
           <Route path="/me/login-history" element={<LoginHistoryPage />} />
           {/* 받은/보낸은 담기는 항목과 동작이 다른 별개 목록이라 경로로 나눈다. */}
           <Route path="/invites" element={<Navigate to="/invites/received" replace />} />
-          <Route path="/invites/received" element={<InvitesPage tab="received" />} />
-          <Route path="/invites/sent" element={<InvitesPage tab="sent" />} />
+          {/* key 를 나눠 탭이 바뀌면 새로 그린다. 같은 인스턴스를 쓰면 이전 탭의 항목이 새 탭의 모양으로
+              한 번 그려져, 없는 필드(받은 초대의 invitee 등)를 읽다 화면이 깨진다. */}
+          <Route path="/invites/received" element={<InvitesPage key="received" tab="received" />} />
+          <Route path="/invites/sent" element={<InvitesPage key="sent" tab="sent" />} />
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="/groups/:groupId" element={<GroupDetailPage />} />
         </Route>
