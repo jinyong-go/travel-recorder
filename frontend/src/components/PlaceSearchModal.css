@@ -69,6 +69,12 @@
   color: var(--accent-strong);
 }
 
+.place-search-limit-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .place-search-list {
   list-style: none;
   margin: 0;

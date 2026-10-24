@@ -6,6 +6,7 @@ import { errorMessage } from '../api/client.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { CloseIcon, SearchIcon } from './icons.jsx'
 import { haversineDistanceKm } from '../utils/geo.js'
+import { PLACE_SEARCH_RESULT_LIMIT } from '../config/placeSearch.js'
 import './PlaceSearchModal.css'
 
 const SEARCH_ERROR = {
@@ -178,6 +179,13 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
                   </li>
                 ))}
               </ul>
+
+              {/* 상한 미만이면 그 검색어의 결과가 전부라 안내하지 않는다. */}
+              {totalCount >= PLACE_SEARCH_RESULT_LIMIT && (
+                <p className="place-search-limit-note">
+                  최대 {PLACE_SEARCH_RESULT_LIMIT}곳까지만 보여줘요. 찾는 곳이 없으면 지역명을 함께 넣어 검색해 보세요.
+                </p>
+              )}
 
               {totalPages > 1 && (
                 <div
