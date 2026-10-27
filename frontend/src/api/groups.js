@@ -9,7 +9,7 @@ import { apiFetch, apiPath } from './client.js'
  * 목록은 모두 `PageResponse` 다 — `{ content, page, size, totalElements, totalPages }`.
  */
 
-export const fetchGroups = () => apiFetch('/api/groups')
+export const fetchGroups = (page) => apiFetch(apiPath`/api/groups?page=${page}`)
 
 export const fetchGroup = (groupId) => apiFetch(apiPath`/api/groups/${groupId}`)
 

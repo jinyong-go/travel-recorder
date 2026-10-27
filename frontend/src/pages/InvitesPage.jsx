@@ -12,6 +12,7 @@ import '../styles/page.css'
 import '../styles/groupPages.css'
 import './InvitesPage.css'
 import { INVITE_GONE_MESSAGE } from '../data/invites.js'
+import { JOINED_GROUP_LIMIT } from '../config/groupLimits.js'
 
 /**
  * 끝난 방식의 표기. 같은 사실을 받은 쪽과 보낸 쪽이 각자의 시점으로 읽으므로 주어가 드러나야 한다.
@@ -80,6 +81,11 @@ export default function InvitesPage({ tab }) {
       if (code === 'GROUP_MEMBER_LIMIT_EXCEEDED') {
         // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다.
         setInviteError('그룹 정원이 가득 찼어요. 자리가 나면 다시 수락할 수 있어요.')
+      } else if (code === 'GROUP_LIMIT_EXCEEDED') {
+        // 정원 초과와 같이 초대는 남는다. 다른 그룹에서 나가면 같은 초대로 다시 수락할 수 있다.
+        setInviteError(
+          `참여할 수 있는 그룹은 ${JOINED_GROUP_LIMIT}개까지예요. 다른 그룹에서 나가면 수락할 수 있어요.`,
+        )
       } else {
         setInviteError(INVITE_GONE_MESSAGE)
         pending.reload()

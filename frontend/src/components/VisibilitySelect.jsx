@@ -1,7 +1,7 @@
 import { fetchGroups } from '../api/groups.js'
-import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { VISIBILITIES, effectiveVisibility } from '../data/visibility.js'
-import useResource from '../hooks/useResource.js'
+import usePagedList from '../hooks/usePagedList.js'
+import PagedListBody from './PagedListBody.jsx'
 import { VisibilityIcon } from './icons.jsx'
 import './VisibilitySelect.css'
 
@@ -13,8 +13,8 @@ import './VisibilitySelect.css'
  * 저장을 막지는 않는다. 범위를 먼저 고르고 그룹을 나중에 붙이는 순서가 자연스럽기 때문이다.
  *
  * 공유할 그룹 목록은 이 컴포넌트가 직접 읽는다. "그룹 공유" 를 골랐을 때만 필요하므로 그때
- * 읽고, 여는 화면이 미리 받아 두지 않는다. 불러오는 중·실패를 "그룹 없음" 과 구분해 보여준다 —
- * 공개 범위를 정하는 자리에서 사실과 다른 안내를 하지 않기 위해서다.
+ * 읽고, 여는 화면이 미리 받아 두지 않는다. 목록은 페이지 단위라 "더 보기" 로 이어 붙이며, 고른 그룹은
+ * id 로 들고 있어 아직 펼치지 않은 페이지의 그룹도 선택이 유지된다.
  */
 export default function VisibilitySelect({
   value,
@@ -25,7 +25,7 @@ export default function VisibilitySelect({
 }) {
   const wantsGroups = value === 'GROUP'
   // 다른 범위로 갔다가 다시 "그룹 공유" 를 고르면 새로 읽는다. 그 사이 그룹이 바뀌었을 수 있다.
-  const { data: groups, status: groupsStatus, reload: reloadGroups } = useResource(fetchGroups, wantsGroups)
+  const groups = usePagedList(fetchGroups, wantsGroups)
 
   const toggleGroup = (groupId) => {
     const next = selectedGroupIds.includes(groupId)
@@ -36,36 +36,27 @@ export default function VisibilitySelect({
 
   /**
    * "그룹 공유" 아래의 그룹 자리. 불러오는 중·실패를 "그룹 없음" 과 구분해 보여 준다 — 공개 범위를
-   * 정하는 자리에서 사실과 다른 안내를 하지 않기 위해서다.
+   * 정하는 자리에서 사실과 다른 안내를 하지 않기 위해서다. 그 판정은 `PagedListBody` 가 한다.
    */
-  const renderGroups = () => {
-    if (groupsStatus === REQUEST_STATUS.ERROR) {
-      return (
-        <p className="visibility-groups-empty">
-          그룹을 불러오지 못했어요.{' '}
-          <button type="button" className="link-button" onClick={reloadGroups}>
-            다시 시도
-          </button>
-        </p>
-      )
-    }
-    if (groupsStatus !== REQUEST_STATUS.COMPLETE) {
-      return <p className="visibility-groups-empty">그룹을 불러오는 중이에요…</p>
-    }
-    if (groups.length === 0) {
-      return (
-        <p className="visibility-groups-empty">
+  const renderGroups = () => (
+    <PagedListBody
+      list={groups}
+      loadingText="그룹을 불러오는 중이에요…"
+      errorText="그룹을 불러오지 못했어요."
+      emptyText={
+        <>
           아직 공유 그룹이 없어요.{' '}
           <button type="button" className="link-button" onClick={onCreateGroupClick}>
             그룹 만들기
           </button>
-        </p>
-      )
-    }
-    return (
+        </>
+      }
+      noteClassName="visibility-groups-empty"
+      errorClassName="visibility-groups-empty"
+    >
       <>
         <ul className="visibility-group-list">
-          {groups.map((group) => (
+          {groups.items.map((group) => (
             <li key={group.id}>
               <label className="visibility-group-item">
                 <input
@@ -85,8 +76,8 @@ export default function VisibilitySelect({
           </p>
         )}
       </>
-    )
-  }
+    </PagedListBody>
+  )
 
   return (
     <fieldset className="visibility-select">

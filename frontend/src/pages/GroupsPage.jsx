@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createGroup as createGroupApi, fetchGroups, fetchReceivedInvites } from '../api/groups.js'
-import { REQUEST_STATUS } from '../api/requestStatus.js'
+import { ApiError } from '../api/client.js'
 import useModal from '../hooks/useModal.js'
+import usePagedList from '../hooks/usePagedList.js'
 import useResource from '../hooks/useResource.js'
 import AppHeader from '../components/AppHeader.jsx'
+import PagedListBody from '../components/PagedListBody.jsx'
 import RequiredNote from '../components/RequiredNote.jsx'
 import { ArrowLeftIcon, PlusIcon } from '../components/icons.jsx'
 import '../styles/page.css'
@@ -12,6 +14,7 @@ import '../styles/form.css'
 import '../styles/groupPages.css'
 import './GroupsPage.css'
 import { GROUP_MEMO_MAX_LENGTH, GROUP_NAME_MAX_LENGTH } from '../config/inputLimits.js'
+import { OWNED_GROUP_LIMIT } from '../config/groupLimits.js'
 
 
 /** 받은 초대 첫 페이지. 건수(`totalElements`)만 쓴다. */
@@ -23,9 +26,9 @@ const loadReceivedInvites = () => fetchReceivedInvites(0)
  * 받은 초대는 목록으로 그리지 않고 건수만 알려 초대함으로 보낸다.
  */
 export default function GroupsPage() {
-  // 그룹을 만든 뒤에도 다시 읽는다. 실패 사유는 나누지 않는다 — 목록을 못 받았다는 사실만
+  // 그룹을 만든 뒤에도 처음부터 다시 읽는다. 실패 사유는 나누지 않는다 — 목록을 못 받았다는 사실만
   // 화면에 필요하다.
-  const { data: groups, status, reload: reloadGroups } = useResource(fetchGroups)
+  const groups = usePagedList(fetchGroups)
 
   /** 받은 초대 알림 줄의 건수. 못 읽으면 알림 줄을 그리지 않을 뿐이다. */
   const receivedCount = useResource(loadReceivedInvites).data?.totalElements ?? 0
@@ -63,11 +66,15 @@ export default function GroupsPage() {
     try {
       // 공백만 남은 메모는 "메모 없음" 과 같다. 서버도 같은 규칙이다.
       await createGroupApi(trimmed, memo.trim() || null)
-      await reloadGroups()
+      await groups.reload()
       closeCreate()
-    } catch {
-      // 입력 규칙은 위에서 이미 걸렀으므로 코드별로 나눠 안내할 실패가 없다.
-      setError('그룹을 만들지 못했어요.')
+    } catch (err) {
+      // 입력 규칙은 위에서 이미 걸렀으므로 서버만 아는 소유 상한만 따로 안내한다.
+      setError(
+        err instanceof ApiError && err.code === 'GROUP_LIMIT_EXCEEDED'
+          ? `그룹은 ${OWNED_GROUP_LIMIT}개까지 만들 수 있어요.`
+          : '그룹을 만들지 못했어요.',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -104,40 +111,31 @@ export default function GroupsPage() {
             </button>
           </div>
 
-          {status === REQUEST_STATUS.LOADING && <div className="empty-state">그룹을 불러오는 중이에요…</div>}
-
-          {status === REQUEST_STATUS.ERROR && (
-            <div className="empty-state">
-              그룹을 불러오지 못했어요.{' '}
-              <button type="button" className="link-button" onClick={reloadGroups}>
-                다시 시도
-              </button>
-            </div>
-          )}
-
-          {status === REQUEST_STATUS.COMPLETE &&
-            (groups.length === 0 ? (
-              <div className="empty-state">
-                공유 그룹을 만들면 특정 여행을 원하는 사람에게만 보여줄 수 있어요.
-              </div>
-            ) : (
-              <ul className="group-list">
-                {groups.map((group) => (
-                  <li key={group.id} className="group-card">
-                    <Link to={`/groups/${group.id}`} className="group-card-link">
-                      <span className="group-card-name">{group.name}</span>
-                      <span className={`group-role-badge${group.isOwner ? ' owner' : ''}`}>
-                        {group.isOwner ? '소유자' : '멤버'}
-                      </span>
-                      <span className="group-card-count">
-                        {group.memberCount}/{group.memberLimit}명
-                      </span>
-                      {group.memo && <span className="group-card-memo">{group.memo}</span>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ))}
+          <PagedListBody
+            list={groups}
+            loadingText="그룹을 불러오는 중이에요…"
+            errorText="그룹을 불러오지 못했어요."
+            emptyText="공유 그룹을 만들면 특정 여행을 원하는 사람에게만 보여줄 수 있어요."
+            noteClassName="empty-state"
+            errorClassName="empty-state"
+          >
+            <ul className="group-list">
+              {groups.items.map((group) => (
+                <li key={group.id} className="group-card">
+                  <Link to={`/groups/${group.id}`} className="group-card-link">
+                    <span className="group-card-name">{group.name}</span>
+                    <span className={`group-role-badge${group.isOwner ? ' owner' : ''}`}>
+                      {group.isOwner ? '소유자' : '멤버'}
+                    </span>
+                    <span className="group-card-count">
+                      {group.memberCount}/{group.memberLimit}명
+                    </span>
+                    {group.memo && <span className="group-card-memo">{group.memo}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </PagedListBody>
         </div>
       </main>
 
