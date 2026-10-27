@@ -115,41 +115,7 @@ function TripDetailView({ trip, onTripChange }) {
   const renderRecords = () => (
     <ul className="place-grid">
       {records.items.map((record) => (
-        <li key={record.id} className="place-card">
-          <div className="place-thumb">
-            {/* 첫 사진이 있으면 그것을, 없으면 카테고리 아이콘을 둔다. */}
-            {record.thumbnailUrl ? (
-              <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
-            ) : (
-              <CategoryIcon category={record.category} className="place-thumb-icon" />
-            )}
-            <span className="place-category-badge">{categoryLabel(record.category)}</span>
-          </div>
-          <div className="place-body">
-            <h3 className="place-name">
-              <Link to={`/records/${record.id}`} className="place-card-link">
-                {record.name}
-              </Link>
-            </h3>
-            <p className="place-region">{record.address}</p>
-            <div className="place-meta">
-              <span className="place-rating">★ {record.rating.toFixed(1)}</span>
-              {record.distanceKm != null && (
-                <span className="place-distance">{record.distanceKm.toFixed(1)}km</span>
-              )}
-              <span className="place-date">{formatDate(record.createdAt)}</span>
-            </div>
-            {record.memo && <p className="place-memo">{record.memo}</p>}
-            <button
-              type="button"
-              className="btn-secondary btn-sm place-map-btn"
-              onClick={() => placeMap.openMap(placeOf(record))}
-            >
-              <MapViewIcon />
-              지도
-            </button>
-          </div>
-        </li>
+        <RecordCard key={record.id} record={record} onMapClick={placeMap.openMap} />
       ))}
     </ul>
   )
@@ -438,5 +404,49 @@ function TripVisibilitySection({ trip, onTripChange }) {
         </ConfirmDialog>
       )}
     </>
+  )
+}
+
+/**
+ * 여행 상세의 하위 기록 카드 한 장. 카드 전체가 기록 상세로 가는 링크이고, 지도 버튼만 따로 눌린다.
+ * 공개 범위 배지와 소속 여행 이름은 달지 않는다 — 한 여행의 목록이라 화면 위에 한 번 보인 값과 같다.
+ */
+function RecordCard({ record, onMapClick }) {
+  return (
+    <li className="place-card">
+      <div className="place-thumb">
+        {/* 첫 사진이 있으면 그것을, 없으면 카테고리 아이콘을 둔다. */}
+        {record.thumbnailUrl ? (
+          <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
+        ) : (
+          <CategoryIcon category={record.category} className="place-thumb-icon" />
+        )}
+        <span className="place-category-badge">{categoryLabel(record.category)}</span>
+      </div>
+      <div className="place-body">
+        <h3 className="place-name">
+          <Link to={`/records/${record.id}`} className="place-card-link">
+            {record.name}
+          </Link>
+        </h3>
+        <p className="place-region">{record.address}</p>
+        <div className="place-meta">
+          <span className="place-rating">★ {record.rating.toFixed(1)}</span>
+          {record.distanceKm != null && (
+            <span className="place-distance">{record.distanceKm.toFixed(1)}km</span>
+          )}
+          <span className="place-date">{formatDate(record.createdAt)}</span>
+        </div>
+        {record.memo && <p className="place-memo">{record.memo}</p>}
+        <button
+          type="button"
+          className="btn-secondary btn-sm place-map-btn"
+          onClick={() => onMapClick(placeOf(record))}
+        >
+          <MapViewIcon />
+          지도
+        </button>
+      </div>
+    </li>
   )
 }

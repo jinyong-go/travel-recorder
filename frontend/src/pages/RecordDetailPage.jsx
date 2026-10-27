@@ -33,6 +33,41 @@ const SAVE_ERROR = {
 }
 
 /**
+ * 수정 폼의 사진 초안을 서버에 반영한다. 원래 목록에 있었는데 초안에서 빠진 사진은 지우고, 새로 고른
+ * 파일(`file` 이 있는 항목)은 한 요청으로 올린다.
+ *
+ * 실패해도 되돌리지 않는다 — 본문은 이미 저장됐고, 다시 읽은 화면이 실제 남은 사진을 보여 준다.
+ * 삭제가 한 번 실패하면 남은 삭제는 건너뛰고 업로드로 넘어간다. 같은 원인으로 나머지도 실패할
+ * 가능성이 높다.
+ *
+ * @returns 실패한 단계 이름 목록(`'사진 삭제'`·`'사진 업로드'`). 모두 성공하면 빈 배열이다.
+ */
+async function syncRecordPhotos(recordId, before, draft) {
+  const failures = []
+  const removed = before.filter((p) => !draft.some((d) => d.id === p.id))
+  for (const photo of removed) {
+    try {
+      await recordApi.deletePhoto(recordId, photo.id)
+    } catch {
+      failures.push('사진 삭제')
+      break
+    }
+  }
+  const added = draft.filter((p) => p.file)
+  if (added.length > 0) {
+    try {
+      await recordApi.uploadPhotos(
+        recordId,
+        added.map((p) => p.file),
+      )
+    } catch {
+      failures.push('사진 업로드')
+    }
+  }
+  return failures
+}
+
+/**
  * 기록 하나의 상세. 작성자(= 소속 여행 소유자)는 같은 카드 안에서 수정·삭제할 수 있다.
  * 공개 범위는 소속 여행의 것을 읽기 전용으로 보여 준다.
  */
@@ -135,29 +170,8 @@ export default function RecordDetailPage() {
       return
     }
 
-    // 2단계: 사진. 본문은 이미 저장됐으므로 여기서 실패해도 되돌리지 않고, 무엇이 안 됐는지만
-    // 알린다. 다시 읽은 화면이 실제 남은 사진을 보여준다.
-    const failures = []
-    const removed = photos.filter((p) => !values.photos.some((d) => d.id === p.id))
-    for (const photo of removed) {
-      try {
-        await recordApi.deletePhoto(record.id, photo.id)
-      } catch {
-        failures.push('사진 삭제')
-        break
-      }
-    }
-    const added = values.photos.filter((p) => p.file)
-    if (added.length > 0) {
-      try {
-        await recordApi.uploadPhotos(
-          record.id,
-          added.map((p) => p.file),
-        )
-      } catch {
-        failures.push('사진 업로드')
-      }
-    }
+    // 2단계: 사진. 실패해도 되돌리지 않는 이유는 syncRecordPhotos 에 있다.
+    const failures = await syncRecordPhotos(record.id, photos, values.photos)
 
     await reloadRecord()
     setEditing(false)
