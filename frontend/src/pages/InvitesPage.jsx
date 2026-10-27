@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ApiError } from '../api/client.js'
+import { errorMessage } from '../api/client.js'
 import * as api from '../api/groups.js'
 import usePagedList from '../hooks/usePagedList.js'
 import { formatDate } from '../utils/date.js'
@@ -31,6 +31,15 @@ const OUTCOME_LABEL = {
     REVOKED: '취소함',
     GROUP_DELETED: '그룹이 삭제됨',
   },
+}
+
+/**
+ * 수락 실패 중 초대가 목록에 그대로 남는 경우. 자리가 나거나 다른 그룹에서 나가면 같은 초대로 다시
+ * 수락할 수 있다.
+ */
+const ACCEPT_ERROR = {
+  GROUP_MEMBER_LIMIT_EXCEEDED: '그룹 정원이 가득 찼어요. 자리가 나면 다시 수락할 수 있어요.',
+  GROUP_LIMIT_EXCEEDED: `참여할 수 있는 그룹은 ${JOINED_GROUP_LIMIT}개까지예요. 다른 그룹에서 나가면 수락할 수 있어요.`,
 }
 
 /**
@@ -77,19 +86,10 @@ export default function InvitesPage({ tab }) {
     try {
       await api.acceptInvite(invite.id)
     } catch (err) {
-      const code = err instanceof ApiError ? err.code : null
-      if (code === 'GROUP_MEMBER_LIMIT_EXCEEDED') {
-        // 초대는 목록에 그대로 남는다. 자리가 나면 같은 초대로 다시 수락할 수 있다.
-        setInviteError('그룹 정원이 가득 찼어요. 자리가 나면 다시 수락할 수 있어요.')
-      } else if (code === 'GROUP_LIMIT_EXCEEDED') {
-        // 정원 초과와 같이 초대는 남는다. 다른 그룹에서 나가면 같은 초대로 다시 수락할 수 있다.
-        setInviteError(
-          `참여할 수 있는 그룹은 ${JOINED_GROUP_LIMIT}개까지예요. 다른 그룹에서 나가면 수락할 수 있어요.`,
-        )
-      } else {
-        setInviteError(INVITE_GONE_MESSAGE)
-        pending.reload()
-      }
+      const limitMessage = errorMessage(err, ACCEPT_ERROR, null)
+      setInviteError(limitMessage ?? INVITE_GONE_MESSAGE)
+      // 상한 초과가 아니면 이미 처리된 초대일 수 있다. 다시 읽어 실제 상태로 맞춘다.
+      if (!limitMessage) pending.reload()
       setProcessing(null)
       return
     }

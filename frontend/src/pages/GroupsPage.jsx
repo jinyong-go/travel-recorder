@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createGroup as createGroupApi, fetchGroups, fetchReceivedInvites } from '../api/groups.js'
-import { ApiError } from '../api/client.js'
+import { errorMessage } from '../api/client.js'
 import useModal from '../hooks/useModal.js'
 import usePagedList from '../hooks/usePagedList.js'
 import useResource from '../hooks/useResource.js'
@@ -16,6 +16,10 @@ import './GroupsPage.css'
 import { GROUP_MEMO_MAX_LENGTH, GROUP_NAME_MAX_LENGTH } from '../config/inputLimits.js'
 import { OWNED_GROUP_LIMIT } from '../config/groupLimits.js'
 
+/** 그룹 만들기 실패 안내. 입력 규칙은 화면이 먼저 거르므로 서버만 아는 소유 상한만 따로 둔다. */
+const CREATE_ERROR = {
+  GROUP_LIMIT_EXCEEDED: `그룹은 ${OWNED_GROUP_LIMIT}개까지 만들 수 있어요.`,
+}
 
 /** 받은 초대 첫 페이지. 건수(`totalElements`)만 쓴다. */
 const loadReceivedInvites = () => fetchReceivedInvites(0)
@@ -69,12 +73,7 @@ export default function GroupsPage() {
       await groups.reload()
       closeCreate()
     } catch (err) {
-      // 입력 규칙은 위에서 이미 걸렀으므로 서버만 아는 소유 상한만 따로 안내한다.
-      setError(
-        err instanceof ApiError && err.code === 'GROUP_LIMIT_EXCEEDED'
-          ? `그룹은 ${OWNED_GROUP_LIMIT}개까지 만들 수 있어요.`
-          : '그룹을 만들지 못했어요.',
-      )
+      setError(errorMessage(err, CREATE_ERROR, '그룹을 만들지 못했어요.'))
     } finally {
       setSubmitting(false)
     }
