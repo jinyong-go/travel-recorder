@@ -17,7 +17,6 @@ import '../styles/detailPage.css'
 import '../styles/groupPages.css'
 import './GroupDetailPage.css'
 import { INVITE_GONE_MESSAGE } from '../data/invites.js'
-import { PHOTO_LINK_NOTICE } from '../data/visibility.js'
 
 const INVITE_ERROR = {
   USER_NOT_FOUND: '해당 이메일로 가입한 사용자가 없어요. 주소를 다시 확인해주세요.',
@@ -44,7 +43,7 @@ const DEFAULT_LOAD_ERROR = { title: '그룹을 불러오지 못했어요', desc:
 const CONFIRM_ACTIONS = {
   delete: {
     title: '그룹을 삭제할까요?',
-    desc: `이 그룹으로만 공유한 여행은 나만 보기 상태가 돼요. 여행과 기록 자체는 삭제되지 않아요. ${PHOTO_LINK_NOTICE}`,
+    desc: `이 그룹으로만 공유한 여행은 나만 보기 상태가 돼요. 여행과 기록 자체는 삭제되지 않아요.`,
     ok: '삭제',
     okBusy: '삭제하는 중…',
     run: (groupId) => api.deleteGroup(groupId),
@@ -52,7 +51,7 @@ const CONFIRM_ACTIONS = {
   },
   leave: {
     title: '그룹에서 나갈까요?',
-    desc: `이 그룹으로 공유된 여행은 더 이상 보이지 않아요. 내가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않아요. ${PHOTO_LINK_NOTICE}`,
+    desc: `이 그룹으로 공유된 여행은 더 이상 보이지 않아요. 내가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않아요.`,
     ok: '나가기',
     okBusy: '나가는 중…',
     run: (groupId) => api.leaveGroup(groupId),
@@ -60,7 +59,7 @@ const CONFIRM_ACTIONS = {
   },
   member: {
     title: '멤버를 제외할까요?',
-    desc: `제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없어요. 이 멤버가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않아요. ${PHOTO_LINK_NOTICE}`,
+    desc: `제외된 멤버는 이 그룹으로 공유된 여행을 더 이상 볼 수 없어요. 이 멤버가 이 그룹에 공유한 여행도 더 이상 이 그룹에 보이지 않아요.`,
     ok: '제외',
     okBusy: '제외하는 중…',
     run: (groupId, { memberId }) => api.removeMember(groupId, memberId),

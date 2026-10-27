@@ -50,11 +50,3 @@ export const isWideningVisibility = (from, to) => {
   if (after === 'PUBLIC' || before === 'PRIVATE') return true
   return to.groupIds.some((id) => !from.groupIds.includes(id))
 }
-
-/**
- * 볼 수 있는 사람이 줄어드는 변경(범위 좁힘, 그룹 삭제·탈퇴·제외) 뒤에 덧붙이는 안내.
- *
- * 사진 URL 은 공개 범위와 무관하게 열리므로, 이미 링크를 본 사람은 범위가 좁아진 뒤에도 사진을 열 수 있다.
- * "이제 아무도 못 본다" 고 믿게 두지 않는다.
- */
-export const PHOTO_LINK_NOTICE = '이전에 공유된 사진 링크는 계속 열릴 수 있어요.'
