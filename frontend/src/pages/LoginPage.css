@@ -31,7 +31,7 @@
 }
 
 .login-desc {
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1.6;
   color: var(--text-muted);
 }
@@ -42,7 +42,7 @@
   border-radius: var(--radius-sm);
   background: var(--error-bg);
   color: var(--error);
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   padding: 10px 12px;
 }
@@ -64,7 +64,7 @@
 }
 
 .login-field-label {
-  font-size: 13px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -76,7 +76,7 @@
   background: var(--bg);
   color: var(--text);
   padding: 11px 12px;
-  font-size: 14px;
+  font-size: var(--fs-sm);
 }
 
 .login-field input:focus {
@@ -94,7 +94,7 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .login-submit-btn:hover:not(:disabled) {
@@ -107,9 +107,9 @@
 }
 
 .login-hint {
-  font-size: 12.5px;
+  font-size: var(--fs-xs);
   line-height: 1.6;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .login-hint code {
@@ -117,7 +117,7 @@
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1px 5px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 /* 네이버 로그인 버튼은 브랜드 가이드에 따라 고정 색(#03C75A)을 쓴다.
@@ -125,8 +125,8 @@
 
 .login-note {
   margin-top: 6px;
-  font-size: 13px;
-  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
 }
 
 .login-browse-link {
@@ -135,7 +135,7 @@
   gap: 6px;
   color: var(--accent-strong);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   text-decoration: none;
 }
 

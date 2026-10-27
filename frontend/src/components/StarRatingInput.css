@@ -65,5 +65,5 @@
   margin-left: 10px;
   font-weight: 700;
   color: var(--accent-strong);
-  font-size: 14px;
+  font-size: var(--fs-sm);
 }

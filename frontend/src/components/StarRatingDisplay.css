@@ -10,7 +10,7 @@
 }
 
 .star-rating-display-value {
-  font-size: 13px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--accent-strong);
 }

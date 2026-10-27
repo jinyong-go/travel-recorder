@@ -10,7 +10,7 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   transition: border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -21,4 +21,15 @@
 
 .theme-selector-label {
   line-height: 1;
+}
+
+/* 좁은 화면에서는 아이콘만 남긴다. 이름은 aria-label 이 전한다. */
+@media (max-width: 480px) {
+  .theme-selector-label {
+    display: none;
+  }
+
+  .theme-selector-btn {
+    padding: 9px 11px;
+  }
 }

@@ -26,7 +26,7 @@
 }
 
 .detail-missing-desc {
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -36,7 +36,7 @@
   gap: 6px;
   color: var(--accent-strong);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   text-decoration: none;
 }
 
@@ -71,7 +71,7 @@
 }
 
 .detail-section-title {
-  font-size: 17px;
+  font-size: var(--fs-lg);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -81,7 +81,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -97,7 +97,7 @@
   color: var(--danger-text);
   border-radius: var(--radius-sm);
   padding: 8px 16px;
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
 
@@ -110,7 +110,7 @@
 
 .detail-shared-groups,
 .detail-trip-link {
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -133,7 +133,7 @@
    동작이라 붉은 테두리를 유지한다. 그룹 상세처럼 홀로 놓인 삭제 버튼은 건드리지 않는다. */
 .detail-author-actions .detail-delete-btn {
   padding: 11px 24px;
-  font-size: 14.5px;
+  font-size: var(--fs-md);
   font-weight: 700;
   line-height: 1;
 }

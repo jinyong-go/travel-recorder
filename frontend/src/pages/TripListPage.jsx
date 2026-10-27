@@ -4,10 +4,8 @@ import { SCOPES, TRIP_SORT_OPTIONS, tripDurationLabel, tripPeriodLabel, tripVisi
 import { fetchTrips } from '../api/trips.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import useMapMode from '../hooks/useMapMode.js'
 import useResource from '../hooks/useResource.js'
 import AppHeader from '../components/AppHeader.jsx'
-import SettingsMenu from '../components/SettingsMenu.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import TripCover from '../components/TripCover.jsx'
 import { PlusIcon } from '../components/icons.jsx'
@@ -20,7 +18,6 @@ import { AUTH_STATUS } from '../context/authStatus.js'
  */
 export default function TripListPage() {
   const { isLoggedIn, status: authStatus } = useAuth()
-  const { mapMode, changeMapMode } = useMapMode()
 
   // 범위/정렬/페이지는 URL 쿼리에 둔다. 상세에 다녀와도 목록 상태가 유지되고,
   // 목록 자체를 링크로 공유할 수 있다.
@@ -119,9 +116,7 @@ export default function TripListPage() {
 
   return (
     <>
-      <AppHeader>
-        <SettingsMenu mapMode={mapMode} onChangeMapMode={changeMapMode} />
-      </AppHeader>
+      <AppHeader />
 
       <main className="app-main">
         {/* 목록을 나누는 탭은 이 한 줄뿐이다. 세 범위는 성격이 달라 한 목록에 섞지 않는다. */}

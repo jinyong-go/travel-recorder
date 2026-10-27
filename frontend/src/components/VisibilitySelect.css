@@ -8,7 +8,7 @@
 
 .visibility-select-legend {
   padding: 0 6px;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text);
 }
@@ -64,7 +64,7 @@
 }
 
 .visibility-option-desc {
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
@@ -106,14 +106,14 @@
 
 .visibility-group-count {
   margin-left: auto;
-  font-size: 0.8rem;
-  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
 }
 
 .visibility-groups-empty,
 .visibility-groups-warning {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 

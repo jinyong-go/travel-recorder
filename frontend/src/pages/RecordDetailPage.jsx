@@ -38,7 +38,9 @@ const SAVE_ERROR = {
 export default function RecordDetailPage() {
   const { recordId } = useParams()
   const navigate = useNavigate()
-  const { isEmbed } = useMapMode()
+  // 헤더의 설정 메뉴와 같은 상태를 써야 지도 방식을 바꾸는 즉시 이 화면에 반영된다.
+  const mapMode = useMapMode()
+  const { isEmbed } = mapMode
   // 수정 폼의 장소 검색 모달에서 기준 위치를 바꾸면 이 화면의 거리도 함께 바뀐다.
   const reference = useReferenceLocation()
   const referenceLocation = reference.location
@@ -175,7 +177,7 @@ export default function RecordDetailPage() {
 
   return (
     <>
-      <AppHeader />
+      <AppHeader mapMode={mapMode} />
 
       <main className="detail-page">
         <div className="detail-inner">

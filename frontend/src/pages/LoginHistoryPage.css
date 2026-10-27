@@ -11,14 +11,14 @@
 
 .login-history-title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: var(--fs-xl);
   font-weight: 800;
   color: var(--text);
 }
 
 .login-history-notice {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   line-height: 1.6;
   color: var(--text-muted);
 }

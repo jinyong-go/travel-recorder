@@ -34,7 +34,7 @@
 }
 
 .member-owner-tag {
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--accent-strong);
   border: 1px solid var(--accent);
@@ -44,8 +44,8 @@
 
 .member-joined {
   margin-left: auto;
-  font-size: 0.8rem;
-  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
 }
 
 .invite-form {
@@ -60,19 +60,19 @@
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 .invite-info {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   color: var(--info-text);
 }
 
 /* 초대 폼 위의 정원 안내. 정원이 차도 초대를 막지 않는 대신 결과를 먼저 알린다. */
 .invite-capacity {
   margin: -4px 0 4px;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--text-muted);
 }

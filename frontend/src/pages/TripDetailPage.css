@@ -45,7 +45,7 @@
   left: 10px;
   background: var(--badge-bg);
   color: var(--accent-strong);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
@@ -59,7 +59,7 @@
 }
 
 .place-name {
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text);
 }
@@ -79,6 +79,11 @@
   cursor: pointer;
 }
 
+/* 테두리는 카드 전체(::after)에 그린다. 링크 글자에도 그리면 이중으로 보인다. */
+.place-card-link:focus-visible {
+  outline: none;
+}
+
 .place-card-link:focus-visible::after {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
@@ -91,7 +96,7 @@
 }
 
 .place-region {
-  font-size: 13px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
@@ -99,7 +104,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -110,8 +115,8 @@
 }
 
 .place-memo {
-  font-size: 13px;
-  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
   margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -135,12 +140,12 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: var(--fs-xs);
 }
 
 .place-map-btn:hover {
   background: var(--surface-soft);
-  border-color: var(--text-faint);
+  border-color: var(--text-muted);
 }
 
 /* 접을 수 있는 섹션 (공개 범위). 이 화면의 유일한 설정 영역이라 연한 바탕의 패널로 두고,
@@ -213,7 +218,7 @@
 
 .trip-detail-period {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-md);
   color: var(--text);
 }
 
@@ -222,13 +227,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2px 14px;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
 .trip-detail-memo {
   margin: 4px 0 0;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   color: var(--text);
   line-height: 1.6;
   white-space: pre-wrap;
@@ -255,7 +260,7 @@
    공통 버튼(높이 약 38px)보다 낮춰 제목 줄 높이를 늘리지 않는다. */
 .trip-records-add-btn {
   padding: 8px 14px;
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
 }
 
 .trip-records-add-btn svg {
@@ -264,7 +269,7 @@
 }
 
 .detail-saved-msg {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--info-text);
 }
 

@@ -16,7 +16,7 @@
 }
 
 .group-form label {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -34,17 +34,11 @@
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
 }
 
 .group-form textarea {
   resize: vertical;
-}
-
-.group-form input:focus-visible,
-.group-form textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }
 
 .group-list {
@@ -81,7 +75,7 @@
 .group-role-badge {
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   background: var(--surface-soft);
   color: var(--text-muted);
@@ -96,14 +90,14 @@
 
 .group-card-count {
   margin-left: auto;
-  font-size: 0.85rem;
-  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
 }
 
 .group-card-memo {
   flex-basis: 100%;
   margin-top: -2px;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -120,7 +114,7 @@
   border-radius: var(--radius-sm);
   background: var(--surface-soft);
   color: var(--accent-strong);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   text-decoration: none;
 }

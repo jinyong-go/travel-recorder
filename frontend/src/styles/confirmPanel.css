@@ -7,12 +7,12 @@
 
 .confirm-panel h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--fs-lg);
 }
 
 .confirm-desc {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   line-height: 1.6;
 }
@@ -27,7 +27,7 @@
 .confirm-ok {
   border-radius: var(--radius-sm);
   padding: 10px 18px;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   border: 1px solid var(--border);
 }

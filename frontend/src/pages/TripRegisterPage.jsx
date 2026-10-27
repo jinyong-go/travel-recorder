@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { errorMessage } from '../api/client.js'
 import { createTrip } from '../api/trips.js'
+import AppHeader from '../components/AppHeader.jsx'
 import TripForm from '../components/TripForm.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
 import '../styles/formPage.css'
@@ -30,28 +31,31 @@ export default function TripRegisterPage() {
   }
 
   return (
-    <div className="register-page">
-      <div className="register-page-inner">
-        <div className="register-page-header">
-          <Link to="/trips" className="back-link">
-            <ArrowLeftIcon /> 여행 목록으로
-          </Link>
-          <h1>여행 만들기</h1>
-        </div>
+    <>
+      <AppHeader />
+      <main className="register-page">
+        <div className="register-page-inner">
+          <div className="register-page-header">
+            <Link to="/trips" className="back-link">
+              <ArrowLeftIcon /> 여행 목록으로
+            </Link>
+            <h1>여행 만들기</h1>
+          </div>
 
-        <div className="trip-form-card">
-          <TripForm
-            submitLabel="여행 만들기"
-            submittingLabel="만드는 중…"
-            showVisibility
-            submitting={submitting}
-            onSubmit={handleSubmit}
-            onCancel={() => navigate('/trips')}
-            onCreateGroupClick={() => navigate('/groups')}
-          />
-          {error && <p className="field-error">{error}</p>}
+          <div className="trip-form-card">
+            <TripForm
+              submitLabel="여행 만들기"
+              submittingLabel="만드는 중…"
+              showVisibility
+              submitting={submitting}
+              onSubmit={handleSubmit}
+              onCancel={() => navigate('/trips')}
+              onCreateGroupClick={() => navigate('/groups')}
+            />
+            {error && <p className="field-error">{error}</p>}
+          </div>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   )
 }

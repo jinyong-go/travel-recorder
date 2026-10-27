@@ -34,7 +34,7 @@
 .by-yong {
   font-size: 0.42em;
   font-weight: 500;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .header-actions {
@@ -43,10 +43,24 @@
   gap: 10px;
 }
 
+/* 헤더의 여행 목록 링크. 지금 그 화면이면 글자색으로만 알린다 — 연두는 면에만 쓴다. */
+.header-nav-link {
+  padding: 9px 4px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+
+.header-nav-link:hover,
+.header-nav-link[aria-current='page'] {
+  color: var(--text);
+}
+
 .empty-state {
   padding: 48px 0;
   text-align: center;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 /* 페이지네이션 */
@@ -67,7 +81,7 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-sm);
 }
 
 .page-btn:hover:not(:disabled) {
@@ -134,7 +148,7 @@
 
 .modal-desc {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--fs-sm);
 }
 
 /* 목록으로 돌아가는 링크 — 등록/상세 화면에서 공용으로 쓴다. */
@@ -147,7 +161,7 @@
   background: transparent;
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   padding: 0;
   text-decoration: none;
@@ -160,7 +174,7 @@
 /* 버튼·폼 공통 — 등록 폼 외에 그룹·상세 화면에서도 쓰므로 여기에 둔다. */
 .field-error {
   color: var(--error);
-  font-size: 12.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   margin: 0;
 }
@@ -176,7 +190,7 @@
   border-radius: var(--radius-sm);
   padding: 11px 18px;
   font-weight: 600;
-  font-size: 14.5px;
+  font-size: var(--fs-md);
   line-height: 1;
   cursor: pointer;
 }
@@ -196,7 +210,7 @@
 
 /* 녹색은 주 버튼과 링크만 쓴다. 보조 버튼은 회색 안에서만 반응해 주 동작과 구분된다. */
 .btn-secondary:hover {
-  border-color: var(--text-faint);
+  border-color: var(--text-muted);
   background: var(--surface-soft);
 }
 

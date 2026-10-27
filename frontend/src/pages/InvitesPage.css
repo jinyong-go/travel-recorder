@@ -11,7 +11,7 @@
   background: none;
   color: var(--text-muted);
   padding: 8px 2px;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 600;
   cursor: pointer;
 }
@@ -38,7 +38,7 @@
 }
 
 .invite-counterpart {
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -52,7 +52,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   background: var(--surface);
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -83,7 +83,7 @@
   color: var(--danger-contrast);
   border-radius: var(--radius-sm);
   padding: 4px 12px;
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
 }

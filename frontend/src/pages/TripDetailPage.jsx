@@ -57,7 +57,9 @@ const groupKey = (ids) => [...ids].sort((a, b) => a - b).join(',')
  */
 function TripDetailView({ trip, onTripChange }) {
   const navigate = useNavigate()
-  const { isEmbed } = useMapMode()
+  // 헤더의 설정 메뉴와 같은 상태를 써야 지도 방식을 바꾸는 즉시 이 화면에 반영된다.
+  const mapMode = useMapMode()
+  const { isEmbed } = mapMode
   // 등록 모달과 같은 상태를 써야 모달에서 위치를 지정했을 때 이 화면의 거리도 바뀐다.
   const reference = useReferenceLocation()
   const referenceLocation = reference.location
@@ -164,7 +166,7 @@ function TripDetailView({ trip, onTripChange }) {
 
   return (
     <>
-      <AppHeader />
+      <AppHeader mapMode={mapMode} />
 
       <main className="detail-page">
         <div className="detail-inner">

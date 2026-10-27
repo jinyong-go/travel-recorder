@@ -14,7 +14,7 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-sm);
 }
 
 .settings-menu-btn:hover {
@@ -36,7 +36,7 @@
 }
 
 .settings-panel-title {
-  font-size: 13px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--text-muted);
   margin: 0 0 10px;
@@ -79,13 +79,25 @@
 }
 
 .settings-option-label {
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text);
 }
 
 .settings-option-desc {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+/* 좁은 화면에서는 아이콘만 남긴다. 이름은 aria-label 이 전한다. */
+@media (max-width: 480px) {
+  .settings-menu-label,
+  .settings-menu-chevron {
+    display: none;
+  }
+
+  .settings-menu-btn {
+    padding: 9px 11px;
+  }
 }

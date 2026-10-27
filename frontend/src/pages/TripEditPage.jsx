@@ -4,6 +4,7 @@ import { errorMessage } from '../api/client.js'
 import { REQUEST_STATUS } from '../api/requestStatus.js'
 import { updateTrip } from '../api/trips.js'
 import useTrip from '../hooks/useTrip.js'
+import AppHeader from '../components/AppHeader.jsx'
 import TripForm from '../components/TripForm.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import DetailStatus from '../components/DetailStatus.jsx'
@@ -63,7 +64,8 @@ function TripEditView({ trip }) {
 
   return (
     <>
-      <div className="register-page">
+      <AppHeader />
+      <main className="register-page">
         <div className="register-page-inner">
           <div className="register-page-header">
             <Link to={detailPath} className="back-link">
@@ -82,7 +84,7 @@ function TripEditView({ trip }) {
             />
           </div>
         </div>
-      </div>
+      </main>
 
       {pendingEdit && (
         <ConfirmDialog

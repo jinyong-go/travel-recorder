@@ -26,13 +26,14 @@ export default function SettingsMenu({ mapMode, onChangeMapMode }) {
       <button
         type="button"
         className="settings-menu-btn"
+        aria-label="설정"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
         <GearIcon />
-        설정
-        <ChevronDownIcon />
+        <span className="settings-menu-label">설정</span>
+        <ChevronDownIcon className="settings-menu-chevron" />
       </button>
 
       {open && (

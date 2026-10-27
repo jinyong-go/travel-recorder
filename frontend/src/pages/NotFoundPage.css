@@ -38,7 +38,7 @@
 }
 
 .notfound-desc {
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1.6;
   color: var(--text-muted);
 }
@@ -56,7 +56,7 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .notfound-home-btn:hover {
@@ -64,7 +64,7 @@
 }
 
 .notfound-places-link {
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--accent-strong);
   text-decoration: none;

@@ -30,7 +30,7 @@
 }
 
 .login-history-ip {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }

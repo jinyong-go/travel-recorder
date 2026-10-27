@@ -13,14 +13,14 @@
 
 .groups-title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: var(--fs-xl);
   font-weight: 800;
   color: var(--text);
 }
 
 .groups-desc {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   line-height: 1.6;
   color: var(--text-muted);
 }
@@ -35,7 +35,7 @@
 
 .group-section-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text);
 }
@@ -46,7 +46,7 @@
   color: var(--text-muted);
   border-radius: var(--radius-sm);
   padding: 4px 12px;
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   cursor: pointer;
 }
 
@@ -76,20 +76,20 @@
 
 .invite-sent-at {
   margin-left: auto;
-  font-size: 0.8rem;
-  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
 }
 
 .invite-note {
   margin: 0;
-  font-size: 0.8rem;
-  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
 .invite-error {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--error);
 }
@@ -97,7 +97,7 @@
 /* 그룹 상세의 메모. 소유자와 멤버 모두에게 보인다. */
 .group-memo {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   line-height: 1.6;
   color: var(--text-muted);
   white-space: pre-wrap;
