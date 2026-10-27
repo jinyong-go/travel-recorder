@@ -317,7 +317,6 @@ function TripVisibilitySection({ trip, onTripChange }) {
 
   const handleSave = async () => {
     setSaving(true)
-    const next = { visibility: visibilityDraft, groupIds: groupDraft }
     try {
       const updated = await tripApi.changeTripVisibility(trip.id, visibilityDraft, groupDraft)
       onTripChange(updated)
