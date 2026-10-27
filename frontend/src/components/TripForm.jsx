@@ -30,8 +30,10 @@ const EMPTY = {
  * 공개 범위는 만들기에서만 받는다(`showVisibility`). 수정에서는 여행 상세의 공개 범위 섹션이
  * 그 역할을 하므로, 같은 값을 두 곳에서 바꿀 수 있게 만들지 않는다.
  *
- * `submitting` 동안은 제출 버튼을 막고 문구를 `submittingLabel` 로 바꾼다. 두 번 눌러 여행이
+ * `submitting` 동안은 제출·취소 버튼을 막고 문구를 `submittingLabel` 로 바꾼다. 두 번 눌러 여행이
  * 둘 생기는 것을 막고, 눌렸다는 것을 보이기 위해서다.
+ *
+ * `error` 는 제출 결과의 오류로, 버튼 바로 위에 보인다.
  *
  * `onSubmit` 에는 검증을 통과한 값만 넘어온다. 예산은 비어 있으면 `null` 이며 이는 "예산 정보
  * 없음"으로 `0` 과 구분된다.
@@ -42,6 +44,7 @@ export default function TripForm({
   submittingLabel,
   showVisibility = false,
   submitting = false,
+  error,
   onSubmit,
   onCancel,
   onCreateGroupClick,
@@ -114,62 +117,67 @@ export default function TripForm({
         {errors.name && <p className="field-error">{errors.name}</p>}
       </div>
 
-      <div className="form-field">
-        <label htmlFor="trip-start" className="field-required">시작일</label>
-        <input
-          id="trip-start"
-          aria-required="true"
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-        />
-        {errors.startDate && <p className="field-error">{errors.startDate}</p>}
+      {/* 짝을 이루는 두 입력은 넓은 화면에서 한 줄에 둔다. 폼 길이가 줄어 공개 범위까지 덜 내려간다. */}
+      <div className="form-row">
+        <div className="form-field">
+          <label htmlFor="trip-start" className="field-required">시작일</label>
+          <input
+            id="trip-start"
+            aria-required="true"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+          {errors.startDate && <p className="field-error">{errors.startDate}</p>}
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="trip-end" className="field-required">종료일</label>
+          <input
+            id="trip-end"
+            aria-required="true"
+            type="date"
+            // 달력에서 시작일 이전 날짜를 처음부터 고를 수 없게 한다.
+            min={startDate || undefined}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+          {endDateError && <p className="field-error">{endDateError}</p>}
+          <p className="field-hint" aria-live="polite">
+            {durationLabel}
+          </p>
+        </div>
       </div>
 
-      <div className="form-field">
-        <label htmlFor="trip-end" className="field-required">종료일</label>
-        <input
-          id="trip-end"
-          aria-required="true"
-          type="date"
-          // 달력에서 시작일 이전 날짜를 처음부터 고를 수 없게 한다.
-          min={startDate || undefined}
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-        />
-        {endDateError && <p className="field-error">{endDateError}</p>}
-        <p className="field-hint" aria-live="polite">
-          {durationLabel}
-        </p>
-      </div>
+      <div className="form-row">
+        <div className="form-field">
+          <label htmlFor="trip-headcount" className="field-required">인원</label>
+          <input
+            id="trip-headcount"
+            aria-required="true"
+            type="number"
+            min={1}
+            value={headcount}
+            onChange={(e) => setHeadcount(e.target.value)}
+          />
+          {errors.headcount && <p className="field-error">{errors.headcount}</p>}
+          {/* 인원과 공유 그룹을 혼동하는 것이 이 화면에서 가장 흔한 오해다. */}
+          <p className="field-hint">함께 간 사람 수예요 (공유 대상과 무관)</p>
+        </div>
 
-      <div className="form-field">
-        <label htmlFor="trip-headcount" className="field-required">인원</label>
-        <input
-          id="trip-headcount"
-          aria-required="true"
-          type="number"
-          min={1}
-          value={headcount}
-          onChange={(e) => setHeadcount(e.target.value)}
-        />
-        {errors.headcount && <p className="field-error">{errors.headcount}</p>}
-        {/* 인원과 공유 그룹을 혼동하는 것이 이 화면에서 가장 흔한 오해다. */}
-        <p className="field-hint">함께 간 사람 수예요 (공유 대상과 무관)</p>
-      </div>
-
-      <div className="form-field">
-        <label htmlFor="trip-budget">예산</label>
-        <input
-          id="trip-budget"
-          type="number"
-          min={0}
-          value={budget}
-          placeholder="원 단위"
-          onChange={(e) => setBudget(e.target.value)}
-        />
-        {errors.budget && <p className="field-error">{errors.budget}</p>}
-        <p className="field-hint">여행 전체 총액이에요. 여행을 볼 수 있는 사람에게 함께 보여요.</p>
+        <div className="form-field">
+          <label htmlFor="trip-budget">예산</label>
+          <input
+            id="trip-budget"
+            type="number"
+            min={0}
+            value={budget}
+            placeholder="원 단위"
+            onChange={(e) => setBudget(e.target.value)}
+          />
+          {errors.budget && <p className="field-error">{errors.budget}</p>}
+          <p className="field-hint">여행 전체 총액이에요. 여행을 볼 수 있는 사람에게 함께 보여요.</p>
+        </div>
       </div>
 
       <div className="form-field">
@@ -198,8 +206,11 @@ export default function TripForm({
 
       {/* 대표 사진은 이 폼에 없다. 하위 기록의 사진 중에서 고르는 값이다. */}
 
+      {error && <p className="field-error">{error}</p>}
+
       <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel}>
+        {/* 만드는 도중에 떠나면 여행이 생겼는지 알 수 없게 되므로 제출 중에는 취소도 막는다. */}
+        <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
           취소
         </button>
         <button type="submit" className="btn-primary" disabled={submitting}>

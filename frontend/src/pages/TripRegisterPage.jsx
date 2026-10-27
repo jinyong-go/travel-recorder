@@ -46,11 +46,11 @@ export default function TripRegisterPage() {
               submittingLabel="만드는 중…"
               showVisibility
               submitting={submitting}
+              error={error}
               onSubmit={handleSubmit}
               onCancel={() => navigate('/trips')}
               onCreateGroupClick={() => navigate('/groups')}
             />
-            {error && <p className="field-error">{error}</p>}
           </div>
         </div>
       </main>

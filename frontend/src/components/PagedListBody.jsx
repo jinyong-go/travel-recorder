@@ -47,7 +47,8 @@ export default function PagedListBody({
         <p className={noteClassName}>{emptyText}</p>
       )}
       {showMore && hasNext && status === REQUEST_STATUS.COMPLETE && (
-        <button type="button" className="link-button" onClick={loadMore}>
+        // 목록 끝에서 다음 동작이 눈에 띄어야 하므로 문장 속 링크가 아니라 버튼 모양으로 둔다.
+        <button type="button" className="btn-secondary" onClick={loadMore}>
           더 보기
         </button>
       )}

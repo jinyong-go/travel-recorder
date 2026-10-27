@@ -51,10 +51,21 @@
   min-width: 0;
   border: 1px solid var(--border);
   background: var(--surface-soft);
-  color: var(--text-muted);
+  /* 직접 입력하지 않는 칸이라 바탕은 흐리게 두되, 고른 장소명은 본문처럼 읽혀야 한다. 비활성
+     입력의 글자색은 브라우저가 덮어쓰므로 text-fill-color 로 고정한다. */
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  font-weight: 600;
   border-radius: var(--radius-sm);
   padding: 11px 14px;
+  font: inherit;
   font-size: var(--fs-md);
+}
+
+.place-search-row input::placeholder {
+  color: var(--text-muted);
+  -webkit-text-fill-color: var(--text-muted);
+  font-weight: 400;
 }
 
 .place-search-row input:disabled {
@@ -145,4 +156,18 @@
 
 .required-mark {
   color: var(--error);
+}
+
+/* 짝을 이루는 두 입력(시작일·종료일, 인원·예산)을 한 줄에 둔다. 좁은 화면에서는 위아래로 쌓는다. */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px 16px;
+}
+
+@media (min-width: 480px) {
+  .form-row {
+    /* 입력 요소의 기본 폭이 칸보다 넓어도 칸을 밀어내지 않게 최소 폭을 0 으로 둔다. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }

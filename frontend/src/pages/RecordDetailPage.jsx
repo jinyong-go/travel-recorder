@@ -177,7 +177,7 @@ export default function RecordDetailPage() {
             <ArrowLeftIcon /> {record.trip.name}
           </Link>
 
-          {/* 기록 내용은 카드 하나에 모은다. 소속 여행과 삭제만 따로 둔다. */}
+          {/* 기록 내용은 한 섹션에 모은다. 공개 범위 안내만 아래에 따로 둔다. */}
           <section className="detail-summary">
             {editing ? (
               <RecordForm
@@ -198,14 +198,13 @@ export default function RecordDetailPage() {
               />
             ) : (
               <>
-                <div className="detail-section-head">
+                <div className="detail-title-row">
                   <div className="detail-summary-head">
                     <span className="detail-category-badge">
                       <CategoryIcon category={record.category} />
                       {categoryLabel(record.category)}
                     </span>
                     <h1 className="detail-name">{record.name}</h1>
-                    <p className="detail-region">{record.address}</p>
                   </div>
                   {isAuthor && (
                     <div className="detail-author-actions">
@@ -224,17 +223,48 @@ export default function RecordDetailPage() {
                   )}
                 </div>
 
+                {/* 위치를 보는 동작이라 주소 옆에 둔다. */}
+                <div className="detail-region-row">
+                  <p className="detail-region">{record.address}</p>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={() => placeMap.openMap(place)}
+                  >
+                    <MapViewIcon />
+                    지도에서 보기
+                  </button>
+                </div>
+
+                {/* 평점은 기록당 하나뿐이라 평균도 분포도 없다. 별과 숫자로 한 번만 보인다. */}
+                <StarRatingDisplay value={record.rating} size={20} />
+
                 {saveNotice && (
                   <p className="field-error" role="status">
                     {saveNotice}
                   </p>
                 )}
 
+                {photos.length === 0 ? (
+                  <p className="detail-empty">등록된 사진이 없어요.</p>
+                ) : (
+                  <ul className="detail-photo-grid">
+                    {photos.map((photo, i) => (
+                      <li key={photo.id} className="detail-photo-item">
+                        <img
+                          src={fileUrl(photo.url)}
+                          alt={`${record.name} 사진 ${i + 1}`}
+                          loading="lazy"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* 메모가 없으면 자리를 비운다. 소제목이 없어 빈 안내만 남으면 고장 난 칸처럼 보인다. */}
+                {record.memo && <p className="detail-memo">{record.memo}</p>}
+
                 <dl className="detail-meta">
-                  <div className="detail-meta-item">
-                    <dt>평점</dt>
-                    <dd className="detail-meta-accent">★ {record.rating.toFixed(1)}</dd>
-                  </div>
                   <div className="detail-meta-item">
                     <dt>거리</dt>
                     <dd>{distanceKm.toFixed(1)}km</dd>
@@ -251,69 +281,30 @@ export default function RecordDetailPage() {
                     </dd>
                   </div>
                 </dl>
-
-                <button
-                  type="button"
-                  className="btn-secondary detail-map-btn"
-                  onClick={() => placeMap.openMap(place)}
-                >
-                  <MapViewIcon />
-                  지도에서 보기
-                </button>
-
-                <div className="detail-subsection">
-                  <h2 className="detail-section-title">사진</h2>
-                  {photos.length === 0 ? (
-                    <p className="detail-empty">등록된 사진이 없어요.</p>
-                  ) : (
-                    <ul className="detail-photo-grid">
-                      {photos.map((photo, i) => (
-                        <li key={photo.id} className="detail-photo-item">
-                          <img
-                            src={fileUrl(photo.url)}
-                            alt={`${record.name} 사진 ${i + 1}`}
-                            loading="lazy"
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {/* 평점과 메모. 기록당 하나뿐이라 평균도 분포도 없다. */}
-                <div className="detail-subsection">
-                  <h2 className="detail-section-title">평점과 메모</h2>
-                  <div className="detail-rating-row">
-                    <StarRatingDisplay value={record.rating} />
-                  </div>
-                  {record.memo ? (
-                    <p className="detail-memo">{record.memo}</p>
-                  ) : (
-                    <p className="detail-empty">메모가 없어요.</p>
-                  )}
-                </div>
               </>
             )}
           </section>
 
-          {/* 소속 여행. 공개 범위는 여기서 바꾸지 않고 여행 화면에서 바꾼다. */}
-          <section className="detail-section">
-            <h2 className="detail-section-title">소속 여행</h2>
-            <p className="detail-trip-link">
-              <Link to={`/trips/${record.trip.id}`}>{record.trip.name}</Link>
-            </p>
-            {trip && (
+          {/*
+            공개 범위는 소속 여행의 값이라 여기서 바꾸지 않는다. 바꾸러 갈 곳이 막히지 않게 여행 화면
+            링크를 함께 둔다. 범위를 아는 작성자에게만 그린다. 소속 여행 이름은 위의 브레드크럼이 맡는다.
+          */}
+          {trip && (
+            <section className="detail-section">
               <p className="detail-visibility-current">
                 이 여행의 공개 범위 <VisibilityBadge visibility={tripVisibility(trip)} />
                 {sharedWithGroups && (
-                  <span>· {sharedGroups.map((g) => g.name).join(', ')}</span>
+                  <span className="detail-shared-groups">
+                    {sharedGroups.map((g) => g.name).join(', ')}
+                  </span>
                 )}
               </p>
-            )}
-            <p className="detail-empty">
-              공개 범위는 여행 단위로 정해져요. 바꾸려면 여행 화면에서 변경해주세요.
-            </p>
-          </section>
+              <p className="detail-visibility-note">
+                공개 범위는 여행 단위로 정해져요. 바꾸려면{' '}
+                <Link to={`/trips/${record.trip.id}`}>여행 화면</Link>에서 변경해주세요.
+              </p>
+            </section>
+          )}
         </div>
       </main>
 

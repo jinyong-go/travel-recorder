@@ -11,7 +11,7 @@ import './LandingPage.css'
 import { AUTH_STATUS } from '../context/authStatus.js'
 
 /** 공개 여행 첫 페이지(최근 등록순). 앞의 몇 건과 전체 건수를 쓴다. */
-const loadPublicTrips = () => fetchTrips('public', 'recent', 0)
+const loadPublicTrips = () => fetchTrips('PUBLIC', 'RECENT', 0)
 
 /** 랜딩에 보여 줄 최근 공개 여행 수. */
 const RECENT_TRIP_COUNT = 4
@@ -48,7 +48,7 @@ export default function LandingPage() {
           </p>
 
           <div className="landing-cta">
-            <Link to="/trips?scope=public" className="btn-primary">
+            <Link to="/trips?scope=PUBLIC" className="btn-primary">
               여행 둘러보기
             </Link>
             {/* 네이버 로그인 복구 시 "네이버로 시작하기" 로 되돌린다.
@@ -71,7 +71,7 @@ export default function LandingPage() {
               <p className="landing-recent-count">
                 지금까지 {publicTrips.totalElements}건의 여행이 공개되어 있어요.
               </p>
-              <Link to="/trips?scope=public" className="landing-recent-more">
+              <Link to="/trips?scope=PUBLIC" className="landing-recent-more">
                 모두 보기
               </Link>
             </div>

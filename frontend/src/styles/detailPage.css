@@ -83,16 +83,58 @@
   gap: 8px;
 }
 
-.detail-shared-groups,
-.detail-trip-link {
+.detail-shared-groups {
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
-.detail-trip-link a {
-  color: var(--accent);
-  font-weight: 600;
-  text-underline-offset: 3px;
+/* 이름과 소유자용 버튼(수정·삭제)을 한 줄에 둔다 — 여행·기록 상세가 같은 자리에 둔다. 목록이 길어도
+   버튼을 찾으러 내려가지 않게 하기 위해서다. 좁은 화면에서는 버튼을 이름 아래로 내려 긴 이름이
+   버튼 폭만큼 좁아지지 않게 한다. */
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .detail-title-row {
+    flex-direction: column;
+  }
+}
+
+/* 상세의 사실 목록(기간·인원·거리·작성자 등). 숫자가 여럿 나란히 놓이므로 항목명을 작게 위에 붙인다. */
+.detail-meta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.detail-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* 값이 긴 항목(여행 기간)은 두 칸을 쓴다. */
+.detail-meta-wide {
+  grid-column: span 2;
+}
+
+.detail-meta dt {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.detail-meta dd {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text);
 }
 
 /* 수정과 삭제를 제목 줄 오른쪽에 묶는다 — 여행·기록 상세가 같은 자리에 둔다. 삭제는 테두리만

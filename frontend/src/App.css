@@ -100,6 +100,15 @@
   cursor: not-allowed;
 }
 
+/* 줄인 페이지 번호 자리. 버튼과 같은 높이로 둔다. */
+.page-gap {
+  min-width: 24px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
 /* 모달 공통 */
 .modal-overlay {
   position: fixed;

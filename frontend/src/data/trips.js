@@ -12,20 +12,20 @@ import { effectiveVisibility } from './visibility.js'
  * 목록에 들어가는 단위는 기록이 아니라 여행이다.
  */
 export const SCOPES = [
-  { key: 'mine', label: '내 여행', requiresLogin: true, empty: '아직 여행이 없어요. 다녀온 여행을 만들어 보세요.' },
+  { key: 'MINE', label: '내 여행', requiresLogin: true, empty: '아직 여행이 없어요. 다녀온 여행을 만들어 보세요.' },
   {
-    key: 'shared',
+    key: 'SHARED',
     label: '공유받은 여행',
     requiresLogin: true,
     empty: '공유받은 여행이 없어요. 그룹에 참여하면 여기에 보여요.',
   },
-  { key: 'public', label: '둘러보기', requiresLogin: false, empty: '공개된 여행이 없어요.' },
+  { key: 'PUBLIC', label: '둘러보기', requiresLogin: false, empty: '공개된 여행이 없어요.' },
 ]
 
 export const TRIP_SORT_OPTIONS = [
-  { key: 'recent', label: '최근 만든 순' },
+  { key: 'RECENT', label: '최근 만든 순' },
   // 거리순은 없다. 여행은 좌표를 갖지 않는다.
-  { key: 'startDate', label: '여행 시작일 순' },
+  { key: 'START_DATE', label: '여행 시작일 순' },
 ]
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000

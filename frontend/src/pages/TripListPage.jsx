@@ -12,6 +12,23 @@ import { PlusIcon } from '../components/icons.jsx'
 import './TripListPage.css'
 import { AUTH_STATUS } from '../context/authStatus.js'
 
+/** 페이지 번호를 모두 그리는 최대 쪽수. 이보다 많으면 가운데를 줄인다. */
+const FULL_PAGINATION_LIMIT = 7
+
+/**
+ * 그릴 페이지 번호. 첫·끝 페이지와 현재 앞뒤 한 쪽만 남기고 사이를 `'…'` 로 줄인다 — 페이지가 많으면
+ * 번호가 여러 줄로 넘쳐 이전·다음 버튼을 찾기 어렵다.
+ *
+ * @returns 페이지 번호와 `'…'` 의 배열. 예: `[1, '…', 4, 5, 6, '…', 20]`
+ */
+const pageNumbers = (current, total) => {
+  if (total <= FULL_PAGINATION_LIMIT) return Array.from({ length: total }, (_, i) => i + 1)
+  const shown = [...new Set([1, current - 1, current, current + 1, total])]
+    .filter((n) => n >= 1 && n <= total)
+    .sort((a, b) => a - b)
+  return shown.flatMap((n, i) => (i > 0 && n - shown[i - 1] > 1 ? ['…', n] : [n]))
+}
+
 /**
  * 여행 목록. 내 여행·공유받은 여행·둘러보기 세 범위를 탭으로 나누고, 범위·정렬·페이지는 주소 쿼리에
  * 둔다. 비로그인은 둘러보기만 본다.
@@ -28,10 +45,10 @@ export default function TripListPage() {
 
   // 비로그인은 "둘러보기" 만 볼 수 있으므로 다른 범위가 들어와도 그쪽으로 떨어뜨린다.
   const visibleScopes = SCOPES.filter((s) => isLoggedIn || !s.requiresLogin)
-  const defaultScope = isLoggedIn ? 'mine' : 'public'
+  const defaultScope = isLoggedIn ? 'MINE' : 'PUBLIC'
   const scope = visibleScopes.some((s) => s.key === scopeParam) ? scopeParam : defaultScope
 
-  const sortKey = TRIP_SORT_OPTIONS.some((o) => o.key === sortParam) ? sortParam : 'recent'
+  const sortKey = TRIP_SORT_OPTIONS.some((o) => o.key === sortParam) ? sortParam : 'RECENT'
   const page = Math.max(1, Number(pageParam) || 1)
 
   // 화면의 페이지는 1부터, API 는 0부터 센다. 페이지 크기는 서버가 정한다.
@@ -47,7 +64,7 @@ export default function TripListPage() {
     const merged = { scope, sort: sortKey, page, ...next }
     const params = {}
     if (merged.scope !== defaultScope) params.scope = merged.scope
-    if (merged.sort !== 'recent') params.sort = merged.sort
+    if (merged.sort !== 'RECENT') params.sort = merged.sort
     if (merged.page !== 1) params.page = String(merged.page)
     setSearchParams(params, { replace: true })
   }
@@ -177,16 +194,24 @@ export default function TripListPage() {
               >
                 이전
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`page-btn${n === page ? ' active' : ''}`}
-                  onClick={() => updateParams({ page: n })}
-                >
-                  {n}
-                </button>
-              ))}
+              {pageNumbers(page, totalPages).map((n, i) =>
+                n === '…' ? (
+                  <span key={`gap-${i}`} className="page-gap" aria-hidden="true">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`page-btn${n === page ? ' active' : ''}`}
+                    // 색만으로 현재 페이지를 알리지 않는다.
+                    aria-current={n === page ? 'page' : undefined}
+                    onClick={() => updateParams({ page: n })}
+                  >
+                    {n}
+                  </button>
+                ),
+              )}
               <button
                 type="button"
                 className="page-btn"

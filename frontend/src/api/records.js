@@ -12,7 +12,7 @@ import { apiFetch, apiPath } from './client.js'
  * 등록순이며, 기준 좌표를 함께 보내 거리를 받는다.
  */
 export const fetchTripRecords = (tripId, { lat, lng }, page) =>
-  apiFetch(apiPath`/api/records?tripId=${tripId}&sort=oldest&lat=${lat}&lng=${lng}&page=${page}`)
+  apiFetch(apiPath`/api/records?tripId=${tripId}&sort=OLDEST&lat=${lat}&lng=${lng}&page=${page}`)
 
 export const fetchRecord = (recordId) => apiFetch(apiPath`/api/records/${recordId}`)
 

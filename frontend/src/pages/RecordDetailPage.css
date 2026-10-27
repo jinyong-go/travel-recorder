@@ -27,35 +27,12 @@
   color: var(--text-muted);
 }
 
-.detail-meta {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-  padding-top: 4px;
-  border-top: 1px solid var(--border);
-}
-
-.detail-meta-item {
+.detail-region-row {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.detail-meta dt {
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
-
-.detail-meta dd {
-  margin: 0;
-  font-size: var(--fs-md);
-  font-weight: 700;
-  color: var(--text);
-}
-
-.detail-meta-accent {
-  color: var(--accent-strong) !important;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 }
 
 .detail-memo {
@@ -67,40 +44,32 @@
   padding: 12px 14px;
 }
 
-.detail-map-btn {
-  align-self: flex-start;
-}
-
-/* 섹션 제목과 작성자용 버튼을 한 줄에 둔다 */
-.detail-section-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-/* 한 카드 안에서 사진·평점 영역을 가른다. 카드를 쪼개지 않고 경계만 남긴다. */
-.detail-subsection {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
 .detail-empty {
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
-/* 사진 갤러리 */
+.detail-visibility-note {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.detail-visibility-note a {
+  color: var(--accent);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+/* 사진 갤러리. 첫 장을 두 칸 크기로 키워 이 장소가 어떤 곳인지 먼저 보이게 하고, 나머지는 세 칸
+   격자로 이어 둔다. 한 장이면 폭 전체를, 두 장이면 첫 장이 두 칸 폭 한 줄을 쓴다 — 빈칸을 남기지
+   않기 위해서다. */
 .detail-photo-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .detail-photo-item {
@@ -111,6 +80,22 @@
   background: var(--surface-soft);
 }
 
+.detail-photo-item:first-child {
+  grid-column: span 2;
+  grid-row: span 2;
+  aspect-ratio: auto;
+}
+
+.detail-photo-item:only-child {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.detail-photo-item:first-child:nth-last-child(2) {
+  grid-row: auto;
+}
+
 .detail-photo-item img {
   width: 100%;
   height: 100%;
@@ -118,9 +103,3 @@
   display: block;
 }
 
-/* 평점·메모 (기록당 하나뿐이라 평균이나 분포가 없다) */
-.detail-rating-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}

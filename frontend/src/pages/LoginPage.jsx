@@ -122,7 +122,7 @@ export default function LoginPage() {
           <p className="login-note">
             로그인 없이도 공개된 여행을 둘러볼 수 있어요.
           </p>
-          <Link to="/trips?scope=public" className="login-browse-link">
+          <Link to="/trips?scope=PUBLIC" className="login-browse-link">
             <ArrowLeftIcon /> 여행 둘러보기
           </Link>
         </div>

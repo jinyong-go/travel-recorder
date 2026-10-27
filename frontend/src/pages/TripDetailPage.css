@@ -201,21 +201,6 @@
   margin-bottom: 8px;
 }
 
-.trip-detail-period {
-  margin: 0;
-  font-size: var(--fs-md);
-  color: var(--text);
-}
-
-.trip-detail-facts {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 14px;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-
 .trip-detail-memo {
   margin: 4px 0 0;
   font-size: var(--fs-md);
@@ -232,15 +217,6 @@
   flex-wrap: wrap;
 }
 
-/* 수정·삭제는 여행 전체에 대한 동작이라 이름 줄에 둔다. 목록이 길어도 찾으러 내려가지 않게
-   하기 위해서다. 버튼 묶음 모양은 styles/detailPage.css 의 .detail-author-actions 다. */
-.trip-detail-title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 /* 소유자가 이 화면에서 가장 자주 하는 동작이라 채움 버튼으로 두되, 16px 섹션 제목 옆에 놓이므로
    공통 버튼(높이 약 38px)보다 낮춰 제목 줄 높이를 늘리지 않는다. */
 .trip-records-add-btn {
@@ -251,6 +227,11 @@
 .trip-records-add-btn svg {
   width: 14px;
   height: 14px;
+}
+
+/* 여행지가 0건일 때 목록 자리의 추가 버튼. 빈 목록 안내 바로 아래 가운데에 둔다. */
+.trip-records-empty-add {
+  align-self: center;
 }
 
 .detail-saved-msg {

@@ -170,7 +170,7 @@ function TripDetailView({ trip, onTripChange }) {
             {trip.coverPhotoUrl && (
               <img src={fileUrl(trip.coverPhotoUrl)} alt="" className="trip-detail-cover" />
             )}
-            <div className="trip-detail-title-row">
+            <div className="detail-title-row">
               <h1 className="detail-name">{trip.name}</h1>
               {isOwner && (
                 <div className="detail-author-actions">
@@ -188,16 +188,34 @@ function TripDetailView({ trip, onTripChange }) {
                 </div>
               )}
             </div>
-            <p className="trip-detail-period">
-              {tripPeriodLabel(trip)} ({tripDurationLabel(trip)})
-            </p>
-            <p className="trip-detail-facts">
-              <span>{trip.headcount}명</span>
-              <span>여행지 {recordCount}곳</span>
+            {/* 숫자가 여럿이라 항목명을 붙인다. 간격만으로 나누면 인원·여행지 수·예산이 섞여 읽힌다. */}
+            <dl className="detail-meta">
+              <div className="detail-meta-item detail-meta-wide">
+                <dt>기간</dt>
+                <dd>
+                  {tripPeriodLabel(trip)} ({tripDurationLabel(trip)})
+                </dd>
+              </div>
+              <div className="detail-meta-item">
+                <dt>인원</dt>
+                <dd>{trip.headcount}명</dd>
+              </div>
+              <div className="detail-meta-item">
+                <dt>여행지</dt>
+                <dd>{recordCount}곳</dd>
+              </div>
               {/* 예산은 여행을 볼 수 있는 사람에게 함께 보인다. */}
-              {trip.budget != null && <span>예산 {budgetLabel(trip.budget)}</span>}
-              <span>by {isOwner ? '나' : trip.owner.name}</span>
-            </p>
+              {trip.budget != null && (
+                <div className="detail-meta-item">
+                  <dt>예산</dt>
+                  <dd>{budgetLabel(trip.budget)}</dd>
+                </div>
+              )}
+              <div className="detail-meta-item">
+                <dt>만든 사람</dt>
+                <dd>{isOwner ? '나' : trip.owner.name}</dd>
+              </div>
+            </dl>
             {trip.memo && <p className="trip-detail-memo">{trip.memo}</p>}
           </section>
 
@@ -207,7 +225,8 @@ function TripDetailView({ trip, onTripChange }) {
           <section className="detail-section">
             <div className="trip-records-head">
               <h2 className="detail-section-title">여행지 ({recordCount}곳)</h2>
-              {isOwner && (
+              {/* 0건이면 목록 자리의 큰 버튼이 대신한다. 같은 버튼이 두 개 보이지 않게 한다. */}
+              {isOwner && recordCount > 0 && (
                 <button
                   type="button"
                   className="btn-primary trip-records-add-btn"
@@ -236,6 +255,18 @@ function TripDetailView({ trip, onTripChange }) {
             >
               {renderRecords()}
             </PagedListBody>
+
+            {/* 첫 여행지를 남기는 것이 이 화면에서 다음에 할 일이라 목록 자리에서 크게 권한다. */}
+            {isOwner && recordCount === 0 && (
+              <button
+                type="button"
+                className="btn-primary trip-records-empty-add"
+                onClick={() => setRegisterOpen(true)}
+              >
+                <PlusIcon />
+                여행지 추가
+              </button>
+            )}
           </section>
         </div>
       </main>
