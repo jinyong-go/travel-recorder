@@ -27,11 +27,18 @@ class GroupController(
     private val groupInviteService: GroupInviteService,
 ) {
 
-    /** 내가 소유하거나 멤버로 속한 그룹 목록을 조회한다. */
+    /**
+     * 내가 소유하거나 멤버로 속한 그룹 목록을 이름순으로 조회한다.
+     *
+     * @param page 0부터 시작하는 페이지 번호
+     */
     @GetMapping
-    fun list(@AuthenticationPrincipal principal: LoginUser?): List<GroupSummaryResponse> {
+    fun list(
+        @RequestParam(defaultValue = "0") page: Int,
+        @AuthenticationPrincipal principal: LoginUser?,
+    ): PageResponse<GroupSummaryResponse> {
         val userId = requireLogin(principal)
-        return groupService.list(userId).map { GroupSummaryResponse.from(it, userId) }
+        return PageResponse.of(groupService.list(userId, page)).map { GroupSummaryResponse.from(it, userId) }
     }
 
     /**
@@ -43,9 +50,10 @@ class GroupController(
     fun create(
         @RequestBody @Valid request: GroupCreateRequest,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): GroupResponse {
+    ): ResponseEntity<GroupResponse> {
         val userId = requireLogin(principal)
-        return GroupResponse.from(groupService.create(userId, request.name, request.memo), userId)
+        val group = groupService.create(userId, request.name, request.memo)
+        return ResponseEntity.status(HttpStatus.CREATED).body(GroupResponse.from(group, userId))
     }
 
     /** 그룹 상세를 멤버 목록과 함께 조회한다. */

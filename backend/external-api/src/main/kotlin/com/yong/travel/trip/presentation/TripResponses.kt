@@ -1,7 +1,7 @@
 package com.yong.travel.trip.presentation
 
 import com.yong.travel.auth.presentation.UserResponse
-import com.yong.travel.group.presentation.GroupBriefResponse
+import com.yong.travel.group.presentation.GroupRefResponse
 import com.yong.travel.trip.domain.Trip
 import com.yong.travel.trip.domain.TripRef
 import com.yong.travel.trip.domain.TripVisibility
@@ -50,7 +50,7 @@ data class TripResponse(
     val owner: UserResponse,
     val isOwner: Boolean,
     val visibility: TripVisibility?,
-    val sharedGroups: List<GroupBriefResponse>?,
+    val sharedGroups: List<GroupRefResponse>?,
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
@@ -73,7 +73,7 @@ data class TripResponse(
             owner = UserResponse.from(trip.owner),
             isOwner = trip.isOwnedBy(requesterId),
             visibility = trip.visibility,
-            sharedGroups = trip.sharedGroups?.map { GroupBriefResponse.from(it) },
+            sharedGroups = trip.sharedGroups?.map { GroupRefResponse.from(it) },
             createdAt = trip.createdAt,
             updatedAt = trip.updatedAt,
         )
@@ -94,7 +94,7 @@ data class TripSummaryResponse(
     val owner: UserResponse,
     val isOwner: Boolean,
     val visibility: TripVisibility?,
-    val sharedGroups: List<GroupBriefResponse>?,
+    val sharedGroups: List<GroupRefResponse>?,
     val createdAt: Instant,
 ) {
     companion object {
@@ -116,7 +116,7 @@ data class TripSummaryResponse(
             owner = UserResponse.from(trip.owner),
             isOwner = trip.isOwnedBy(requesterId),
             visibility = trip.visibility,
-            sharedGroups = trip.sharedGroups?.map { GroupBriefResponse.from(it) },
+            sharedGroups = trip.sharedGroups?.map { GroupRefResponse.from(it) },
             createdAt = trip.createdAt,
         )
     }

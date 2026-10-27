@@ -9,4 +9,10 @@ package com.yong.travel.trip.record.domain
 data class GeoPoint(
     val latitude: Double,
     val longitude: Double,
-)
+) {
+    companion object {
+        /** WGS84 위경도 범위 안인지. 기록의 좌표와 목록의 기준 위치가 같은 규칙을 쓰도록 여기 한 곳에 둔다. */
+        fun isValid(latitude: Double, longitude: Double): Boolean =
+            latitude in -90.0..90.0 && longitude in -180.0..180.0
+    }
+}

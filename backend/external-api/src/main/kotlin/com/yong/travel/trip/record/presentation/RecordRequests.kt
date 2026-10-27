@@ -1,6 +1,7 @@
 package com.yong.travel.trip.record.presentation
 
 import com.yong.travel.trip.record.domain.Category
+import com.yong.travel.trip.record.domain.GeoPoint
 import com.yong.travel.trip.record.domain.TripRecordCreateCommand
 import com.yong.travel.trip.record.domain.TripRecordUpdateCommand
 import jakarta.validation.constraints.AssertTrue
@@ -68,6 +69,10 @@ data class TripRecordCreateRequest(
     val isTagLengthValid: Boolean
         get() = areTagsWithinLength(tags)
 
+    @get:AssertTrue(message = COORDINATE_RANGE_MESSAGE)
+    val isValidCoordinate: Boolean
+        get() = GeoPoint.isValid(latitude, longitude)
+
     /** 검증을 마친 요청을 서비스 입력으로 옮긴다. */
     fun toCommand() = TripRecordCreateCommand(
         tripId, name, category, tags, address, roadAddress, externalLink, latitude, longitude, rating, memo,
@@ -121,6 +126,10 @@ data class TripRecordUpdateRequest(
     val isTagLengthValid: Boolean
         get() = areTagsWithinLength(tags)
 
+    @get:AssertTrue(message = COORDINATE_RANGE_MESSAGE)
+    val isValidCoordinate: Boolean
+        get() = GeoPoint.isValid(latitude, longitude)
+
     /** 검증을 마친 요청을 서비스 입력으로 옮긴다. */
     fun toCommand() = TripRecordUpdateCommand(
         name, category, tags, address, roadAddress, externalLink, latitude, longitude, rating, memo,
@@ -152,3 +161,5 @@ private fun isHalfPoint(value: Double): Boolean = value * 2 == floor(value * 2)
 private fun areTagsWithinLength(tags: List<String>): Boolean = tags.all { it.length <= MAX_TAG_LENGTH }
 
 private const val MAX_TAG_LENGTH = 20
+
+private const val COORDINATE_RANGE_MESSAGE = "좌표는 위도 -90~90, 경도 -180~180 범위여야 합니다."

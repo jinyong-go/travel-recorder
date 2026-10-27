@@ -126,10 +126,9 @@ external-api/
 │  │  ├─ persistence/              # photos(메타데이터) · photo_data(바이너리) 엔티티
 │  │  └─ storage/PhotoDatabaseService.kt  # 사진 바이너리 DB 저장·조회와 URL 생성
 │  └─ common/
-│     ├─ config/WebConfig.kt       # CORS, 쿼리 파라미터 enum 변환기
+│     ├─ config/WebConfig.kt       # CORS
 │     ├─ error/                    # ErrorCode, ApiException, GlobalExceptionHandler
 │     ├─ web/AuthSupport.kt        # 인증 주체 → User 변환 헬퍼 (컨트롤러가 아니라 web 유지)
-│     ├─ web/EnumParams.kt         # scope=mine 같은 소문자 enum 파라미터 변환
 │     ├─ domain/PageResult.kt      # 서비스가 돌려주는 목록 한 페이지 (Spring Data 비의존)
 │     ├─ persistence/PageSupport.kt  # 목록 페이지 크기(서버 고정), Page → PageResult 변환
 │     └─ presentation/PageResponse.kt  # 공통 페이지 응답
@@ -310,7 +309,7 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 | `GET` | `/api/auth/session` | 클라이언트 부팅용 세션 상태 조회. `{ authenticated, csrfToken }`, 비로그인도 `200` |
 | `GET` | `/api/auth/me` | 현재 로그인 사용자 조회 |
 | `POST` | `/api/auth/logout` | 로그아웃 (세션 무효화) |
-| `GET` | `/api/trips` | 여행 목록. `scope`(`mine`\|`shared`\|`public`) **필수**, `keyword`, `sort`(`recent`\|`startDate`), `page` |
+| `GET` | `/api/trips` | 여행 목록. `scope`(`MINE`\|`SHARED`\|`PUBLIC`) **필수**, `keyword`, `sort`(`RECENT`\|`START_DATE`), `page` |
 | `GET` | `/api/trips/{tripId}` | 여행 상세. 볼 권한이 없으면 `404` |
 | `POST` | `/api/trips` | 여행 생성 (공개 범위 생략 시 `PRIVATE`) |
 | `PUT` | `/api/trips/{tripId}` | 여행 기본 정보 수정 — 공개 범위 제외 (소유자) |
@@ -325,9 +324,9 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 | `DELETE` | `/api/records/{recordId}` | 기록 삭제 (여행 소유자) |
 | `GET` | `/api/places/search` | 등록 폼용 장소 검색 (네이버 지역 검색 프록시·집계) |
 | `GET` | `/api/tags` | 태그 검색 (`keyword`). 볼 수 있는 기록에 쓰인 태그로 제한 |
-| `GET` | `/api/groups` | 내가 소유하거나 참여한 그룹 목록 |
+| `GET` | `/api/groups` | 내가 소유하거나 참여한 그룹 목록 (페이지) |
 | `POST` | `/api/groups` | 그룹 생성 (소유자도 멤버로 입력) |
-| `GET` | `/api/groups/{groupId}` | 그룹 상세 (멤버 목록). 멤버가 아니면 `404` |
+| `GET` | `/api/groups/{groupId}` | 그룹 상세 (멤버 목록). 멤버가 아니면 `403` |
 | `PUT` \| `DELETE` | `/api/groups/{groupId}` | 그룹 이름 변경 / 삭제 (소유자) |
 | `DELETE` | `/api/groups/{groupId}/members/me` | 그룹 탈퇴 (소유자는 `403`) |
 | `DELETE` | `/api/groups/{groupId}/members/{userId}` | 멤버 제외 (소유자) |
@@ -335,14 +334,15 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 | `DELETE` | `/api/groups/{groupId}/invites/{inviteId}` | 초대 철회 (소유자) |
 | `GET` | `/api/invites` | 내가 받은 초대 목록 |
 | `GET` | `/api/invites/sent` | 내가 보낸 대기 중인 초대 목록 (그룹 횡단) |
-| `GET` | `/api/invites/history` | 끝난 초대 이력. `role`(`received`\|`sent`) |
+| `GET` | `/api/invites/history` | 끝난 초대 이력. `role`(`RECEIVED`\|`SENT`) |
 | `POST` | `/api/invites/{inviteId}/accept` | 초대 수락 (정원이 차 있으면 `409`) |
 | `POST` | `/api/invites/{inviteId}/reject` | 초대 거절 |
 | `POST` | `/api/records/{recordId}/photos` | 사진 업로드 (`multipart/form-data`, 여행 소유자) |
 | `DELETE` | `/api/records/{recordId}/photos/{photoId}` | 사진 삭제 (여행 소유자) |
-| `GET` | `/api/files/photos/{photoId}` | 사진 바이너리 서빙 (인증 불필요, 공개 범위 미적용) |
+| `GET` | `/api/files/photos/{photoId}` | 사진 바이너리 서빙 (비로그인 허용, 소속 여행의 공개 범위 적용) |
 
-- `scope`와 `sort`는 **소문자로 전송.** 대문자도 허용 (`common/web/EnumParams.kt`).
+- 열거형 값(`scope`·`sort`·`role` 등)은 **대문자로 전송.** 소문자는 `400`.
+- 생성 요청은 `201 Created`로 응답.
 - 목록의 **페이지 크기는 서버가 결정.** 요청의 `size`는 무시하며, 응답의 `size`가 적용된 값.
 
 오류 응답은 `common/error`의 `ErrorResponse`(`code`/`message`/`status`) 형식으로 통일,
@@ -376,8 +376,6 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 
 미구현 / 예정 (상세는 backend-specification.md 6장)
 - **네이버 OAuth 로그인 복구** — `SecurityConfig`의 `oauth2Login` 블록이 주석 처리된 상태. 복구 시 `LocalLoginConfig`·`LocalLoginController` 제거
-- **인가 정책 적용** — `SecurityConfig`가 개발 편의를 위해 `anyRequest().permitAll()`로 열린 상태. 인증은 컨트롤러가 `requireLogin`으로 직접 차단하며, backend-specification.md 2.2의 정책대로 필터체인의 `authenticated()`로 복원 필요
 - `trips.cover_photo_id` 외래키 복원 — Flyway 도입으로 가능해짐. 복원 시 `ON DELETE SET NULL`로 사진 삭제 경로의 커버 해제를 DB에 맡길 수 있음
 - 사진 저장소의 AWS S3 전환 — 현재는 DB 저장, 저장 추상화는 전환 시점에 도입
-- 사진 서빙에 공개 범위 미적용 — URL을 아는 사람은 비공개 여행의 사진도 열람 가능하며, 현재는 추측 불가능한 사진 id(UUID)에만 의존
 - 장소 검색 후보 풀 확대 — 원본 API가 검색어당 최대 5건만 반환하므로, 검색어 변형으로 추가 호출해 집계하는 로직 필요

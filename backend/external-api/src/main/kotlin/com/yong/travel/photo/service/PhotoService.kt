@@ -7,6 +7,7 @@ import com.yong.travel.photo.domain.Photo
 import com.yong.travel.photo.domain.PhotoContent
 import com.yong.travel.photo.persistence.PhotoEntity
 import com.yong.travel.photo.persistence.PhotoRepository
+import com.yong.travel.photo.persistence.PhotoSpecifications
 import com.yong.travel.photo.storage.PhotoDatabaseService
 import com.yong.travel.trip.record.service.TripRecordService
 import org.slf4j.LoggerFactory
@@ -31,14 +32,19 @@ class PhotoService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * 사진 바이너리를 읽는다.
+     * 요청자가 볼 수 있는 사진의 바이너리를 읽는다. 소속 여행을 볼 수 있어야 한다.
      *
-     * 로그인도 공개 범위도 확인하지 않는다. 추측할 수 없는 UUID 에만 의존하며, 이것은 알려진 한계다.
-     * 판정을 붙이려면 이 메서드에 붙인다 — 그래서 저장소를 컨트롤러가 직접 부르지 않고 여기를 거친다.
-     *
-     * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없을 때
+     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개 여행의 사진만 읽힌다
+     * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없거나 볼 권한이 없을 때 (존재 은닉)
      */
-    fun load(photoId: UUID): PhotoContent = photoDatabaseService.load(photoId)
+    fun load(photoId: UUID, userId: Long?): PhotoContent {
+        if (!photoRepository.exists(PhotoSpecifications.viewableBy(photoId, userId))) {
+            // 응답이 "없음"과 같으므로 막혔을 수 있다는 사실은 이 로그에만 남는다.
+            log.debug("사진 조회 차단 photoId={} userId={}", photoId, userId)
+            throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
+        }
+        return photoDatabaseService.load(photoId)
+    }
 
     /**
      * 기록에 사진 여러 장을 올린다.

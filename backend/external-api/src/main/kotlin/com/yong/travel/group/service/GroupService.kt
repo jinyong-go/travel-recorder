@@ -2,8 +2,11 @@ package com.yong.travel.group.service
 
 import com.yong.travel.auth.persistence.UserRepository
 import com.yong.travel.auth.persistence.toUser
+import com.yong.travel.common.domain.PageResult
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
+import com.yong.travel.common.persistence.listPageRequest
+import com.yong.travel.common.persistence.toPageResult
 import com.yong.travel.common.util.trimToNull
 import com.yong.travel.group.domain.Group
 import com.yong.travel.group.domain.GroupMemberEvent
@@ -45,13 +48,14 @@ class GroupService(
     /**
      * 요청자가 소유하거나 속한 그룹 목록을 조회한다.
      *
-     * @return 그룹 목록. 멤버 행에서 출발하므로 소유자도 자기 그룹을 여기서 본다. 없으면 빈 목록
+     * @param page 0부터 시작하는 페이지 번호
+     * @return 이름순 그룹 한 페이지. 멤버 행에서 출발하므로 소유자도 자기 그룹을 여기서 본다
      */
-    fun list(userId: Long): List<Group> {
-        val groups = groupMemberRepository.findGroupsByUserId(userId)
-        // 명단은 그룹마다 묻지 않고 한 번에 읽어 그룹 id 로 묶는다.
-        val members = membersOf(groups.mapNotNull { it.id })
-        return groups.map { it.toDomain(members[requireNotNull(it.id)].orEmpty()) }
+    fun list(userId: Long, page: Int): PageResult<Group> {
+        val groups = groupMemberRepository.findGroupsByUserId(userId, listPageRequest(page))
+        // 명단은 그룹마다 묻지 않고 페이지 전체를 한 번에 읽어 그룹 id 로 묶는다.
+        val members = membersOf(groups.content.mapNotNull { it.id })
+        return groups.toPageResult().map { it.toDomain(members[requireNotNull(it.id)].orEmpty()) }
     }
 
     /**
@@ -78,11 +82,21 @@ class GroupService(
      * @param memo 메모. 공백만 있으면 `null` 로 저장된다
      * @throws ApiException `UNAUTHENTICATED` — 세션은 살아 있는데 사용자 행이 없을 때.
      *         계정이 지워진 뒤의 요청이라 다시 로그인하는 것 말고 할 수 있는 일이 없다
+     * @throws ApiException `GROUP_LIMIT_EXCEEDED` — 이미 소유 그룹 상한만큼 갖고 있을 때
      */
     @Transactional
     fun create(userId: Long, name: String, memo: String?): Group {
         val owner = userRepository.findById(userId)
             .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
+        // 잠그지 않는다. 동시 요청으로 한 건 넘칠 수 있지만, 이 상한은 목록 크기를 묶으려는 것이라
+        // 정원(MEMBER_LIMIT)처럼 정확히 지켜야 할 약속이 아니다.
+        if (groupRepository.countByOwnerId(userId) >= GroupEntity.OWNED_GROUP_LIMIT) {
+            log.debug("그룹 생성 거부: 소유 상한 초과 userId={}", userId)
+            throw ApiException(
+                ErrorCode.GROUP_LIMIT_EXCEEDED,
+                "만들 수 있는 그룹은 ${GroupEntity.OWNED_GROUP_LIMIT}개까지입니다.",
+            )
+        }
         val group = groupRepository.save(
             GroupEntity(owner = owner, name = name.trim(), memo = memo.trimToNull()),
         )

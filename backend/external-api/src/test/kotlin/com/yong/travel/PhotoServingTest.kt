@@ -2,6 +2,9 @@ package com.yong.travel
 
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.auth.persistence.UserRepository
+import com.yong.travel.auth.security.LoginUserDetails
+import com.yong.travel.group.service.GroupInviteService
+import com.yong.travel.group.service.GroupService
 import com.yong.travel.photo.service.PhotoService
 import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.trip.record.presentation.TripRecordCreateRequest
@@ -16,9 +19,12 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
@@ -31,6 +37,8 @@ import kotlin.test.assertTrue
  *
  * 응답의 `url` 을 그대로 요청해 올린 바이트가 그대로 나오는지, 사진을 지우면 바이너리도 함께
  * 사라지는지(ON DELETE CASCADE), 기록·여행을 지우면 사진 행은 남고 바이너리만 사라지는지 확인한다.
+ * 서빙도 소속 여행의 공개 범위를 따르므로, 못 보는 사진이 없는 사진과 같은 404 인지와 공유 해제가
+ * 즉시 사진까지 막는지도 고정한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,6 +51,8 @@ class PhotoServingTest {
     @Autowired private lateinit var tripService: TripService
     @Autowired private lateinit var recordService: TripRecordService
     @Autowired private lateinit var photoService: PhotoService
+    @Autowired private lateinit var groupService: GroupService
+    @Autowired private lateinit var groupInviteService: GroupInviteService
 
     @Test
     fun `올린 사진이 응답 url 에서 같은 바이트와 형식으로 나온다`() {
@@ -53,10 +63,11 @@ class PhotoServingTest {
         val photo = photoService.upload(recordId, owner, listOf(jpeg(bytes))).single()
 
         assertTrue(photo.url.endsWith("/${photo.id}"))
-        mockMvc.perform(get(photo.url))
+        mockMvc.perform(get(photo.url).with(loggedInAs(owner)))
             .andExpect(status().isOk)
             .andExpect(content().contentType(MediaType.IMAGE_JPEG))
             .andExpect(content().bytes(bytes))
+            .andExpect(header().string("Cache-Control", "max-age=3600, private"))
     }
 
     @Test
@@ -70,7 +81,7 @@ class PhotoServingTest {
 
         photoService.delete(recordId, photo.id, owner)
 
-        mockMvc.perform(get(photo.url))
+        mockMvc.perform(get(photo.url).with(loggedInAs(owner)))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("PHOTO_NOT_FOUND"))
     }
@@ -88,10 +99,10 @@ class PhotoServingTest {
         recordService.delete(deleted, owner)
         flush()
 
-        mockMvc.perform(get(gone.url))
+        mockMvc.perform(get(gone.url).with(loggedInAs(owner)))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("PHOTO_NOT_FOUND"))
-        mockMvc.perform(get(alive.url)).andExpect(status().isOk)
+        mockMvc.perform(get(alive.url).with(loggedInAs(owner))).andExpect(status().isOk)
         assertEquals(1L, count("SELECT count(*) FROM photos WHERE id = '${gone.id}'"))
     }
 
@@ -109,8 +120,66 @@ class PhotoServingTest {
         tripService.delete(tripId, owner)
         flush()
 
-        photos.forEach { mockMvc.perform(get(it.url)).andExpect(status().isNotFound) }
-        mockMvc.perform(get(other.url)).andExpect(status().isOk)
+        photos.forEach { mockMvc.perform(get(it.url).with(loggedInAs(owner))).andExpect(status().isNotFound) }
+        mockMvc.perform(get(other.url).with(loggedInAs(owner))).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `볼 수 없는 여행의 사진은 비로그인·타인 모두 없는 사진과 같은 404 다`() {
+        val owner = newUser()
+        val stranger = newUser()
+        val photo = upload(owner, newTrip(owner))
+        flush()
+
+        listOf(get(photo.url), get(photo.url).with(loggedInAs(stranger))).forEach { request ->
+            mockMvc.perform(request)
+                .andExpect(status().isNotFound)
+                .andExpect(jsonPath("$.code").value("PHOTO_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("존재하지 않는 사진입니다."))
+        }
+    }
+
+    @Test
+    fun `전체 공개 여행의 사진은 비로그인도 받는다`() {
+        val owner = newUser()
+        val photo = upload(owner, newTrip(owner, TripVisibility.PUBLIC))
+        flush()
+
+        mockMvc.perform(get(photo.url)).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `공유 그룹 멤버는 사진을 받고, 제외되는 즉시 404 가 된다`() {
+        val owner = newUser()
+        val member = newUser()
+        val groupId = newGroupWith(owner, member)
+        val tripId = newTrip(owner)
+        tripService.changeVisibility(tripId, owner, TripVisibility.GROUP, listOf(groupId))
+        val photo = upload(owner, tripId)
+        flush()
+
+        mockMvc.perform(get(photo.url).with(loggedInAs(member))).andExpect(status().isOk)
+
+        groupService.removeMember(groupId, member, owner)
+        flush()
+
+        mockMvc.perform(get(photo.url).with(loggedInAs(member))).andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `공개 범위를 좁히면 커버 사진도 즉시 404 가 된다`() {
+        val owner = newUser()
+        val tripId = newTrip(owner, TripVisibility.PUBLIC)
+        val photo = upload(owner, tripId)
+        tripService.changeCover(tripId, owner, photo.id)
+        flush()
+        mockMvc.perform(get(photo.url)).andExpect(status().isOk)
+
+        tripService.changeVisibility(tripId, owner, TripVisibility.PRIVATE, emptyList())
+        flush()
+
+        mockMvc.perform(get(photo.url)).andExpect(status().isNotFound)
+        mockMvc.perform(get(photo.url).with(loggedInAs(owner))).andExpect(status().isOk)
     }
 
     @Test
@@ -118,6 +187,22 @@ class PhotoServingTest {
         mockMvc.perform(get("/api/files/photos/123"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+    }
+
+    /** 컨트롤러가 principal 을 `LoginUser` 로 받으므로 임시 로그인과 같은 타입을 세션 대신 직접 넣는다. */
+    private fun loggedInAs(userId: Long) = authentication(
+        UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", userId), null, emptyList()),
+    )
+
+    private fun upload(ownerId: Long, tripId: Long) =
+        photoService.upload(newRecord(tripId, ownerId), ownerId, listOf(jpeg(JPEG_HEAD + byteArrayOf(7)))).single()
+
+    private fun newGroupWith(ownerId: Long, memberId: Long): Long {
+        val groupId = requireNotNull(groupService.create(ownerId, "가족", null).id)
+        val memberEmail = requireNotNull(userRepository.findById(memberId).orElseThrow().email)
+        val invite = groupInviteService.invite(groupId, ownerId, memberEmail)
+        groupInviteService.accept(invite.invite.id, memberId)
+        return groupId
     }
 
     private fun count(sql: String): Long =
@@ -142,7 +227,7 @@ class PhotoServingTest {
         ).id,
     )
 
-    private fun newTrip(ownerId: Long): Long =
+    private fun newTrip(ownerId: Long, visibility: TripVisibility = TripVisibility.PRIVATE): Long =
         tripService.create(
             ownerId,
             TripCreateRequest(
@@ -150,7 +235,7 @@ class PhotoServingTest {
                 startDate = LocalDate.of(2026, 9, 5),
                 endDate = LocalDate.of(2026, 9, 8),
                 headcount = 2,
-                visibility = TripVisibility.PRIVATE,
+                visibility = visibility,
             ).toCommand(),
         ).id
 

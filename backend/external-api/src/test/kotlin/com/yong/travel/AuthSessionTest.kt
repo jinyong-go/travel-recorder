@@ -1,12 +1,15 @@
 package com.yong.travel
 
 import com.jayway.jsonpath.JsonPath
+import com.yong.travel.auth.security.LoginUserDetails
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -40,7 +43,7 @@ class AuthSessionTest {
     fun `세션 조회로 받은 토큰을 헤더에 실으면 쓰기 요청이 통과한다`() {
         val (cookie, token) = issueToken()
 
-        mockMvc.perform(post("/api/auth/logout").cookie(cookie).header("X-XSRF-TOKEN", token))
+        mockMvc.perform(post("/api/auth/logout").with(loggedIn()).cookie(cookie).header("X-XSRF-TOKEN", token))
             .andExpect(status().isNoContent)
     }
 
@@ -48,7 +51,7 @@ class AuthSessionTest {
     fun `토큰 헤더가 없으면 쓰기 요청은 403 이다`() {
         val (cookie, _) = issueToken()
 
-        mockMvc.perform(post("/api/auth/logout").cookie(cookie))
+        mockMvc.perform(post("/api/auth/logout").with(loggedIn()).cookie(cookie))
             .andExpect(status().isForbidden)
     }
 
@@ -56,7 +59,7 @@ class AuthSessionTest {
     fun `로그아웃은 토큰 쿠키를 비운다`() {
         val (cookie, token) = issueToken()
 
-        val result = mockMvc.perform(post("/api/auth/logout").cookie(cookie).header("X-XSRF-TOKEN", token))
+        val result = mockMvc.perform(post("/api/auth/logout").with(loggedIn()).cookie(cookie).header("X-XSRF-TOKEN", token))
             .andReturn()
 
         val cleared = result.response.getCookie("XSRF-TOKEN")
@@ -70,4 +73,9 @@ class AuthSessionTest {
         val token = JsonPath.read<String>(response.contentAsString, "$.csrfToken")
         return response.getCookie("XSRF-TOKEN")!! to token
     }
+
+    /** 로그아웃은 로그인이 필요한 경로라 로그인 상태로 보낸다. 서비스까지 가지 않아 사용자 행은 필요 없다. */
+    private fun loggedIn() = authentication(
+        UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", 1L), null, emptyList()),
+    )
 }

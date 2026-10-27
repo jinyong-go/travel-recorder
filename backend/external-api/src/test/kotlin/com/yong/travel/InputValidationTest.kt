@@ -67,6 +67,26 @@ class InputValidationTest {
     }
 
     @Test
+    fun `좌표는 위도 -90~90, 경도 -180~180 까지다`() {
+        listOf(90.0 to 180.0, -90.0 to -180.0, 0.0 to 0.0).forEach { (lat, lng) ->
+            assertTrue(violationsOf(request(latitude = lat, longitude = lng)).isEmpty())
+        }
+        listOf(90.000001 to 0.0, -90.1 to 0.0, 0.0 to 180.000001, 0.0 to -180.1).forEach { (lat, lng) ->
+            assertEquals(setOf("validCoordinate"), violationsOf(request(latitude = lat, longitude = lng)))
+        }
+    }
+
+    @Test
+    fun `목록의 기준 좌표도 같은 범위를 벗어나면 400 VALIDATION_ERROR 다`() {
+        mockMvc.perform(get("/api/records?scope=PUBLIC&lat=90&lng=180")).andExpect(status().isOk)
+        listOf("lat=90.1&lng=0", "lat=0&lng=-180.1").forEach { coordinate ->
+            mockMvc.perform(get("/api/records?scope=PUBLIC&$coordinate"))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+        }
+    }
+
+    @Test
     fun `장소 정보는 각각 255자까지다`() {
         assertTrue(violationsOf(request(name = "가".repeat(255))).isEmpty())
         assertEquals(setOf("name"), violationsOf(request(name = "가".repeat(256))))
@@ -133,6 +153,8 @@ class InputValidationTest {
         address: String = "제주특별자치도 서귀포시",
         externalLink: String? = null,
         tags: List<String> = emptyList(),
+        latitude: Double = 33.45,
+        longitude: Double = 126.94,
     ) = TripRecordCreateRequest(
         tripId = 1,
         name = name,
@@ -140,8 +162,8 @@ class InputValidationTest {
         tags = tags,
         address = address,
         externalLink = externalLink,
-        latitude = 33.45,
-        longitude = 126.94,
+        latitude = latitude,
+        longitude = longitude,
         rating = 4.5,
     )
 

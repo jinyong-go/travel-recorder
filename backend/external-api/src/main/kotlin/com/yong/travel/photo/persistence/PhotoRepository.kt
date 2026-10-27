@@ -1,12 +1,13 @@
 package com.yong.travel.photo.persistence
 
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.util.UUID
 
-/** 사진 메타데이터 조회. 목록용 일괄 조회와 커버 지정 확인을 함께 둔다. */
-interface PhotoRepository : JpaRepository<PhotoEntity, UUID> {
+/** 사진 메타데이터 조회. 목록용 일괄 조회와 커버 지정 확인, 서빙 전 열람 판정([PhotoSpecifications])을 함께 둔다. */
+interface PhotoRepository : JpaRepository<PhotoEntity, UUID>, JpaSpecificationExecutor<PhotoEntity> {
     /** 한 기록의 사진을 등록순으로 읽는다. */
     fun findByRecordIdOrderByCreatedAtAsc(recordId: Long): List<PhotoEntity>
 

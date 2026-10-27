@@ -35,9 +35,7 @@ class PhotoDatabaseService(
     }
 
     /**
-     * 서빙할 바이너리를 읽는다.
-     *
-     * ⚠️ 공개 범위를 판정하지 않는다. 추측 불가능한 UUID 에만 의존하는 알려진 한계다.
+     * 서빙할 바이너리를 읽는다. 공개 범위 판정은 호출자(`PhotoService.load`)가 먼저 한다.
      *
      * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없을 때
      */

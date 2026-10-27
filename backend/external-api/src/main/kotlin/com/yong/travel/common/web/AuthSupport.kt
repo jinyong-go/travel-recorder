@@ -5,9 +5,8 @@ import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode
 
 /**
- * SecurityConfig 가 아직 모든 요청을 permitAll 로 통과시키므로, 인증이 필요한 엔드포인트는
- * 컨트롤러에서 principal 유무로 직접 막는다. SecurityConfig 를 authenticated 로 되돌린 뒤에도
- * 사용자 PK 획득 경로로 그대로 쓰인다.
+ * 로그인한 사용자의 PK 를 꺼낸다. 로그인 여부는 SecurityConfig 가 먼저 막지만, 그 목록이 잘못
+ * 열렸을 때도 인증이 필요한 엔드포인트가 비로그인으로 돌지 않도록 여기서 한 번 더 막는다.
  *
  * 로그인 수단(인메모리·네이버 OAuth)과 무관하게 동작하도록 principal 은 LoginUser 로 받는다.
  *

@@ -8,6 +8,7 @@ import com.yong.travel.trip.domain.TripScope
 import com.yong.travel.trip.domain.TripSort
 import com.yong.travel.trip.service.TripService
 import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -72,9 +73,10 @@ class TripController(
     fun create(
         @RequestBody @Valid request: TripCreateRequest,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): TripResponse {
+    ): ResponseEntity<TripResponse> {
         val userId = requireLogin(principal)
-        return TripResponse.from(tripService.create(userId, request.toCommand()), userId)
+        val trip = tripService.create(userId, request.toCommand())
+        return ResponseEntity.status(HttpStatus.CREATED).body(TripResponse.from(trip, userId))
     }
 
     /** 여행 기본 정보를 수정한다. 공개 범위는 이 경로로 바꾸지 않는다. 소유자만 할 수 있다. */

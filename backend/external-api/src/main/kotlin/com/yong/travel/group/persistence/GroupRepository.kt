@@ -6,8 +6,11 @@ import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
-/** 그룹 조회. 정원 판정용 잠금 조회를 함께 둔다. */
+/** 그룹 조회. 정원 판정용 잠금 조회와 소유 상한 판정용 건수 조회를 함께 둔다. */
 interface GroupRepository : JpaRepository<GroupEntity, Long> {
+
+    /** 사용자가 소유한 그룹 수. 소유 그룹 상한 판정에 쓴다. */
+    fun countByOwnerId(ownerId: Long): Long
 
     /**
      * 정원 검사와 멤버 입력을 한 트랜잭션에 묶기 위해 그룹 행을 잠그고 읽는다.

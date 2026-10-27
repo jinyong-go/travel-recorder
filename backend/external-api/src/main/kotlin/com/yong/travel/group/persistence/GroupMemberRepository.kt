@@ -1,5 +1,7 @@
 package com.yong.travel.group.persistence
 
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -57,7 +59,18 @@ interface GroupMemberRepository : JpaRepository<GroupMemberEntity, Long> {
         @Param("userId") userId: Long,
     ): List<GroupEntity>
 
-    /** 사용자가 속한 그룹을 이름순으로 읽는다. */
-    @Query("select m.group from GroupMemberEntity m where m.user.id = :userId order by m.group.name asc")
-    fun findGroupsByUserId(@Param("userId") userId: Long): List<GroupEntity>
+    /**
+     * 사용자가 속한 그룹을 이름순으로 한 페이지 읽는다. 소유한 그룹도 멤버 행이 있어 함께 나온다.
+     *
+     * @return 이름순 그룹 한 페이지
+     */
+    @Query(
+        value = "select m.group from GroupMemberEntity m where m.user.id = :userId order by m.group.name asc",
+        countQuery = "select count(m) from GroupMemberEntity m where m.user.id = :userId",
+    )
+    fun findGroupsByUserId(@Param("userId") userId: Long, pageable: Pageable): Page<GroupEntity>
+
+    /** 사용자가 소유하지 않고 멤버로만 속한 그룹 수. 참여 그룹 상한 판정에 쓴다. */
+    @Query("select count(m) from GroupMemberEntity m where m.user.id = :userId and m.group.owner.id <> :userId")
+    fun countJoinedByUserId(@Param("userId") userId: Long): Long
 }

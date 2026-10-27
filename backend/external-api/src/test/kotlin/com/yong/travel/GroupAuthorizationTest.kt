@@ -27,8 +27,8 @@ import org.springframework.transaction.annotation.Transactional
 /**
  * 그룹 인가 검증. 그룹은 존재를 숨기지 않아 비멤버·비소유자는 403, 없는 그룹만 404 다.
  *
- * SecurityConfig 가 permitAll 이라 컨트롤러의 requireLogin 이 유일한 인증 차단이다. 빠뜨리면 그대로
- * 열리므로 그룹 엔드포인트마다 비로그인 401 을 확인한다.
+ * 인증은 SecurityConfig 와 컨트롤러의 requireLogin 이 이중으로 막는다. 어느 한쪽이 잘못 열려도
+ * 드러나도록 그룹 엔드포인트마다 비로그인 401 을 확인한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

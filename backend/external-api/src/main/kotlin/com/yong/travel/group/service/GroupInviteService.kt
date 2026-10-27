@@ -184,6 +184,7 @@ class GroupInviteService(
      * @param userId 요청자의 사용자 id. 초대받은 본인이어야 한다
      * @throws ApiException `INVITE_NOT_FOUND` — 초대가 없거나 받은 본인이 아닐 때
      * @throws ApiException `GROUP_MEMBER_LIMIT_EXCEEDED` — 그룹 정원이 가득 찼을 때
+     * @throws ApiException `GROUP_LIMIT_EXCEEDED` — 요청자가 이미 참여 그룹 상한만큼 속해 있을 때
      */
     @Transactional
     fun accept(inviteId: Long, userId: Long) {
@@ -196,6 +197,15 @@ class GroupInviteService(
             // 초대 행은 남는다. 자리가 나면 같은 초대로 다시 수락한다.
             log.debug("초대 수락 거부: 정원 초과 inviteId={} groupId={} userId={}", inviteId, groupId, userId)
             throw ApiException(ErrorCode.GROUP_MEMBER_LIMIT_EXCEEDED)
+        }
+        // 정원과 같이 초대 행은 남고 이력도 생기지 않는다. 다른 그룹에서 나가면 같은 초대로 다시 수락한다.
+        // 잠그지 않는 이유는 GroupService.create 의 소유 상한과 같다.
+        if (groupMemberRepository.countJoinedByUserId(userId) >= GroupEntity.JOINED_GROUP_LIMIT) {
+            log.debug("초대 수락 거부: 참여 상한 초과 inviteId={} userId={}", inviteId, userId)
+            throw ApiException(
+                ErrorCode.GROUP_LIMIT_EXCEEDED,
+                "참여할 수 있는 그룹은 ${GroupEntity.JOINED_GROUP_LIMIT}개까지입니다.",
+            )
         }
 
         groupMemberRepository.save(GroupMemberEntity(group = group, user = invite.invitee))

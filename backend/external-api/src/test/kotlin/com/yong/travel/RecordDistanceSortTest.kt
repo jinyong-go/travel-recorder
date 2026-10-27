@@ -63,10 +63,10 @@ class RecordDistanceSortTest {
 
     @Test
     fun `거리순에 기준 좌표가 없으면 400 VALIDATION_ERROR 다`() {
-        mockMvc.perform(get("/api/records?scope=public&sort=distance"))
+        mockMvc.perform(get("/api/records?scope=PUBLIC&sort=DISTANCE"))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
-        mockMvc.perform(get("/api/records?scope=public&sort=distance&lat=$BASE_LAT"))
+        mockMvc.perform(get("/api/records?scope=PUBLIC&sort=DISTANCE&lat=$BASE_LAT"))
             .andExpect(status().isBadRequest)
     }
 

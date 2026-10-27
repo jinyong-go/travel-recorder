@@ -12,8 +12,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 /**
  * 쿼리 파라미터의 열거형 표기 검증.
  *
- * 명세는 소문자·camelCase 로 규정하는데 Spring 기본 변환기는 대문자만
- * 받는다. 프론트엔드가 명세대로 보내면 전부 400 이 되던 자리라 회귀 테스트로 고정한다.
+ * 열거형 값은 쿼리·본문·응답 모두 대문자 한 가지 표기다. 소문자를 다시 받아 주는 변환기가 끼어들면
+ * 같은 값이 두 이름을 갖게 되므로, 소문자가 거부되는 것까지 고정한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -22,34 +22,33 @@ class EnumParamBindingTest {
     @Autowired private lateinit var mockMvc: MockMvc
 
     @Test
-    fun `명세 표기 그대로 보낸 scope 와 sort 가 바인딩된다`() {
+    fun `대문자 표기의 scope 와 sort 가 바인딩된다`() {
         listOf(
-            "/api/trips?scope=public",
-            "/api/trips?scope=public&sort=recent",
-            "/api/trips?scope=public&sort=startDate",
-            "/api/records?scope=public",
-            "/api/records?scope=public&sort=recent",
-            "/api/records?scope=public&sort=oldest",
-            "/api/records?scope=public&category=FOOD",
+            "/api/trips?scope=PUBLIC",
+            "/api/trips?scope=PUBLIC&sort=RECENT",
+            "/api/trips?scope=PUBLIC&sort=START_DATE",
+            "/api/records?scope=PUBLIC",
+            "/api/records?scope=PUBLIC&sort=RECENT",
+            "/api/records?scope=PUBLIC&sort=OLDEST",
+            "/api/records?scope=PUBLIC&category=FOOD",
         ).forEach { url ->
             mockMvc.perform(get(url)).andExpect(status().isOk)
         }
     }
 
     @Test
-    fun `대문자 표기도 그대로 받는다`() {
-        mockMvc.perform(get("/api/trips?scope=PUBLIC&sort=START_DATE")).andExpect(status().isOk)
-    }
-
-    @Test
-    fun `알 수 없는 값은 400 VALIDATION_ERROR 다`() {
-        mockMvc.perform(get("/api/trips?scope=everything"))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
-
-        mockMvc.perform(get("/api/trips?scope=public&sort=distance"))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+    fun `소문자와 알 수 없는 값은 400 VALIDATION_ERROR 다`() {
+        listOf(
+            "/api/trips?scope=public",
+            "/api/trips?scope=PUBLIC&sort=startDate",
+            "/api/records?scope=PUBLIC&sort=oldest",
+            "/api/trips?scope=EVERYTHING",
+            "/api/trips?scope=PUBLIC&sort=DISTANCE",
+        ).forEach { url ->
+            mockMvc.perform(get(url))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+        }
     }
 
     @Test
@@ -60,8 +59,8 @@ class EnumParamBindingTest {
     }
 
     @Test
-    fun `비로그인은 mine 과 shared 를 조회할 수 없다`() {
-        listOf("mine", "shared").forEach { scope ->
+    fun `비로그인은 MINE 과 SHARED 를 조회할 수 없다`() {
+        listOf("MINE", "SHARED").forEach { scope ->
             mockMvc.perform(get("/api/trips?scope=$scope"))
                 .andExpect(status().isUnauthorized)
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))

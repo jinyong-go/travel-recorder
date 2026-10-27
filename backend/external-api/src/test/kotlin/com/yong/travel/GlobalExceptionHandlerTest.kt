@@ -1,5 +1,6 @@
 package com.yong.travel
 
+import com.yong.travel.auth.security.LoginUserDetails
 import com.yong.travel.common.error.GlobalExceptionHandler
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
@@ -7,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -20,6 +23,8 @@ import org.springframework.web.server.ResponseStatusException
 /**
  * 어떤 경로로 실패하든 `ErrorResponse`(code/message/status) 한 가지 형태로 응답하는지 확인한다.
  * 컨트롤러를 거치지 않는 실패(주소 없음, 메서드 불일치 등)까지 포함한다.
+ *
+ * 비로그인에게 닫힌 경로는 필터가 먼저 401 로 막으므로, 그 뒤의 실패를 보려는 요청은 로그인 상태로 보낸다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -29,7 +34,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     fun `매핑되지 않은 주소는 404 NOT_FOUND 를 반환한다`() {
-        mockMvc.perform(get("/api/there-is-no-such-path"))
+        mockMvc.perform(get("/api/there-is-no-such-path").with(loggedIn()))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("NOT_FOUND"))
             .andExpect(jsonPath("$.status").value(404))
@@ -46,7 +51,7 @@ class GlobalExceptionHandlerTest {
     @Test
     fun `읽을 수 없는 본문은 400 VALIDATION_ERROR 를 반환한다`() {
         mockMvc.perform(
-            put("/api/records/1").with(csrf())
+            put("/api/records/1").with(csrf()).with(loggedIn())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{ this is not json"),
         )
@@ -57,7 +62,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     fun `지원하지 않는 메서드는 405 를 반환한다`() {
-        mockMvc.perform(post("/api/records/1").with(csrf()))
+        mockMvc.perform(post("/api/records/1").with(csrf()).with(loggedIn()))
             .andExpect(status().isMethodNotAllowed)
             .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"))
     }
@@ -65,7 +70,7 @@ class GlobalExceptionHandlerTest {
     @Test
     fun `지원하지 않는 Content-Type 은 415 를 반환한다`() {
         mockMvc.perform(
-            put("/api/records/1").with(csrf())
+            put("/api/records/1").with(csrf()).with(loggedIn())
                 .contentType(MediaType.TEXT_PLAIN)
                 .content("rating=5"),
         )
@@ -107,4 +112,9 @@ class GlobalExceptionHandlerTest {
         assertEquals(406, response.statusCode.value())
         assertEquals("BAD_REQUEST", response.body?.code)
     }
+
+    /** 로그인이 필요한 경로라 필터에서 401 로 먼저 막히지 않도록 로그인 상태로 보낸다. 서비스까지 가지 않아 사용자 행은 필요 없다. */
+    private fun loggedIn() = authentication(
+        UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", 1L), null, emptyList()),
+    )
 }

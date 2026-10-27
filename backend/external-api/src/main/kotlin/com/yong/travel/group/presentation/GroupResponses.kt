@@ -84,13 +84,13 @@ data class GroupResponse(
  * 멤버 수·정원·명단은 담지 않는다. 초대받은 사람은 수락 전이라 볼 수 없고, 여행 응답에는
  * 그룹의 인원 사정까지 실을 이유가 없다.
  */
-data class GroupBriefResponse(
+data class GroupRefResponse(
     val id: Long,
     val name: String,
 ) {
     companion object {
         /** 그룹 참조 → 응답. */
-        fun from(group: GroupRef) = GroupBriefResponse(group.id, group.name)
+        fun from(group: GroupRef) = GroupRefResponse(group.id, group.name)
     }
 }
 
@@ -118,7 +118,7 @@ data class PendingInviteResponse(
 /** 받은 초대. 그룹명·초대자·보낸 시각까지가 수락 전에 보여 줄 수 있는 전부다. */
 data class ReceivedInviteResponse(
     val id: Long,
-    val group: GroupBriefResponse,
+    val group: GroupRefResponse,
     val invitedBy: UserResponse,
     val createdAt: Instant,
 ) {
@@ -126,7 +126,7 @@ data class ReceivedInviteResponse(
         /** 대기 초대 → 받은 사람이 보는 응답. */
         fun from(invite: GroupInvite) = ReceivedInviteResponse(
             id = invite.id,
-            group = GroupBriefResponse.from(invite.group),
+            group = GroupRefResponse.from(invite.group),
             invitedBy = UserResponse.from(invite.invitedBy),
             createdAt = invite.createdAt,
         )
@@ -141,7 +141,7 @@ data class ReceivedInviteResponse(
  */
 data class SentInviteResponse(
     val id: Long,
-    val group: GroupBriefResponse,
+    val group: GroupRefResponse,
     val invitee: UserResponse,
     val createdAt: Instant,
 ) {
@@ -149,7 +149,7 @@ data class SentInviteResponse(
         /** 대기 초대 → 보낸 사람이 보는 응답. */
         fun from(invite: GroupInvite) = SentInviteResponse(
             id = invite.id,
-            group = GroupBriefResponse.from(invite.group),
+            group = GroupRefResponse.from(invite.group),
             invitee = UserResponse.from(invite.invitee),
             createdAt = invite.createdAt,
         )

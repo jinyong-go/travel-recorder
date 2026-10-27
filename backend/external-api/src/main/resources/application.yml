@@ -64,8 +64,8 @@ app:
 
 management:
   server:
-    # 관리 엔드포인트는 서비스 포트와 나눈다. SecurityConfig 가 permitAll 이라 같은 포트에 두면 외부에
-    # 그대로 열린다. 포트를 나누면 배포에서 이 포트를 공개하지 않는 것만으로 막힌다.
+    # 관리 엔드포인트는 서비스 포트와 나눈다. 수집기가 로그인하지 않아 SecurityConfig 가 노출한 두 엔드포인트를
+    # 열어 두므로, 같은 포트에 두면 외부에 그대로 열린다. 포트를 나누면 배포에서 이 포트를 공개하지 않는 것만으로 막힌다.
     port: ${MANAGEMENT_PORT:8081}
   endpoints:
     web:

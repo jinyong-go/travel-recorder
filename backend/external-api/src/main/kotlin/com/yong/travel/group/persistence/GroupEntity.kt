@@ -46,5 +46,14 @@ class GroupEntity(
     companion object {
         /** 소유자를 포함한 그룹당 최대 인원. 소규모 동행·가족 단위 공유를 전제로 한 값이다. */
         const val MEMBER_LIMIT = 5
+
+        /**
+         * 한 사용자가 소유할 수 있는 그룹 수, 소유하지 않고 멤버로 참여할 수 있는 그룹 수의 상한.
+         *
+         * 둘을 나눈 것은 하나로 합치면 그룹을 많이 만든 사람이 초대를 수락하지 못하는 식으로 두 행위가 서로를
+         * 막기 때문이다. 합쳐서 내 그룹 목록의 크기를 묶는다.
+         */
+        const val OWNED_GROUP_LIMIT = 50
+        const val JOINED_GROUP_LIMIT = 50
     }
 }

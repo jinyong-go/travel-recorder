@@ -12,6 +12,7 @@ import com.yong.travel.trip.record.domain.RecordScope
 import com.yong.travel.trip.record.domain.RecordSort
 import com.yong.travel.trip.record.service.TripRecordService
 import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -63,6 +64,9 @@ class TripRecordController(
         }
         // 한쪽만 온 좌표는 쓸 수 없어 없는 것으로 본다.
         val origin = if (lat != null && lng != null) GeoPoint(lat, lng) else null
+        if (origin != null && !GeoPoint.isValid(origin.latitude, origin.longitude)) {
+            throw ApiException(ErrorCode.VALIDATION_ERROR, "lat·lng 가 좌표 범위를 벗어났습니다.")
+        }
         // 거리순은 DB 가 기준 위치로 정렬하므로 좌표 없이는 정렬할 기준이 없다.
         if (sort == RecordSort.DISTANCE && origin == null) {
             throw ApiException(ErrorCode.VALIDATION_ERROR, "거리순 정렬에는 lat 과 lng 가 필요합니다.")
@@ -94,9 +98,10 @@ class TripRecordController(
     fun create(
         @RequestBody @Valid request: TripRecordCreateRequest,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): TripRecordResponse {
+    ): ResponseEntity<TripRecordResponse> {
         val userId = requireLogin(principal)
-        return TripRecordResponse.from(recordService.create(userId, request.toCommand()), userId)
+        val record = recordService.create(userId, request.toCommand())
+        return ResponseEntity.status(HttpStatus.CREATED).body(TripRecordResponse.from(record, userId))
     }
 
     /** 기록을 수정한다. 작성자만 할 수 있다. */

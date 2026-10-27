@@ -44,6 +44,9 @@ enum class ErrorCode(val status: HttpStatus, val defaultMessage: String) {
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 형식입니다."),
     CONFLICT(HttpStatus.CONFLICT, "이미 처리된 요청이거나 다른 요청과 충돌했습니다."),
     GROUP_MEMBER_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 가득 찼습니다."),
+
+    /** 사용자당 그룹 수 상한(소유·참여) 초과. 어느 상한인지는 화면(생성·수락)이 이미 알아 코드를 나누지 않는다. */
+    GROUP_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "그룹 수 상한에 도달했습니다."),
     ALREADY_MEMBER(HttpStatus.CONFLICT, "이미 그룹 멤버입니다."),
     PLACE_SEARCH_UNAVAILABLE(HttpStatus.BAD_GATEWAY, "장소 검색을 사용할 수 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),

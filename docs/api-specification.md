@@ -16,7 +16,7 @@
 | POST | `/api/auth/login` | 임시 로그인 (§2.1.1) | - |
 | GET | `/oauth2/authorization/naver` | 네이버 로그인 시작 (§2.1.2) | - |
 | GET | `/api/auth/session` | 세션 상태 조회 (§2.1.3) | - |
-| GET | `/api/auth/me` | 내 정보 조회 (§2.1.4) | 선택 |
+| GET | `/api/auth/me` | 내 정보 조회 (§2.1.4) | 필요 |
 | GET | `/api/auth/me/login-history` | 로그인 이력 조회 (§2.1.5) | 필요 |
 | POST | `/api/auth/logout` | 로그아웃 (§2.1.6) | 필요 |
 
@@ -88,21 +88,21 @@
 #### 2.2.1 여행 목록 조회
 
 ```
-GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0
+GET /api/trips?scope=MINE&keyword=제주&sort=RECENT&page=0
 ```
 
 | 파라미터 | 값 | 설명 |
 |---|---|---|
-| `scope` | `mine` \| `shared` \| `public` | **필수.** 조회 범위 (§3.1) |
+| `scope` | `MINE` \| `SHARED` \| `PUBLIC` | **필수.** 조회 범위 (§3.1) |
 | `keyword` | 문자열 | 여행 이름 부분 일치 |
-| `sort` | `recent`(기본) \| `startDate` | `recent` 는 생성 시각 역순, `startDate` 는 시작일 역순 |
+| `sort` | `RECENT`(기본) \| `START_DATE` | `RECENT` 는 생성 시각 역순, `START_DATE` 는 시작일 역순 |
 | `page` | 정수 | 0-base, 기본 `0`. 페이지 크기는 10 고정 (§3.2) |
 
-- `sort=distance` 는 여행 목록에 없다. 여행은 좌표를 갖지 않기 때문이다.
+- `sort=DISTANCE` 는 여행 목록에 없다. 여행은 좌표를 갖지 않기 때문이다.
 - `visibility`·`sharedGroups` 는 **요청자가 소유자인 여행에만** 응답에 포함한다.
   `budget` 은 열람 권한이 있으면 누구에게나 내려준다 (공통 명세 §3.5 노출 표).
 
-**응답 예시 (`scope=mine`)**
+**응답 예시 (`scope=MINE`)**
 ```json
 {
   "content": [
@@ -256,18 +256,18 @@ GET /api/trips?scope=mine&keyword=제주&sort=recent&page=0
 #### 2.3.1 기록 목록 조회
 
 ```
-GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
-                &sort=recent&lat=37.55&lng=126.97&page=0
+GET /api/records?scope=MINE&tripId=12&category=FOOD&tag=제주&keyword=카페
+                &sort=RECENT&lat=37.55&lng=126.97&page=0
 ```
 
 | 파라미터 | 값 | 설명 |
 |---|---|---|
-| `scope` | `mine` \| `shared` \| `public` | 조회 범위 (§3.1). **`tripId` 가 없으면 필수**, 있으면 생략할 수 있다 |
+| `scope` | `MINE` \| `SHARED` \| `PUBLIC` | 조회 범위 (§3.1). **`tripId` 가 없으면 필수**, 있으면 생략할 수 있다 |
 | `tripId` | 정수 | 특정 여행의 하위 기록으로 한정. 여행 상세 화면이 이 경우다 |
 | `category` | `SIGHT`\|`SHOPPING`\|`FOOD` | 생략 시 전체 |
 | `tag`, `keyword` | 문자열 | 태그 일치, 장소명·주소 부분 일치 |
-| `sort` | `recent`(기본) \| `oldest` \| `rating` \| `distance` | `oldest` 는 등록순(여행 상세), `rating` 은 기록의 평점 기준, `distance` 는 기준 위치에서 가까운 순(같으면 최신순)이며 **페이지를 넘어 이어진다** |
-| `lat`, `lng` | 실수 | `sort=distance` 일 때 필수이며 없으면 `400 VALIDATION_ERROR`. 요청자의 기준 위치 |
+| `sort` | `RECENT`(기본) \| `OLDEST` \| `RATING` \| `DISTANCE` | `OLDEST` 는 등록순(여행 상세), `RATING` 은 기록의 평점 기준, `DISTANCE` 는 기준 위치에서 가까운 순(같으면 최신순)이며 **페이지를 넘어 이어진다** |
+| `lat`, `lng` | 실수 | `sort=DISTANCE` 일 때 필수이며 없으면 `400 VALIDATION_ERROR`. 요청자의 기준 위치. 범위는 기록 좌표와 같고(§2.3.3) 벗어나면 `400 VALIDATION_ERROR` |
 | `page` | 정수 | 0-base, 기본 `0`. 페이지 크기는 10 고정 (§3.2) |
 
 - **범위 판정은 모두 소속 여행을 조인해서 한다** (백엔드 명세 §2.2, §2.1). 기록 테이블만 봐서는 판정할 수 없다.
@@ -276,13 +276,13 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 - **`tripId` 만 주고 `scope` 를 생략하면** 그 여행의 하위 기록 전부다. 열람자는 남의 여행이
   공유인지 공개인지 모르므로(`visibility` 는 소유자에게만 내려간다) 화면이 `scope` 를 고를 수 없다.
   볼 수 있는 여행이면 하위 기록도 전부 볼 수 있으므로(공통 명세 §3.5) 권한이 넓어지지 않는다.
-- `scope` 와 `tripId` 를 함께 주었는데 어긋나면(예: `scope=mine` 인데 타인의 공개 여행) 오류가 아니라
+- `scope` 와 `tripId` 를 함께 주었는데 어긋나면(예: `scope=MINE` 인데 타인의 공개 여행) 오류가 아니라
   **빈 목록**을 반환한다.
 - `scope` 와 `tripId` 가 둘 다 없으면 `400 VALIDATION_ERROR` 다.
 - **응답에 `visibility` 와 공유 그룹 목록은 포함하지 않는다.** 그 값은 여행에 있으므로
   `GET /api/trips/{id}` 로 조회한다.
 
-**응답 예시 (`scope=public`)**
+**응답 예시 (`scope=PUBLIC`)**
 ```json
 {
   "content": [
@@ -372,6 +372,8 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 - **`visibility` 와 `groupIds` 는 이 요청에 없다.** 공개 범위는 여행이 이미 갖고 있다 (§2.2).
 - 장소명·주소·도로명주소·원본 링크의 길이, 원본 링크의 스킴, 태그 개수·길이 상한은 공통 명세
   §3.3 이 유일한 출처다. 위반하면 `400 VALIDATION_ERROR` 다.
+- `latitude` 는 -90 이상 90 이하, `longitude` 는 -180 이상 180 이하여야 한다. 벗어나면
+  `400 VALIDATION_ERROR` 다. 수정 요청(§2.3.4)도 같다.
   태그 개수는 요청에 담긴 그대로 센다(중복·공백 항목 포함). 저장할 때는 공백을 지우고 같은 이름을 합친다.
 
 #### 2.3.4 기록 수정
@@ -490,11 +492,13 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 - 사진 바이너리를 내려준다.
 - 사진 id 는 UUID 문자열이다. 응답의 `url` 이 곧 `/api/files/photos/{photoId}` 이며, 클라이언트는
   URL 을 직접 조립하지 않고 응답 값을 그대로 쓴다.
-- 저장된 `contentType` 을 `Content-Type` 으로 내려준다. 사진은 한 번 올라가면 내용이
-  바뀌지 않으므로(수정 API 가 없다) 오래 캐시해도 된다. 없는 사진이면 `404 PHOTO_NOT_FOUND` 다.
+- **소속 여행의 공개 범위를 적용한다.** 여행을 볼 수 없는 요청자(비로그인 포함)에게는 없는 사진과
+  같은 `404 PHOTO_NOT_FOUND` 다 (백엔드 명세 §4.1). 비로그인도 부를 수 있으며, 그때는 전체 공개
+  여행의 사진만 나온다. 쿠키 세션이라 `<img>` 요청에도 로그인이 실린다.
+- 저장된 `contentType` 을 `Content-Type` 으로 내려준다. 없는 사진이면 `404 PHOTO_NOT_FOUND` 다.
   삭제된 여행·기록의 사진도 바이너리가 지워져 같은 `404` 다 (백엔드 명세 §3.2).
-- ⚠️ **공개 범위를 적용하지 않는다.** URL 을 아는 사람은 비공개 여행의 사진도 볼 수 있으며, 현재는
-  추측 불가능한 UUID 식별자에만 의존한다 (백엔드 명세 §4.1, 백엔드 명세 §6.2).
+- 캐시는 `Cache-Control: private, max-age=3600` 이다. 열람 가능 여부가 바뀔 수 있어 오래 캐시하면
+  공유를 해제한 뒤에도 같은 브라우저에 남으므로 1시간으로 묶는다 (공통 명세 §7.2).
 
 ### 2.6 그룹
 
@@ -510,9 +514,11 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 #### 2.6.1 그룹 목록 조회
 
-`GET /api/groups`
+`GET /api/groups?page=`
 
-- 내가 소유하거나 속한 그룹 목록이며, 각 항목에 `role: OWNER|MEMBER` 를 포함한다.
+- 내가 소유하거나 속한 그룹 목록이며, 이름순이다. 각 항목에 요청자가 소유자인지(`isOwner`)를 포함한다.
+- **페이지네이션한다** (§3.2). 사용자당 그룹 수 상한(소유 50·참여 50, 공통 명세 §3.6)이 있어 전체
+  건수는 묶여 있지만, 공유 대상 선택처럼 한 화면에 펼치는 곳에서 한 번에 내려받기엔 크다.
 - 각 항목은 `memo` 도 포함한다. 그룹 카드에서 이름만으로 구분되지 않는 문제를 풀려고 넣은 값이라,
   상세로 들어가야만 보이면 목적을 채우지 못한다.
 
@@ -523,6 +529,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 - 소유자를 멤버로 함께 입력한다.
 - 요청 본문은 `{ "name": "가족", "memo": "설 연휴 사진 공유용" }` 이다. `memo` 는 생략 가능하며
   생략하면 `null` 로 저장된다.
+- 이미 소유 그룹이 50개면 `409 GROUP_LIMIT_EXCEEDED` 다 (공통 명세 §3.6).
 
 #### 2.6.3 그룹 상세 조회
 
@@ -601,7 +608,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 `GET /api/groups/{id}/invites`
 
 - **페이지네이션한다** (§3.2). **건수를 묶어 주는 상한이 없기 때문이다** — 대기 초대는 정원 판정이
-  수락 시점이라 정원을 넘겨 보낼 수 있다. 정원(5명)이 곧 상한인 그룹 목록(§2.6.1)과는 다르다.
+  수락 시점이라 정원을 넘겨 보낼 수 있다.
 - 각 항목은 `invitee`·`createdAt` 만 있는 형태다. 어느 그룹인지는 화면에 이미 드러나 있다.
 
 #### 2.7.2 초대 보내기
@@ -679,18 +686,18 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 #### 2.7.6 초대 이력
 
-`GET /api/invites/history?role=received|sent`
+`GET /api/invites/history?role=RECEIVED|SENT`
 
 - 끝난 초대의 이력이다.
-- **`role` 로 관점을 고른다.** `received` 면 `invitee_id = 나`, `sent` 면 `invited_by = 나` 이며,
-  생략하면 `received` 다. 정렬은 `resolvedAt DESC` 이고
+- **`role` 로 관점을 고른다.** `RECEIVED` 면 `invitee_id = 나`, `SENT` 면 `invited_by = 나` 이며,
+  생략하면 `RECEIVED` 다. 정렬은 `resolvedAt DESC` 이고
   `invite_history(invitee_id, resolved_at DESC)`·`(invited_by, resolved_at DESC)` 인덱스를 둔다.
 - **페이지네이션한다** (§3.2). 대기 초대와 달리 상한이 없을 뿐 아니라 지우지 않으므로
   계정이 오래될수록 길어진다.
 - **이력도 당사자만 본다.** `role` 과 무관하게 남의 이력은 조회 경로가 없으며, 조건이 곧
   본인 필터다 (공통 명세 §2.6).
 
-**응답 예시 (`role=sent`)**
+**응답 예시 (`role=SENT`)**
 ```json
 {
   "content": [
@@ -707,8 +714,8 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 }
 ```
 
-- **상대는 `role` 에 따라 달라지므로 `counterpart` 한 필드로 내려준다.** `role=sent` 면 초대받았던
-  사람, `role=received` 면 보냈던 사람이다. 관점마다 필드 이름을 달리하면 화면이 같은 목록을
+- **상대는 `role` 에 따라 달라지므로 `counterpart` 한 필드로 내려준다.** `role=SENT` 면 초대받았던
+  사람, `role=RECEIVED` 면 보냈던 사람이다. 관점마다 필드 이름을 달리하면 화면이 같은 목록을
   두 가지 모양으로 다뤄야 한다.
 - `group.name` 은 **끝난 시점의 스냅샷**이다. 그룹 이름이 그 뒤에 바뀌어도 이력은 따라 바뀌지
   않으며, 그룹이 삭제되었으면 `deleted: true` 로 내려 화면이 링크를 걸지 않게 한다
@@ -725,6 +732,8 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
   존재가 드러나지 않아야 하며, 없는 `inviteId` 와 응답이 같아야 한다 (백엔드 명세 §2.2.2).
 - 정원(5명)이 차 있으면 `409 GROUP_MEMBER_LIMIT_EXCEEDED` 이고 **초대 행은 남는다.**
   자리가 난 뒤 같은 초대로 다시 수락할 수 있어야 하기 때문이다 (백엔드 명세 §3.1).
+- 요청자가 이미 참여 상한(소유하지 않은 그룹 50개, 공통 명세 §3.6)에 닿아 있으면
+  `409 GROUP_LIMIT_EXCEEDED` 이며, 정원 초과와 같이 초대 행은 남는다.
 - 수락 처리는 정원 검사와 `GroupMember` 입력을 **한 트랜잭션에서, 그룹 행을 잠근 뒤** 수행한다.
   정원을 강제하는 DB 제약이 없어 애플리케이션 검사가 유일한 관문이므로, 검사와 입력 사이에 다른
   수락이 끼어들면 6명짜리 그룹이 만들어진다.
@@ -758,6 +767,13 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 기본 경로는 `/api` 이고 응답은 JSON 이다.
 
+- **열거형 값은 쿼리 파라미터·요청 본문·응답 모두 대문자 표기다** (`scope=PUBLIC`, `sort=START_DATE`,
+  `"visibility": "GROUP"`). 위치마다 표기가 다르면 같은 값을 두 이름으로 다뤄야 한다. 소문자는
+  `400 VALIDATION_ERROR` 다.
+- **생성 요청(`POST`)은 `201 Created` 와 만들어진 리소스를 본문으로 돌려준다.** 대상은 여행·기록·그룹
+  생성과 사진 업로드(만들어진 사진 목록)다. 초대 보내기만 기존 초대를 돌려줄 때 `200` 이다 (§2.7.2).
+  `Location` 헤더는 싣지 않는다 — 클라이언트는 본문을 쓰고, 사진 업로드는 여러 건을 한 번에 만든다.
+
 ### 3.1 조회 범위 (`scope`)
 
 **여행·기록 목록**은 **어떤 범위를 보는지**를 항상 명시한다. 세 범위는 성격이 달라 한 목록에 섞지
@@ -766,18 +782,19 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 | `scope` | 여행 목록에서 | 기록 목록에서 | 비로그인 |
 |---|---|---|:---:|
-| `mine` | `owner` 가 요청자인 여행 전부 (공개 범위 무관) | 그 여행들의 하위 기록 | `401` |
-| `shared` | 요청자가 멤버인 그룹으로 공유된 **타인의** 여행 | 그 여행들의 하위 기록 | `401` |
-| `public` | `visibility=PUBLIC` 인 여행 전부 (본인 것 포함) | 그 여행들의 하위 기록 | ✅ |
+| `MINE` | `owner` 가 요청자인 여행 전부 (공개 범위 무관) | 그 여행들의 하위 기록 | `401` |
+| `SHARED` | 요청자가 멤버인 그룹으로 공유된 **타인의** 여행 | 그 여행들의 하위 기록 | `401` |
+| `PUBLIC` | `visibility=PUBLIC` 인 여행 전부 (본인 것 포함) | 그 여행들의 하위 기록 | ✅ |
 
 - `scope` 는 **권한을 넓히는 수단이 아니다.** 어떤 값이든 서버는 백엔드 명세 §2.2 판정을 통과한 것만
   반환한다. 이미 볼 수 있는 것 중에서 고르는 수단일 뿐이다.
-- `scope=shared` 는 본인 것을 제외한다. 본인 것은 `mine` 에서 이미 전부 보이므로 중복을 피한다.
+- `scope=SHARED` 는 본인 것을 제외한다. 본인 것은 `MINE` 에서 이미 전부 보이므로 중복을 피한다.
 - **기록 목록의 범위 판정도 소속 여행으로 한다** (백엔드 명세 §2.2). 기록 자체에는 판정 근거가 없다.
 
 ### 3.2 페이지네이션
 
 모든 목록 응답은 `content`, `page`(0-base), `size`, `totalElements`, `totalPages` 를 포함한다.
+태그 자동완성(상위 20건, §2.8.1)과 사진 업로드 결과는 목록 조회가 아니라 배열 그대로다.
 **요청이 받는 것은 `page` 하나뿐이고 페이지 크기는 서버가 정한다.** 크기를 클라이언트가 고르게
 두면 한 번에 전부 받아 가는 요청을 막을 상한이 매번 필요해지고, 그 상한 자체가 또 하나의 값
 규칙이 된다.
@@ -787,6 +804,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 여행 목록 (`/api/trips`) | 10 |
 | 기록 목록 (`/api/records`) | 10 |
 | 장소 검색 (`/api/places/search`) | 5 |
+| 그룹 목록 (`/api/groups`) | 10 |
 | 초대 목록 (`/api/invites`, `/api/groups/{id}/invites`) | 10 |
 | 로그인 이력 (`/api/auth/me/login-history`) | 10 |
 
@@ -810,7 +828,7 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 
 | 상황 | HTTP 상태 | code |
 |---|---|---|
-| 입력값 검증 실패 (필수값 누락, 카테고리 값 오류, 평점 범위·단위 오류, 여행 기간 역전, 인원·예산 범위 오류) | 400 | `VALIDATION_ERROR` |
+| 입력값 검증 실패 (필수값 누락, 카테고리 값 오류, 평점 범위·단위 오류, 좌표 범위 오류, 여행 기간 역전, 인원·예산 범위 오류) | 400 | `VALIDATION_ERROR` |
 | 경로·쿼리 파라미터 타입 불일치, 필수 파라미터(`scope` 등) 누락, 본문 파싱 실패 | 400 | `VALIDATION_ERROR` |
 | 허용되지 않는 파일 형식/용량 초과 (멀티파트 단계 초과 포함) | 400 | `INVALID_FILE` |
 | 비로그인 사용자의 보호된 API 접근 | 401 | `UNAUTHENTICATED` |
@@ -822,11 +840,12 @@ GET /api/records?scope=mine&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 존재하지 않는 사진 | 404 | `PHOTO_NOT_FOUND` |
 | 존재하지 않거나 **당사자가 아닌** 초대 | 404 | `INVITE_NOT_FOUND` |
 | 초대 대상 이메일의 가입자가 없음 | 404 | `USER_NOT_FOUND` |
-| 매핑되지 않은 주소, 존재하지 않는 정적 파일 | 404 | `NOT_FOUND` |
+| 매핑되지 않은 주소, 존재하지 않는 정적 파일 (비로그인 요청이면 그 전에 `401`, 백엔드 명세 §2.2.0) | 404 | `NOT_FOUND` |
 | 지원하지 않는 HTTP 메서드 | 405 | `METHOD_NOT_ALLOWED` |
 | 지원하지 않는 `Content-Type` | 415 | `UNSUPPORTED_MEDIA_TYPE` |
 | 그 밖에 상태만 알려진 요청 실패 (협상 불가 `Accept` 등). 상태는 원래 값을 유지 | 해당 4xx | `BAD_REQUEST` |
 | 그룹 정원(5명) 초과 | 409 | `GROUP_MEMBER_LIMIT_EXCEEDED` |
+| 사용자당 그룹 수 상한(소유 50·참여 50) 초과 | 409 | `GROUP_LIMIT_EXCEEDED` |
 | 이미 멤버인 사용자를 초대 | 409 | `ALREADY_MEMBER` |
 | 그 밖의 DB 제약 위반 (동시 요청 경합 등) | 409 | `CONFLICT` |
 | 지역 검색 API 호출 실패/한도 초과 | 502 | `PLACE_SEARCH_UNAVAILABLE` |

@@ -3,6 +3,7 @@ package com.yong.travel.photo.presentation
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.web.requireLogin
 import com.yong.travel.photo.service.PhotoService
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -32,8 +33,10 @@ class PhotoController(
         @PathVariable recordId: Long,
         @RequestParam("files") files: List<MultipartFile>,
         @AuthenticationPrincipal principal: LoginUser?,
-    ): List<PhotoResponse> =
-        photoService.upload(recordId, requireLogin(principal), files).map { PhotoResponse.from(it) }
+    ): ResponseEntity<List<PhotoResponse>> {
+        val photos = photoService.upload(recordId, requireLogin(principal), files)
+        return ResponseEntity.status(HttpStatus.CREATED).body(photos.map { PhotoResponse.from(it) })
+    }
 
     /** 사진을 삭제한다. 바이너리까지 함께 지우는 물리 삭제다. */
     @DeleteMapping("/{photoId}")
