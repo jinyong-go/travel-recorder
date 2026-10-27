@@ -9,36 +9,11 @@
 
 /* .modal-panel 은 확인 모달 기준으로 가운데 정렬이다. 라벨이 달린 입력 폼은 왼쪽으로 되돌린다. */
 .group-form {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   margin-top: 12px;
   text-align: left;
-}
-
-.group-form label {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.group-form label + input,
-.group-form label + textarea {
-  margin-bottom: 6px;
-}
-
-.group-form input,
-.group-form textarea {
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fs-md);
-}
-
-.group-form textarea {
-  resize: vertical;
 }
 
 .group-list {

@@ -6,7 +6,9 @@ import { LOGIN_HISTORY_NOTICE } from '../data/loginHistory.js'
 import AppHeader from '../components/AppHeader.jsx'
 import LoginHistoryList from '../components/LoginHistoryList.jsx'
 import PagedListBody from '../components/PagedListBody.jsx'
+import UserAvatar from '../components/UserAvatar.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
+import '../styles/page.css'
 import './MyInfoPage.css'
 
 /**
@@ -25,22 +27,16 @@ export default function MyInfoPage() {
     <>
       <AppHeader />
 
-      <main className="my-info-page">
-        <div className="my-info-inner">
+      <main className="page">
+        <div className="page-inner">
           <Link to="/trips" className="back-link">
             <ArrowLeftIcon /> 여행 목록으로
           </Link>
 
-          <h1 className="my-info-title">내 정보</h1>
+          <h1 className="page-title">내 정보</h1>
 
           <section className="my-info-card">
-            {user.profileImageUrl ? (
-              <img className="my-info-avatar" src={user.profileImageUrl} alt="" />
-            ) : (
-              <span className="my-info-avatar my-info-avatar-fallback" aria-hidden="true">
-                {user.name.slice(0, 1)}
-              </span>
-            )}
+            <UserAvatar user={user} size={72} />
 
             <dl className="my-info-fields">
               <dt>이름</dt>

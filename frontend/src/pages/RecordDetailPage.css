@@ -69,22 +69,6 @@
 
 .detail-map-btn {
   align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  padding: 9px 18px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-weight: 600;
-  font-size: var(--fs-sm);
-}
-
-.detail-map-btn:hover {
-  background: var(--surface-soft);
-  border-color: var(--text-muted);
 }
 
 /* 섹션 제목과 작성자용 버튼을 한 줄에 둔다 */

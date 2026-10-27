@@ -75,24 +75,6 @@
   margin-left: 0;
 }
 
-/* 거절은 되돌릴 수 없다 — 확인 모달의 실행 버튼과 같은 색을 쓴다.
-   되돌릴 수 있는 "초대 취소"·"멤버 제외"(.member-remove)와 구분되는 자리다. */
-.invite-reject {
-  border: 1px solid var(--danger);
-  background: var(--danger);
-  color: var(--danger-contrast);
-  border-radius: var(--radius-sm);
-  padding: 4px 12px;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.invite-reject:hover {
-  background: var(--danger-hover);
-  border-color: var(--danger-hover);
-}
-
 .received-invite-actions {
   display: flex;
   gap: 8px;

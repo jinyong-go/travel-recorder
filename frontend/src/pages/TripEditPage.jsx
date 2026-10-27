@@ -10,7 +10,7 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import DetailStatus from '../components/DetailStatus.jsx'
 import { TRIP_STATUS_MESSAGE } from '../data/trips.js'
 import { ArrowLeftIcon } from '../components/icons.jsx'
-import '../styles/formPage.css'
+import '../styles/page.css'
 
 /**
  * 여행 정보 수정 화면. 만들기와 같은 폼을 쓰되 공개 범위는 싣지 않는다 —
@@ -65,14 +65,12 @@ function TripEditView({ trip }) {
   return (
     <>
       <AppHeader />
-      <main className="register-page">
-        <div className="register-page-inner">
-          <div className="register-page-header">
-            <Link to={detailPath} className="back-link">
-              <ArrowLeftIcon /> 여행 상세로
-            </Link>
-            <h1>여행 정보 수정</h1>
-          </div>
+      <main className="page">
+        <div className="page-inner page-inner-narrow">
+          <Link to={detailPath} className="back-link">
+            <ArrowLeftIcon /> 여행 상세로
+          </Link>
+          <h1 className="page-title">여행 정보 수정</h1>
 
           <div className="trip-form-card">
             {/* 공개 범위는 이 폼에 없다. 여행 상세의 전용 섹션에서만 바꾼다. */}

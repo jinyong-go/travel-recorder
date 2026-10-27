@@ -8,6 +8,7 @@ import AppHeader from '../components/AppHeader.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PagedListBody from '../components/PagedListBody.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
+import '../styles/page.css'
 import '../styles/groupPages.css'
 import './InvitesPage.css'
 import { INVITE_GONE_MESSAGE } from '../data/invites.js'
@@ -121,13 +122,13 @@ export default function InvitesPage({ tab }) {
           다시 보내지 않게 한다. 보낸 탭에서는 헤더가 직접 읽는다. */}
       <AppHeader receivedCount={tab === 'received' ? (pending.total ?? 0) : undefined} />
 
-      <main className="groups-page">
-        <div className="groups-inner">
+      <main className="page">
+        <div className="page-inner">
           <Link to="/groups" className="back-link">
             <ArrowLeftIcon /> 그룹 목록으로
           </Link>
 
-          <h1 className="groups-title">초대함</h1>
+          <h1 className="page-title">초대함</h1>
 
           <div className="invite-tabs" role="tablist" aria-label="초대 목록">
             {[
@@ -174,7 +175,7 @@ export default function InvitesPage({ tab }) {
                       <div className="received-invite-actions">
                         <button
                           type="button"
-                          className="btn-primary"
+                          className="btn-primary btn-sm"
                           disabled={busy}
                           onClick={() => handleAccept(invite)}
                         >
@@ -182,7 +183,7 @@ export default function InvitesPage({ tab }) {
                         </button>
                         <button
                           type="button"
-                          className="invite-reject"
+                          className="btn-danger btn-sm"
                           disabled={busy}
                           onClick={() => setRejecting(invite)}
                         >
@@ -193,7 +194,7 @@ export default function InvitesPage({ tab }) {
                     ) : (
                       <button
                         type="button"
-                        className="member-remove"
+                        className="btn-secondary btn-sm"
                         disabled={busy}
                         onClick={() => handleRevoke(invite)}
                       >

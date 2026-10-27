@@ -180,7 +180,9 @@
 }
 
 .btn-secondary,
-.btn-primary {
+.btn-primary,
+.btn-danger,
+.btn-danger-outline {
   /* Link 로도 쓰이므로 앵커 기본 밑줄을 지우고, 아이콘과 글자를 수직 가운데로 맞춘다. */
   display: inline-flex;
   align-items: center;
@@ -196,7 +198,9 @@
 }
 
 .btn-secondary svg,
-.btn-primary svg {
+.btn-primary svg,
+.btn-danger svg,
+.btn-danger-outline svg {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
@@ -209,7 +213,7 @@
 }
 
 /* 녹색은 주 버튼과 링크만 쓴다. 보조 버튼은 회색 안에서만 반응해 주 동작과 구분된다. */
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   border-color: var(--text-muted);
   background: var(--surface-soft);
 }
@@ -227,6 +231,45 @@
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* 되돌릴 수 없는 동작. 채움은 확인 모달의 최종 실행과 초대 거절에, 테두리형은 화면 위의 삭제 진입
+   버튼에 쓴다. 테두리형은 수정 버튼 옆에 두어도 주 동작처럼 보이지 않는다. */
+.btn-danger {
+  border: 1px solid var(--danger);
+  background: var(--danger);
+  color: var(--danger-contrast);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+
+.btn-danger-outline {
+  border: 1px solid var(--danger-border);
+  background: var(--surface);
+  color: var(--danger-text);
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--danger-contrast);
+}
+
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-danger-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 목록 항목 안의 작은 버튼. 모바일에서 누를 수 있도록 높이 32px 을 지킨다. */
+.btn-sm {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: var(--fs-sm);
 }
 
 /* 본문 안에서 링크처럼 보이는 버튼. 글자 크기는 둘러싼 문장을 따른다. */

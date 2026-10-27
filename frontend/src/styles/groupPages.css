@@ -1,22 +1,4 @@
-/* 그룹 목록·그룹 상세·초대함 공통 틀과 목록 항목 */
-
-.groups-page {
-  padding: 24px 16px 60px;
-}
-
-.groups-inner {
-  max-width: 720px;
-  margin: 0 auto;
-  display: grid;
-  gap: 24px;
-}
-
-.groups-title {
-  margin: 0;
-  font-size: var(--fs-xl);
-  font-weight: 800;
-  color: var(--text);
-}
+/* 그룹 목록·그룹 상세·초대함 공통 설명·섹션·목록 항목. 화면 틀은 styles/page.css 다. */
 
 .groups-desc {
   margin: 0;
@@ -38,21 +20,6 @@
   font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text);
-}
-
-.member-remove {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  padding: 4px 12px;
-  font-size: var(--fs-xs);
-  cursor: pointer;
-}
-
-.member-remove:hover {
-  border-color: var(--danger-border);
-  color: var(--danger-text);
 }
 
 .invite-list {

@@ -8,9 +8,9 @@ import { formatDate } from '../utils/date.js'
 import { tripVisibility } from '../data/trips.js'
 import useResource from '../hooks/useResource.js'
 import useTrip from '../hooks/useTrip.js'
-import { buildMapsSearchUrl } from '../config/mapSettings.js'
 import { haversineDistanceKm } from '../utils/geo.js'
 import useMapMode from '../hooks/useMapMode.js'
+import usePlaceMap from '../hooks/usePlaceMap.js'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import AppHeader from '../components/AppHeader.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
@@ -20,6 +20,7 @@ import PlaceMapModal from '../components/PlaceMapModal.jsx'
 import RecordForm from '../components/RecordForm.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import { ArrowLeftIcon, CategoryIcon, MapViewIcon } from '../components/icons.jsx'
+import '../styles/page.css'
 import '../styles/detailPage.css'
 import './RecordDetailPage.css'
 
@@ -40,7 +41,7 @@ export default function RecordDetailPage() {
   const navigate = useNavigate()
   // 헤더의 설정 메뉴와 같은 상태를 써야 지도 방식을 바꾸는 즉시 이 화면에 반영된다.
   const mapMode = useMapMode()
-  const { isEmbed } = mapMode
+  const placeMap = usePlaceMap(mapMode.isEmbed)
   // 수정 폼의 장소 검색 모달에서 기준 위치를 바꾸면 이 화면의 거리도 함께 바뀐다.
   const reference = useReferenceLocation()
   const referenceLocation = reference.location
@@ -52,7 +53,6 @@ export default function RecordDetailPage() {
   const isAuthor = record?.isAuthor ?? false
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [mapOpen, setMapOpen] = useState(false)
   // 장소·카테고리·평점·메모·사진을 한 번에 고친다. 저장 전까지의 초안은 RecordForm 이 들고 있다.
   const [editing, setEditing] = useState(false)
   const [editError, setEditError] = useState('')
@@ -94,14 +94,6 @@ export default function RecordDetailPage() {
   const sharedWithGroups = trip != null && tripVisibility(trip) === 'GROUP'
   // 서버는 저장하지 않는 값이다. 기준 위치는 이 브라우저의 것이다.
   const distanceKm = haversineDistanceKm(referenceLocation, place.location)
-
-  const handleMapClick = () => {
-    if (isEmbed) {
-      setMapOpen(true)
-    } else {
-      window.open(buildMapsSearchUrl(place), '_blank', 'noopener,noreferrer')
-    }
-  }
 
   const closeDeleteConfirm = () => {
     setConfirmingDelete(false)
@@ -179,8 +171,8 @@ export default function RecordDetailPage() {
     <>
       <AppHeader mapMode={mapMode} />
 
-      <main className="detail-page">
-        <div className="detail-inner">
+      <main className="page">
+        <div className="page-inner">
           <Link to={`/trips/${record.trip.id}`} className="back-link">
             <ArrowLeftIcon /> {record.trip.name}
           </Link>
@@ -222,7 +214,7 @@ export default function RecordDetailPage() {
                       </button>
                       <button
                         type="button"
-                        className="detail-delete-btn"
+                        className="btn-danger-outline"
                         aria-label="기록 삭제"
                         onClick={() => setConfirmingDelete(true)}
                       >
@@ -260,7 +252,11 @@ export default function RecordDetailPage() {
                   </div>
                 </dl>
 
-                <button type="button" className="detail-map-btn" onClick={handleMapClick}>
+                <button
+                  type="button"
+                  className="btn-secondary detail-map-btn"
+                  onClick={() => placeMap.openMap(place)}
+                >
                   <MapViewIcon />
                   지도에서 보기
                 </button>
@@ -337,7 +333,7 @@ export default function RecordDetailPage() {
         </ConfirmDialog>
       )}
 
-      {mapOpen && <PlaceMapModal place={place} onClose={() => setMapOpen(false)} />}
+      {placeMap.mapPlace && <PlaceMapModal place={placeMap.mapPlace} onClose={placeMap.closeMap} />}
     </>
   )
 }

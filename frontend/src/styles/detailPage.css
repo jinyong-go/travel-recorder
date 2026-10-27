@@ -1,18 +1,10 @@
-/* 상세 화면 공통 틀 — 여행·기록·그룹 상세가 함께 쓴다. */
+/* 상세 화면 공통 부품 — 여행·기록·그룹 상세가 함께 쓰는 불러오기 안내·섹션·이름·작성자 버튼.
+   화면 틀은 styles/page.css 다. */
 
-.detail-page {
-  flex: 1;
-  padding: 8px clamp(16px, 4vw, 48px) 64px;
+/* 불러오는 중·없음·실패 안내를 화면 한가운데 둔다. 안내만 있는 화면이라 틀을 flex 로 바꿔
+   세로로도 가운데에 놓는다. */
+.detail-status {
   display: flex;
-  justify-content: center;
-}
-
-.detail-inner {
-  width: 100%;
-  max-width: 720px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
 }
 
 /* 존재하지 않는 여행지 */
@@ -91,23 +83,6 @@
   gap: 8px;
 }
 
-.detail-delete-btn {
-  border: 1px solid var(--danger-border);
-  background: var(--surface);
-  color: var(--danger-text);
-  border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-/* 되돌릴 수 없는 동작이라 호버 시 버튼 전체를 채운다. 확인 모달의 삭제 버튼(.confirm-ok)과 같은 색이다. */
-.detail-delete-btn:hover {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: var(--danger-contrast);
-}
-
 .detail-shared-groups,
 .detail-trip-link {
   font-size: var(--fs-sm);
@@ -127,13 +102,4 @@
   flex-shrink: 0;
   gap: 8px;
   white-space: nowrap;
-}
-
-/* 수정 버튼(.btn-secondary)과 나란히 놓이므로 글자 모양과 높이를 맞춘다. 색은 되돌릴 수 없는
-   동작이라 붉은 테두리를 유지한다. 그룹 상세처럼 홀로 놓인 삭제 버튼은 건드리지 않는다. */
-.detail-author-actions .detail-delete-btn {
-  padding: 11px 24px;
-  font-size: var(--fs-md);
-  font-weight: 700;
-  line-height: 1;
 }

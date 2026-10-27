@@ -6,6 +6,7 @@ import AppHeader from '../components/AppHeader.jsx'
 import LoginHistoryList from '../components/LoginHistoryList.jsx'
 import PagedListBody from '../components/PagedListBody.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
+import '../styles/page.css'
 import './LoginHistoryPage.css'
 
 /**
@@ -21,13 +22,13 @@ export default function LoginHistoryPage() {
     <>
       <AppHeader />
 
-      <main className="login-history-page">
-        <div className="login-history-inner">
+      <main className="page">
+        <div className="page-inner">
           <Link to="/me" className="back-link">
             <ArrowLeftIcon /> 내 정보로
           </Link>
 
-          <h1 className="login-history-title">로그인 이력</h1>
+          <h1 className="page-title">로그인 이력</h1>
           <p className="login-history-notice">{LOGIN_HISTORY_NOTICE}</p>
 
           <PagedListBody

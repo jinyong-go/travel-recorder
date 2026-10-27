@@ -22,31 +22,3 @@
   justify-content: flex-end;
   gap: 8px;
 }
-
-.confirm-cancel,
-.confirm-ok {
-  border-radius: var(--radius-sm);
-  padding: 10px 18px;
-  font-size: var(--fs-sm);
-  cursor: pointer;
-  border: 1px solid var(--border);
-}
-
-.confirm-cancel {
-  background: var(--surface);
-  color: var(--text-muted);
-}
-
-.confirm-ok {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: var(--danger-contrast);
-  font-weight: 600;
-}
-
-/* 되돌릴 수 있는 동작의 확인 버튼. 삭제의 붉은색을 쓰지 않는다. */
-.confirm-ok-safe {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
-}

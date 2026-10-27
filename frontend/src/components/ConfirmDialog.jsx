@@ -34,12 +34,12 @@ export default function ConfirmDialog({
         <p className="confirm-desc">{children}</p>
         {error && <p className="field-error">{error}</p>}
         <div className="confirm-actions">
-          <button type="button" className="confirm-cancel" onClick={onCancel}>
+          <button type="button" className="btn-secondary" onClick={onCancel}>
             취소
           </button>
           <button
             type="button"
-            className={`confirm-ok${safe ? ' confirm-ok-safe' : ''}`}
+            className={safe ? 'btn-primary' : 'btn-danger'}
             disabled={busy}
             onClick={onConfirm}
           >

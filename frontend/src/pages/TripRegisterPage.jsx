@@ -5,7 +5,7 @@ import { createTrip } from '../api/trips.js'
 import AppHeader from '../components/AppHeader.jsx'
 import TripForm from '../components/TripForm.jsx'
 import { ArrowLeftIcon } from '../components/icons.jsx'
-import '../styles/formPage.css'
+import '../styles/page.css'
 
 const CREATE_ERROR = {
   GROUP_NOT_FOUND: '공유할 수 없는 그룹이 선택되어 있어요. 그룹 선택을 다시 확인해주세요.',
@@ -33,14 +33,12 @@ export default function TripRegisterPage() {
   return (
     <>
       <AppHeader />
-      <main className="register-page">
-        <div className="register-page-inner">
-          <div className="register-page-header">
-            <Link to="/trips" className="back-link">
-              <ArrowLeftIcon /> 여행 목록으로
-            </Link>
-            <h1>여행 만들기</h1>
-          </div>
+      <main className="page">
+        <div className="page-inner page-inner-narrow">
+          <Link to="/trips" className="back-link">
+            <ArrowLeftIcon /> 여행 목록으로
+          </Link>
+          <h1 className="page-title">여행 만들기</h1>
 
           <div className="trip-form-card">
             <TripForm

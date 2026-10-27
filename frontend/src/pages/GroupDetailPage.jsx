@@ -10,7 +10,9 @@ import AppHeader from '../components/AppHeader.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import DetailStatus from '../components/DetailStatus.jsx'
 import PagedListBody from '../components/PagedListBody.jsx'
+import UserAvatar from '../components/UserAvatar.jsx'
 import { ArrowLeftIcon, PlusIcon } from '../components/icons.jsx'
+import '../styles/page.css'
 import '../styles/detailPage.css'
 import '../styles/groupPages.css'
 import './GroupDetailPage.css'
@@ -167,13 +169,13 @@ export default function GroupDetailPage() {
     <>
       <AppHeader />
 
-      <main className="groups-page">
-        <div className="groups-inner">
+      <main className="page">
+        <div className="page-inner">
           <Link to="/groups" className="back-link">
             <ArrowLeftIcon /> 그룹 목록으로
           </Link>
 
-          <h1 className="groups-title group-detail-name">{group.name}</h1>
+          <h1 className="page-title group-detail-name">{group.name}</h1>
           {group.memo && <p className="group-memo">{group.memo}</p>}
           <p className="groups-desc">
             멤버 {group.memberCount}/{group.memberLimit}명
@@ -186,9 +188,7 @@ export default function GroupDetailPage() {
             <ul className="member-list">
               {group.members.map((member) => (
                 <li key={member.id} className="member-item">
-                  <span className="member-avatar" aria-hidden="true">
-                    {member.name.slice(0, 1)}
-                  </span>
+                  <UserAvatar user={member} />
                   <span className="member-name">
                     {member.name}
                     {member.id === group.owner.id && <span className="member-owner-tag">소유자</span>}
@@ -197,7 +197,7 @@ export default function GroupDetailPage() {
                   {isOwner && member.id !== group.owner.id && (
                     <button
                       type="button"
-                      className="member-remove"
+                      className="btn-secondary btn-sm"
                       disabled={busy}
                       onClick={() => setConfirming({ type: 'member', memberId: member.id })}
                     >
@@ -265,14 +265,12 @@ export default function GroupDetailPage() {
                 <ul className="invite-list">
                   {pending.items.map((item) => (
                     <li key={item.id} className="invite-item">
-                      <span className="member-avatar" aria-hidden="true">
-                        {item.invitee.name.slice(0, 1)}
-                      </span>
+                      <UserAvatar user={item.invitee} />
                       <span className="member-name">{item.invitee.name}</span>
                       <span className="invite-sent-at">{formatDate(item.createdAt)} 보냄</span>
                       <button
                         type="button"
-                        className="member-remove"
+                        className="btn-secondary btn-sm"
                         disabled={busy}
                         onClick={() => handleRevoke(item.id)}
                       >
@@ -288,7 +286,7 @@ export default function GroupDetailPage() {
           <section className="group-section group-danger-zone">
             <button
               type="button"
-              className="detail-delete-btn"
+              className="btn-danger-outline"
               disabled={busy}
               onClick={() => setConfirming({ type: isOwner ? 'delete' : 'leave' })}
             >

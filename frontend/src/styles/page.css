@@ -1,0 +1,24 @@
+/* 헤더 아래 화면 틀 — 헤더가 있는 모든 화면이 쓴다. 폭만 화면 성격에 따라 둘로 나눈다:
+   읽는 화면 720px, 폼 하나인 화면(여행 만들기·수정) 560px. */
+
+.page {
+  flex: 1;
+  padding: 8px clamp(16px, 4vw, 48px) 64px;
+}
+
+.page-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.page-inner-narrow {
+  max-width: 560px;
+}
+
+.page-title {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+}

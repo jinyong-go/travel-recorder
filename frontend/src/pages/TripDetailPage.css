@@ -126,26 +126,11 @@
 }
 
 .place-map-btn {
+  /* 카드 전체를 덮는 링크(::after) 위에 올려 이 버튼만 따로 눌리게 한다. 모양은 .btn-secondary 다. */
   position: relative;
   z-index: 1;
   align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   margin-top: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-weight: 600;
-  font-size: var(--fs-xs);
-}
-
-.place-map-btn:hover {
-  background: var(--surface-soft);
-  border-color: var(--text-muted);
 }
 
 /* 접을 수 있는 섹션 (공개 범위). 이 화면의 유일한 설정 영역이라 연한 바탕의 패널로 두고,

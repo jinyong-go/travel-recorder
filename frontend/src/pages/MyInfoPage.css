@@ -1,21 +1,3 @@
-.my-info-page {
-  padding: 24px 16px 60px;
-}
-
-.my-info-inner {
-  max-width: 720px;
-  margin: 0 auto;
-  display: grid;
-  gap: 16px;
-}
-
-.my-info-title {
-  margin: 0;
-  font-size: var(--fs-xl);
-  font-weight: 800;
-  color: var(--text);
-}
-
 .my-info-card {
   display: flex;
   align-items: center;
@@ -24,26 +6,6 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-}
-
-.my-info-avatar {
-  flex-shrink: 0;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/* 프로필 사진이 없는 계정은 이름 첫 글자로 대신한다. */
-.my-info-avatar-fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  color: var(--accent-strong);
-  font-size: 1.75rem;
-  font-weight: 700;
 }
 
 .my-info-fields {
@@ -87,7 +49,7 @@
 }
 
 .my-info-more-link {
-  justify-self: start;
+  align-self: flex-start;
   font-weight: 600;
   color: var(--accent-strong);
 }

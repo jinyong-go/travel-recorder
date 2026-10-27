@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowLeftIcon } from './icons.jsx'
+import '../styles/page.css'
 import '../styles/detailPage.css'
 
 /**
@@ -8,7 +9,7 @@ import '../styles/detailPage.css'
  */
 export default function DetailStatus({ title, desc, backTo, backLabel }) {
   return (
-    <main className="detail-page">
+    <main className="page detail-status">
       <div className="detail-missing">
         <h1>{title}</h1>
         {desc && <p className="detail-missing-desc">{desc}</p>}

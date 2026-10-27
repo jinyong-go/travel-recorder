@@ -12,7 +12,7 @@ import usePagedList from '../hooks/usePagedList.js'
 import useReferenceLocation from '../hooks/useReferenceLocation.js'
 import useTrip from '../hooks/useTrip.js'
 import useMapMode from '../hooks/useMapMode.js'
-import { buildMapsSearchUrl } from '../config/mapSettings.js'
+import usePlaceMap from '../hooks/usePlaceMap.js'
 import AppHeader from '../components/AppHeader.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import DetailStatus from '../components/DetailStatus.jsx'
@@ -22,7 +22,7 @@ import RecordRegisterModal from '../components/RecordRegisterModal.jsx'
 import VisibilityBadge from '../components/VisibilityBadge.jsx'
 import VisibilitySelect from '../components/VisibilitySelect.jsx'
 import { ArrowLeftIcon, CategoryIcon, ChevronDownIcon, MapViewIcon, PlusIcon } from '../components/icons.jsx'
-// 상세 화면의 공통 레이아웃(.detail-page / .detail-inner / .detail-section)은 기록 상세와 같다.
+import '../styles/page.css'
 import '../styles/detailPage.css'
 import './TripDetailPage.css'
 /** 여행을 서버에서 읽고, 읽는 중·없음·실패를 처리한다. 화면은 여행이 도착한 뒤 TripDetailView 가 그린다. */
@@ -59,7 +59,7 @@ function TripDetailView({ trip, onTripChange }) {
   const navigate = useNavigate()
   // 헤더의 설정 메뉴와 같은 상태를 써야 지도 방식을 바꾸는 즉시 이 화면에 반영된다.
   const mapMode = useMapMode()
-  const { isEmbed } = mapMode
+  const placeMap = usePlaceMap(mapMode.isEmbed)
   // 등록 모달과 같은 상태를 써야 모달에서 위치를 지정했을 때 이 화면의 거리도 바뀐다.
   const reference = useReferenceLocation()
   const referenceLocation = reference.location
@@ -75,22 +75,12 @@ function TripDetailView({ trip, onTripChange }) {
   // 사진만 올리지 못한 채 등록된 기록. 재업로드하러 갈 수 있게 링크를 남긴다.
   const [photoFailedRecord, setPhotoFailedRecord] = useState(null)
 
-  const [mapModalRecord, setMapModalRecord] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   // 삭제 요청이 나가 있는 동안 같은 버튼을 다시 누르지 못하게 한다.
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
 
   const recordCount = trip.recordCount
-
-  const handleMapButtonClick = (record) => {
-    const place = placeOf(record)
-    if (isEmbed) {
-      setMapModalRecord(place)
-    } else {
-      window.open(buildMapsSearchUrl(place), '_blank', 'noopener,noreferrer')
-    }
-  }
 
   /** 등록 후 목록과 여행지 수를 다시 읽는다. 낙관적으로 붙이지 않는다 — 서버가 정한 순서·거리를 따른다. */
   const handleRecordCreated = async (record, { photoFailed }) => {
@@ -152,8 +142,8 @@ function TripDetailView({ trip, onTripChange }) {
             {record.memo && <p className="place-memo">{record.memo}</p>}
             <button
               type="button"
-              className="place-map-btn"
-              onClick={() => handleMapButtonClick(record)}
+              className="btn-secondary btn-sm place-map-btn"
+              onClick={() => placeMap.openMap(placeOf(record))}
             >
               <MapViewIcon />
               지도
@@ -168,8 +158,8 @@ function TripDetailView({ trip, onTripChange }) {
     <>
       <AppHeader mapMode={mapMode} />
 
-      <main className="detail-page">
-        <div className="detail-inner">
+      <main className="page">
+        <div className="page-inner">
           <Link to="/trips" className="back-link">
             <ArrowLeftIcon /> 여행 목록으로
           </Link>
@@ -189,7 +179,7 @@ function TripDetailView({ trip, onTripChange }) {
                   </Link>
                   <button
                     type="button"
-                    className="detail-delete-btn"
+                    className="btn-danger-outline"
                     aria-label="여행 삭제"
                     onClick={() => setConfirmingDelete(true)}
                   >
@@ -265,9 +255,7 @@ function TripDetailView({ trip, onTripChange }) {
         </ConfirmDialog>
       )}
 
-      {mapModalRecord && (
-        <PlaceMapModal place={mapModalRecord} onClose={() => setMapModalRecord(null)} />
-      )}
+      {placeMap.mapPlace && <PlaceMapModal place={placeMap.mapPlace} onClose={placeMap.closeMap} />}
 
       {registerOpen && (
         <RecordRegisterModal

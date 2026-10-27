@@ -1,8 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchReceivedInvites } from '../api/groups.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import useDismissable from '../hooks/useDismissable.js'
 import useResource from '../hooks/useResource.js'
+import UserAvatar from './UserAvatar.jsx'
 import { ChevronDownIcon } from './icons.jsx'
 import './HeaderAuth.css'
 import { AUTH_STATUS } from '../context/authStatus.js'
@@ -27,26 +29,8 @@ export default function HeaderAuth({ receivedCount: givenCount }) {
   const fetched = useResource(loadReceivedInvites, status === AUTH_STATUS.AUTHENTICATED && givenCount === undefined)
   const receivedCount = givenCount ?? fetched.data?.totalElements ?? 0
   const [open, setOpen] = useState(false)
-  const wrapRef = useRef(null)
+  const wrapRef = useDismissable(open, () => setOpen(false))
   const panelId = useId()
-
-  // 열려 있을 때만 바깥 클릭과 Esc 를 듣는다.
-  useEffect(() => {
-    if (!open) return undefined
-
-    const handleClickOutside = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
-    }
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [open])
 
   // 세션 확인 전에는 아무것도 그리지 않는다. 로그인 링크를 먼저 보여 주면
   // 로그인한 사용자에게 화면이 한 번 깜빡인다.
@@ -86,13 +70,7 @@ export default function HeaderAuth({ receivedCount: givenCount }) {
             : `${user.name} 계정 메뉴`
         }
       >
-        {user.profileImageUrl ? (
-          <img className="header-user-avatar" src={user.profileImageUrl} alt="" />
-        ) : (
-          <span className="header-user-avatar header-user-avatar-fallback" aria-hidden="true">
-            {user.name.slice(0, 1)}
-          </span>
-        )}
+        <UserAvatar user={user} size={28} />
         <span className="header-user-name">{user.name}</span>
         {/* 메뉴를 열기 전에도 초대가 온 것이 보여야 한다. */}
         {badge}

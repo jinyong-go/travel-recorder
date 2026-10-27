@@ -135,7 +135,7 @@ export default function RecordForm({
               disabled
               readOnly
             />
-            <button type="button" className="search-trigger-btn" onClick={() => setSearchOpen(true)}>
+            <button type="button" className="btn-secondary" onClick={() => setSearchOpen(true)}>
               <SearchIcon />
               검색
             </button>
@@ -181,7 +181,7 @@ export default function RecordForm({
               multiple
               onChange={handlePhotoAdd}
             />
-            <label htmlFor="record-photos" className="photo-upload-btn">
+            <label htmlFor="record-photos" className="btn-secondary photo-upload-btn">
               <PhotoIcon />
               사진 추가
             </label>

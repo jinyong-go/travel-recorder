@@ -7,8 +7,8 @@ import useResource from '../hooks/useResource.js'
 import AppHeader from '../components/AppHeader.jsx'
 import RequiredNote from '../components/RequiredNote.jsx'
 import { ArrowLeftIcon, PlusIcon } from '../components/icons.jsx'
+import '../styles/page.css'
 import '../styles/form.css'
-import '../styles/confirmPanel.css'
 import '../styles/groupPages.css'
 import './GroupsPage.css'
 import { GROUP_MEMO_MAX_LENGTH, GROUP_NAME_MAX_LENGTH } from '../config/inputLimits.js'
@@ -78,8 +78,8 @@ export default function GroupsPage() {
       {/* 알림 줄에 쓰려고 이미 받은 건수다. 헤더가 같은 요청을 다시 보내지 않게 넘긴다. */}
       <AppHeader receivedCount={receivedCount} />
 
-      <main className="groups-page">
-        <div className="groups-inner">
+      <main className="page">
+        <div className="page-inner">
           <Link to="/trips" className="back-link">
             <ArrowLeftIcon /> 여행 목록으로
           </Link>
@@ -91,7 +91,7 @@ export default function GroupsPage() {
             </Link>
           )}
 
-          <h1 className="groups-title">공유 그룹</h1>
+          <h1 className="page-title">공유 그룹</h1>
           <p className="groups-desc">
             그룹은 여행을 보여줄 대상 목록이에요. 멤버는 공유받은 여행을 볼 수만 있고,
             수정하거나 삭제할 수는 없어요.
@@ -155,36 +155,40 @@ export default function GroupsPage() {
             <form className="group-form" onSubmit={handleCreate}>
               <RequiredNote />
 
-              <label htmlFor="group-name" className="field-required">이름</label>
-              <input
-                id="group-name"
-                aria-required="true"
-                type="text"
-                value={name}
-                maxLength={GROUP_NAME_MAX_LENGTH}
-                autoFocus
-                placeholder="예: 가족, 제주 동행"
-                onChange={(e) => setName(e.target.value)}
-              />
+              <div className="form-field">
+                <label htmlFor="group-name" className="field-required">이름</label>
+                <input
+                  id="group-name"
+                  aria-required="true"
+                  type="text"
+                  value={name}
+                  maxLength={GROUP_NAME_MAX_LENGTH}
+                  autoFocus
+                  placeholder="예: 가족, 제주 동행"
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
 
-              <label htmlFor="group-memo">메모</label>
-              <textarea
-                id="group-memo"
-                value={memo}
-                maxLength={GROUP_MEMO_MAX_LENGTH}
-                rows={3}
-                placeholder="예: 설 연휴 사진 공유용"
-                onChange={(e) => setMemo(e.target.value)}
-              />
-              <p className="field-hint">멤버에게도 보여요.</p>
+              <div className="form-field">
+                <label htmlFor="group-memo">메모</label>
+                <textarea
+                  id="group-memo"
+                  value={memo}
+                  maxLength={GROUP_MEMO_MAX_LENGTH}
+                  rows={3}
+                  placeholder="예: 설 연휴 사진 공유용"
+                  onChange={(e) => setMemo(e.target.value)}
+                />
+                <p className="field-hint">멤버에게도 보여요.</p>
+              </div>
 
               {error && <p className="field-error">{error}</p>}
 
-              <div className="confirm-actions">
-                <button type="button" className="confirm-cancel" onClick={closeCreate}>
+              <div className="form-actions">
+                <button type="button" className="btn-secondary" onClick={closeCreate}>
                   취소
                 </button>
-                <button type="submit" className="confirm-ok confirm-ok-safe" disabled={submitting}>
+                <button type="submit" className="btn-primary" disabled={submitting}>
                   {submitting ? '만드는 중…' : '만들기'}
                 </button>
               </div>

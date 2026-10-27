@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import useDismissable from '../hooks/useDismissable.js'
 import { MAP_MODES, hasNaverMapClientId } from '../config/mapSettings.js'
 import { ChevronDownIcon, GearIcon } from './icons.jsx'
 import './SettingsMenu.css'
@@ -9,17 +10,7 @@ import './SettingsMenu.css'
  */
 export default function SettingsMenu({ mapMode, onChangeMapMode }) {
   const [open, setOpen] = useState(false)
-  const wrapRef = useRef(null)
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  const wrapRef = useDismissable(open, () => setOpen(false))
 
   return (
     <div className="settings-menu" ref={wrapRef}>

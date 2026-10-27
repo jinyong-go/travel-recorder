@@ -14,17 +14,24 @@
   color: var(--text);
 }
 
-/* 여행 만들기 폼의 텍스트·숫자·날짜 입력. 장소 검색 input 과 같은 생김새를 쓴다. */
+/* 텍스트·숫자·날짜 입력과 여러 줄 입력. 장소 검색 input 과 같은 생김새를 쓴다. 입력 요소는 글꼴을
+   물려받지 않으므로 font 를 명시한다. */
 .form-field > input[type='text'],
 .form-field > input[type='number'],
 .form-field > input[type='date'],
+.form-field > textarea,
 .form-field select {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 11px 14px;
+  font: inherit;
   font-size: var(--fs-md);
+}
+
+.form-field > textarea {
+  resize: vertical;
 }
 
 .field-hint {
@@ -52,29 +59,6 @@
 
 .place-search-row input:disabled {
   cursor: not-allowed;
-}
-
-.search-trigger-btn,
-.photo-upload-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--accent-strong);
-  padding: 0 16px;
-  border-radius: var(--radius-sm);
-  font-weight: 700;
-  font-size: var(--fs-sm);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.search-trigger-btn:hover,
-.photo-upload-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
 }
 
 .category-choice-group {
@@ -132,10 +116,6 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
-}
-
-.photo-upload-btn {
-  padding: 10px 16px;
 }
 
 .photo-upload-input:focus-visible + .photo-upload-btn {
