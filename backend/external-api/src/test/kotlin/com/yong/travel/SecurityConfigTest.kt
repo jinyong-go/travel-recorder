@@ -14,12 +14,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-/**
- * 필터체인의 인증 관문 검증.
- *
- * 비로그인에게 열린 경로만 나열하고 나머지는 닫는 구성이라, 열린 경로가 실제로 열려 있는지와
- * 그 밖의 경로가 컨트롤러에 닿기 전에 같은 오류 본문으로 막히는지를 함께 고정한다.
- */
+/** 비로그인에게 열린 경로는 열리고 나머지는 막히는지 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 class SecurityConfigTest {

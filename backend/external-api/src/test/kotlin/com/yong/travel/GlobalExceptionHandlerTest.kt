@@ -20,12 +20,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.web.server.ResponseStatusException
 
-/**
- * 어떤 경로로 실패하든 `ErrorResponse`(code/message/status) 한 가지 형태로 응답하는지 확인한다.
- * 컨트롤러를 거치지 않는 실패(주소 없음, 메서드 불일치 등)까지 포함한다.
- *
- * 비로그인에게 닫힌 경로는 필터가 먼저 401 로 막으므로, 그 뒤의 실패를 보려는 요청은 로그인 상태로 보낸다.
- */
+/** 어떤 실패든 같은 오류 응답 형태로 답하는지 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 class GlobalExceptionHandlerTest {
@@ -113,7 +108,7 @@ class GlobalExceptionHandlerTest {
         assertEquals("BAD_REQUEST", response.body?.code)
     }
 
-    /** 로그인이 필요한 경로라 필터에서 401 로 먼저 막히지 않도록 로그인 상태로 보낸다. 서비스까지 가지 않아 사용자 행은 필요 없다. */
+    /** 401 로 먼저 막히지 않도록 로그인 상태로 보낸다. */
     private fun loggedIn() = authentication(
         UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", 1L), null, emptyList()),
     )

@@ -23,10 +23,7 @@ const INVITE_ERROR = {
   ALREADY_MEMBER: '이미 이 그룹의 멤버예요.',
 }
 
-/**
- * 조회 실패 안내. **부재와 권한 부족을 구분해 보여 준다** — 여행·기록과 달리 그룹은 존재를
- * 숨기지 않기 때문이다.
- */
+/** 그룹 조회 실패 안내 */
 const LOAD_ERROR = {
   FORBIDDEN: { title: '이 그룹의 멤버만 볼 수 있어요', desc: '초대를 받아 참여하면 볼 수 있어요.' },
   GROUP_NOT_FOUND: { title: '존재하지 않는 그룹이에요', desc: '주소를 다시 확인해주세요.' },
@@ -34,12 +31,7 @@ const LOAD_ERROR = {
 
 const DEFAULT_LOAD_ERROR = { title: '그룹을 불러오지 못했어요', desc: '잠시 후 다시 시도해주세요.' }
 
-/**
- * 확인 모달을 거치는 동작. `confirming.type` 으로 고르며, 문구와 요청과 끝난 뒤의 이동을 함께 둔다.
- *
- * `run(groupId, confirming)` 이 요청을 보낸다. `leavesPage` 면 그룹을 지웠거나 나가서 이 화면에
- * 남을 수 없으므로 그룹 목록으로 가고, 아니면 바뀐 멤버를 보이도록 그룹을 다시 읽는다.
- */
+/** 확인 모달을 거치는 동작 */
 const CONFIRM_ACTIONS = {
   delete: {
     title: '그룹을 삭제할까요?',
@@ -67,30 +59,25 @@ const CONFIRM_ACTIONS = {
   },
 }
 
-/**
- * 그룹 하나의 멤버와 초대. 소유자는 초대·초대 취소·멤버 제외·그룹 삭제를, 멤버는 나가기만 할 수 있다.
- */
+/** 그룹 상세 — 멤버와 초대 관리 */
 export default function GroupDetailPage() {
   const { groupId } = useParams()
   const navigate = useNavigate()
 
-  // 그룹 A 에서 B 로 바로 옮기면 A 의 응답이 늦게 올 수 있다. 훅이 가장 최근 요청의 응답만 남긴다.
   const loadGroup = useCallback(() => api.fetchGroup(groupId), [groupId])
   const { data: group, status: groupStatus, error: loadError, reload: reloadGroup } = useResource(loadGroup)
 
   const [email, setEmail] = useState('')
   const [inviteMessage, setInviteMessage] = useState(null)
-  // 나가기·삭제·제외 실패 문구. 멤버에게도 보여야 하므로 소유자 전용인 초대 문구와 따로 둔다.
+  // 나가기·삭제·제외 실패 문구
   const [actionError, setActionError] = useState(null)
-  // 확인 모달에 올라 있는 동작. { type: 'delete' | 'leave' } 또는 { type: 'member', memberId }
+  // 확인 모달에 올린 동작
   const [confirming, setConfirming] = useState(null)
-  // 나가 있는 요청. 다른 버튼까지 막되 문구는 누른 버튼에서만 바꾼다.
-  // action: 'send' | 'revoke' | 'confirm', id: 취소하는 초대의 id
+  // 진행 중인 요청
   const [processing, setProcessing] = useState(null)
   const busy = processing !== null
   const isProcessing = (action, id) => processing?.action === action && processing.id === id
 
-  // 대기 초대는 소유자만 본다. 비소유자에게는 호출 자체를 하지 않는다.
   const loadPending = useCallback((page) => api.fetchPendingInvites(groupId, page), [groupId])
   const pending = usePagedList(loadPending, Boolean(group?.isOwner))
 
@@ -99,12 +86,10 @@ export default function GroupDetailPage() {
     return <DetailStatus title={title} desc={desc} backTo="/groups" backLabel="그룹 목록으로" />
   }
 
-  // 상태가 아니라 그룹 유무로 가른다. 멤버를 제외한 뒤 다시 읽는 동안 화면을 비우지 않는다.
   if (!group) return <DetailStatus title="그룹을 불러오는 중이에요…" />
 
   const isOwner = group.isOwner
   const isFull = group.memberCount >= group.memberLimit
-  // 불러온 항목 수가 아니라 서버의 전체 건수다. "더 보기" 전에는 일부만 불러와 있다.
   const pendingCount = pending.total ?? 0
 
   const handleSend = async (e) => {
@@ -119,7 +104,7 @@ export default function GroupDetailPage() {
     try {
       const { status } = await api.sendInvite(group.id, trimmed)
       setEmail('')
-      // 이미 초대한 상대를 다시 초대한 것은 오류가 아니다. 서버가 201 이 아닌 200 으로 답한다.
+      // 이미 초대한 상대
       setInviteMessage({
         type: 'info',
         text: status === 200 ? '이미 초대한 상대예요.' : '초대를 보냈어요.',
@@ -137,7 +122,6 @@ export default function GroupDetailPage() {
     try {
       await api.revokeInvite(group.id, inviteId)
     } catch {
-      // 이미 처리된 초대일 수 있다. 어느 쪽이든 목록을 다시 읽으면 실제 상태로 맞춰진다.
       setInviteMessage({ type: 'error', text: INVITE_GONE_MESSAGE })
     } finally {
       pending.reload()
@@ -211,10 +195,6 @@ export default function GroupDetailPage() {
           {isOwner && (
             <section className="group-section">
               <h2 className="group-section-title">초대</h2>
-              {/*
-                정원 판정은 수락 시점에 하므로 정원이 차도 초대를 막지 않는다.
-                막지 않는 대신, 보내기 전에 남은 자리와 그 결과를 먼저 알린다.
-              */}
               <p className="invite-capacity">
                 소유자를 포함해 최대 {group.memberLimit}명까지 참여할 수 있어요. 지금{' '}
                 {group.memberCount}/{group.memberLimit}명
@@ -222,7 +202,6 @@ export default function GroupDetailPage() {
                 {isFull &&
                   ' — 정원이 차서 지금은 수락되지 않아요. 자리가 나면 같은 초대로 수락할 수 있어요.'}
               </p>
-              {/* 자동완성이나 검색 결과를 붙이지 않는다. 가입자를 훑을 수 있는 화면이 된다. */}
               <form className="invite-form" onSubmit={handleSend}>
                 <label className="sr-only" htmlFor="invite-email">
                   초대할 상대의 이메일
@@ -252,8 +231,6 @@ export default function GroupDetailPage() {
                 </p>
               )}
 
-              {/* 정원과 무관하게 초대를 보낼 수 있어 건수가 쌓인다. 빈 목록 안내는 없다 — 대기 건수는
-                  위의 정원 안내가 이미 말한다. */}
               <PagedListBody
                 list={pending}
                 loadingText="불러오는 중이에요…"

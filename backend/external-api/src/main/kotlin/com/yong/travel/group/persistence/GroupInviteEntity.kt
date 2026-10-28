@@ -14,11 +14,8 @@ import jakarta.persistence.UniqueConstraint
 import java.time.Instant
 
 /**
- * 그룹 소유자가 특정 사용자 앞으로 보낸 가입 요청. 받은 사람의 계정에 쌓인다.
- *
- * 토큰·만료 컬럼을 두지 않는다 — 초대가 서비스 밖으로 나가지 않으므로 추측할 대상도, 수명도 없다.
- * 상태 컬럼도 두지 않는다 — 수락·거절·철회가 모두 행 삭제로 끝나고, 끝난 초대는
- * [InviteHistoryEntity] 로 옮겨 이력으로 남긴다.
+ * 그룹 소유자가 사용자에게 보낸 대기 중인 초대.
+ * 끝난 초대는 지우고 [InviteHistoryEntity] 로 옮기므로 상태 컬럼이 없다.
  */
 @Entity
 @Table(
@@ -34,7 +31,7 @@ class GroupInviteEntity(
     @JoinColumn(name = "invitee_id", nullable = false)
     var invitee: UserEntity,
 
-    /** 보낸 사람 = 초대 시점의 그룹 소유자. 소유자는 바뀌지 않지만 받은 사람에게 보여 줄 이름이라 따로 갖는다. */
+    /** 보낸 사람(그룹 소유자). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invited_by", nullable = false)
     var invitedBy: UserEntity,

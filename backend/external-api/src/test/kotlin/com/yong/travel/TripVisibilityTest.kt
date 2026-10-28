@@ -31,12 +31,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * 여행 단위의 공개 범위와 소유자 판정 검증.
- *
- * 공개 범위가 여행 한 곳에만 있으므로 여기서 새면 하위 기록이 전부 함께 샌다.
- * "볼 수 있어야 하는 경우" 보다 "보이면 안 되는 경우" 를 더 촘촘히 확인한다.
- *
- * 1차 캐시 때문에 변경 직후 조회가 DB 를 타지 않으므로 검증 전에 flush/clear 로 영속성 컨텍스트를 비운다.
+ * 여행 공개 범위와 소유자 판정을 확인한다. 보이면 안 되는 경우를 특히 촘촘히 본다.
+ * 변경이 DB 에 반영된 뒤 읽도록 검증 전에 영속성 컨텍스트를 비운다.
  */
 @SpringBootTest
 @Transactional
@@ -79,7 +75,7 @@ class TripVisibilityTest {
         assertFalse(asGuest.isOwnedBy(guest))
         assertNull(asGuest.visibility, "누구에게 공유했는지는 열람자에게 알릴 이유가 없다")
         assertNull(asGuest.sharedGroups)
-        // 예산은 공개 범위를 그대로 따르는 값이라 열람자에게도 보인다.
+        // 예산은 열람자에게도 보인다.
         assertEquals(1_250_000L, asGuest.budget)
     }
 
@@ -90,7 +86,7 @@ class TripVisibilityTest {
         val foreignGroupId = requireNotNull(groupService.create(stranger, "남의 그룹", null).id)
         flush()
 
-        // 403 이면 "그런 그룹이 있다" 는 뜻이 되므로 여기서도 404 다.
+        // 그룹이 있다는 사실이 드러나지 않도록 404 다.
         val onCreate = assertThrows<ApiException> {
             newTrip(owner, TripVisibility.GROUP, listOf(foreignGroupId))
         }
@@ -120,7 +116,7 @@ class TripVisibilityTest {
         tripService.changeVisibility(tripId, owner, TripVisibility.PRIVATE, emptyList())
         flush()
 
-        // 남겨 두면 나중에 다시 GROUP 으로 되돌렸을 때 예전 공유가 의도치 않게 되살아난다.
+        // 다시 GROUP 으로 바꿔도 예전 공유가 되살아나지 않아야 한다.
         assertEquals(0L, count("select count(*) from trip_shares where trip_id = $tripId"))
         assertThrows<ApiException> { tripService.get(tripId, member) }
     }
@@ -162,7 +158,7 @@ class TripVisibilityTest {
         assertThrows<ApiException> { recordService.get(recordId, owner) }
         assertEquals(1L, count("select count(*) from trips where id = $tripId"))
         assertEquals(1L, count("select count(*) from trip_records where id = $recordId"))
-        // 주인 없는 공유 행이 권한 판정에 끼어들 여지를 남기지 않는다.
+        // 공유도 함께 지워진다.
         assertEquals(0L, count("select count(*) from trip_shares where trip_id = $tripId"))
     }
 
@@ -175,7 +171,7 @@ class TripVisibilityTest {
         val tripId = newTrip(owner, TripVisibility.GROUP, listOf(groupId))
         flush()
 
-        // 볼 수 있는 사람에게는 403 이다 — 여행의 존재는 이미 알고 있다.
+        // 볼 수 있는 사람에게는 403 이다.
         assertEquals(ErrorCode.FORBIDDEN, assertThrows<ApiException> { tripService.delete(tripId, guest) }.errorCode)
         assertEquals(
             ErrorCode.FORBIDDEN,
@@ -227,7 +223,7 @@ class TripVisibilityTest {
         assertEquals(1L, tripService.get(tripId, owner).recordCount)
         assertNotNull(kept)
 
-        // 목록도 같은 값을 내려준다 (집계 경로가 갈라지지 않는지 확인).
+        // 목록도 같은 값을 내려 준다.
         val counts = tripService.list(TripListQuery(TripScope.MINE), owner, firstPage())
             .content.associate { it.id to it.recordCount }
         assertEquals(0L, counts[emptyTripId])

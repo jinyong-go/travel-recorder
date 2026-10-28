@@ -1,5 +1,4 @@
-# 로컬 개발용. API 서버와 같은 compose 의 PostgreSQL 을 쓴다. 스키마는 API 서버의 Flyway 가 만들므로
-# API 서버를 한 번 띄운 뒤에 돌린다.
+# 로컬 개발용. 스키마는 API 서버가 만들므로 API 서버를 한 번 띄운 뒤에 돌린다.
 spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/travel}

@@ -18,10 +18,7 @@ import java.time.LocalDate
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-/**
- * 평점은 0.5 ~ 5.0 을 0.5 단위로만 받는다.
- * 요청 DTO 의 Bean Validation 과 DB CHECK 제약 두 곳에서 모두 막히는지 확인한다.
- */
+/** 평점 범위와 0.5 단위가 요청 검증과 DB 제약 양쪽에서 지켜지는지 확인한다. */
 @SpringBootTest
 @Transactional
 class RecordRatingTest {

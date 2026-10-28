@@ -1,5 +1,4 @@
-/* 여러 화면에서 쓰는 범용 UI 요소 — 헤더·모달 틀·버튼·링크·오류 문구·빈 상태·페이지네이션.
-   화면 틀을 일부 화면이 공유하면 styles/, 한 곳만 쓰면 그 컴포넌트 옆 CSS 에 둔다. */
+/* 여러 화면에서 쓰는 공통 UI — 헤더·모달·버튼·오류 문구·빈 상태·페이지네이션 */
 
 .app-header {
   padding: 24px clamp(16px, 4vw, 48px) 8px;
@@ -18,7 +17,7 @@
   letter-spacing: -0.4px;
 }
 
-/* 헤더 타이틀을 홈 링크로 쓸 때 (h1 과 같은 모양을 유지한다) */
+/* 홈으로 가는 헤더 제목 링크 */
 .app-title-link {
   text-decoration: none;
   color: inherit;
@@ -43,7 +42,7 @@
   gap: 10px;
 }
 
-/* 헤더의 여행 목록 링크. 지금 그 화면이면 글자색으로만 알린다 — 연두는 면에만 쓴다. */
+/* 헤더의 여행 목록 링크 */
 .header-nav-link {
   padding: 9px 4px;
   color: var(--text-muted);
@@ -100,7 +99,7 @@
   cursor: not-allowed;
 }
 
-/* 줄인 페이지 번호 자리. 버튼과 같은 높이로 둔다. */
+/* 줄인 페이지 번호 자리 */
 .page-gap {
   min-width: 24px;
   height: 36px;
@@ -160,7 +159,7 @@
   font-size: var(--fs-sm);
 }
 
-/* 목록으로 돌아가는 링크 — 등록/상세 화면에서 공용으로 쓴다. */
+/* 목록으로 돌아가는 링크 */
 .back-link {
   align-self: flex-start;
   display: inline-flex;
@@ -180,7 +179,7 @@
   color: var(--accent-strong);
 }
 
-/* 버튼·폼 공통 — 등록 폼 외에 그룹·상세 화면에서도 쓰므로 여기에 둔다. */
+/* 버튼·폼 공통 */
 .field-error {
   color: var(--error);
   font-size: var(--fs-xs);
@@ -192,7 +191,6 @@
 .btn-primary,
 .btn-danger,
 .btn-danger-outline {
-  /* Link 로도 쓰이므로 앵커 기본 밑줄을 지우고, 아이콘과 글자를 수직 가운데로 맞춘다. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -221,7 +219,7 @@
   color: var(--text);
 }
 
-/* 녹색은 주 버튼과 링크만 쓴다. 보조 버튼은 회색 안에서만 반응해 주 동작과 구분된다. */
+/* 보조 버튼 */
 .btn-secondary:hover:not(:disabled) {
   border-color: var(--text-muted);
   background: var(--surface-soft);
@@ -242,8 +240,7 @@
   cursor: not-allowed;
 }
 
-/* 되돌릴 수 없는 동작. 채움은 확인 모달의 최종 실행과 초대 거절에, 테두리형은 화면 위의 삭제 진입
-   버튼에 쓴다. 테두리형은 수정 버튼 옆에 두어도 주 동작처럼 보이지 않는다. */
+/* 삭제처럼 되돌릴 수 없는 동작의 버튼 */
 .btn-danger {
   border: 1px solid var(--danger);
   background: var(--danger);
@@ -274,14 +271,14 @@
   cursor: not-allowed;
 }
 
-/* 목록 항목 안의 작은 버튼. 모바일에서 누를 수 있도록 높이 32px 을 지킨다. */
+/* 목록 항목 안의 작은 버튼 */
 .btn-sm {
   min-height: 32px;
   padding: 0 12px;
   font-size: var(--fs-sm);
 }
 
-/* 본문 안에서 링크처럼 보이는 버튼. 글자 크기는 둘러싼 문장을 따른다. */
+/* 링크처럼 보이는 버튼 */
 .link-button {
   border: none;
   background: none;

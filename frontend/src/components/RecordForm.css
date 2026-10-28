@@ -1,5 +1,4 @@
-/* 기록 입력 폼. 입력 요소 공통 스타일은 styles/form.css 에 있다. 모달 패널·상세 카드 안에 들어가므로
-   폼 자체에는 테두리를 두지 않는다. */
+/* 기록 입력 폼 */
 .record-form {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,4 @@
-# 운영용. 스키마 변경은 애플리케이션이 아니라 배포 절차에서 적용한다.
+# 운영용.
 spring:
   datasource:
     url: ${DB_URL}
@@ -13,8 +13,7 @@ spring:
       ddl-auto: validate
 
   flyway:
-    # 운영 DB 에 애플리케이션이 DDL 을 날리지 않도록 막는다. 마이그레이션은 배포 절차에서 Flyway CLI 로
-    # 적용하고, 앱은 ddl-auto: validate 로 적용됐는지만 확인한다.
+    # 마이그레이션은 배포 절차에서 적용하므로 애플리케이션은 돌리지 않는다.
     enabled: false
 
 app:
@@ -26,11 +25,11 @@ logging:
     root: INFO
     com.yong.travel: INFO
   file:
-    # 로그 수집기가 있는 환경이면 LOG_FILE 로 경로를 옮긴다. 필수는 아니다.
+    # LOG_FILE 로 경로를 바꿀 수 있다.
     name: ${LOG_FILE:./logs/travel-recorder.log}
   logback:
     rollingpolicy:
       max-file-size: 10MB
       max-history: 14
-      # Boot 기본값은 무제한이다. 재배포 없이 도는 서버에서 디스크가 차는 것을 막는다.
+      # 디스크가 차지 않도록 로그 보관량을 제한한다.
       total-size-cap: 1GB

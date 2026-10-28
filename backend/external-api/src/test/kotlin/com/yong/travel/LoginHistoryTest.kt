@@ -20,11 +20,7 @@ import org.springframework.transaction.annotation.Transactional
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-/**
- * 로그인 이력이 남는 모양과, 조회가 본인 것으로만 한정되는지 검증.
- *
- * 기록 지점인 임시 로그인 API 는 `local`·`dev` 프로파일에만 있어 여기서는 서비스로 기록한다.
- */
+/** 로그인 이력 기록과 본인 이력만 조회되는지 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -84,7 +80,7 @@ class LoginHistoryTest {
             .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
     }
 
-    /** 컨트롤러가 principal 을 `LoginUser` 로 받으므로 임시 로그인과 같은 타입을 세션 대신 직접 넣는다. */
+    /** 로그인한 사용자로 요청하도록 principal 을 직접 넣는다. */
     private fun loggedInAs(userId: Long) = authentication(
         UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", userId), null, emptyList()),
     )

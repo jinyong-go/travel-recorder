@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
-/** 여행 API (`/api/trips`). */
+/** 여행 API. */
 @RestController
 @RequestMapping("/api/trips")
 class TripController(
@@ -30,13 +30,10 @@ class TripController(
 ) {
 
     /**
-     * 여행 목록 조회.
+     * 여행 목록을 조회한다. 비로그인은 PUBLIC 만 볼 수 있다.
      *
-     * `scope` 는 필수다 ([TripScope]).
-     * MINE/SHARED 는 로그인해야 하며, 비로그인은 PUBLIC 만 조회할 수 있다.
-     *
-     * @param keyword 여행 이름 부분 일치 검색어
-     * @param page 0부터 시작하는 페이지 번호
+     * @param keyword 여행 이름 부분 일치
+     * @param page 0부터 시작
      */
     @GetMapping
     fun list(
@@ -54,7 +51,7 @@ class TripController(
         return PageResponse.of(trips).map { TripSummaryResponse.from(it, userId) }
     }
 
-    /** 여행 상세를 조회한다. 비로그인도 부를 수 있다. */
+    /** 여행을 조회한다. */
     @GetMapping("/{tripId}")
     fun get(
         @PathVariable tripId: Long,
@@ -64,11 +61,7 @@ class TripController(
         return TripResponse.from(tripService.get(tripId, userId), userId)
     }
 
-    /**
-     * 여행을 만든다. 소유자는 요청자로 고정되며 요청으로 지정할 수 없다.
-     *
-     * @return 만들어진 여행 상세
-     */
+    /** 요청자를 소유자로 여행을 만든다. */
     @PostMapping
     fun create(
         @RequestBody @Valid request: TripCreateRequest,
@@ -79,7 +72,7 @@ class TripController(
         return ResponseEntity.status(HttpStatus.CREATED).body(TripResponse.from(trip, userId))
     }
 
-    /** 여행 기본 정보를 수정한다. 공개 범위는 이 경로로 바꾸지 않는다. 소유자만 할 수 있다. */
+    /** 여행 기본 정보를 바꾼다. 소유자만 할 수 있다. */
     @PutMapping("/{tripId}")
     fun update(
         @PathVariable tripId: Long,
@@ -90,7 +83,7 @@ class TripController(
         return TripResponse.from(tripService.update(tripId, userId, request.toCommand()), userId)
     }
 
-    /** 공개 범위를 바꾼다. GROUP 이면 공유 그룹 목록도 함께 전체 교체된다. */
+    /** 공개 범위를 바꾼다. GROUP 이면 공유 그룹도 함께 바꾼다. */
     @PatchMapping("/{tripId}/visibility")
     fun changeVisibility(
         @PathVariable tripId: Long,
@@ -102,7 +95,7 @@ class TripController(
         return TripResponse.from(trip, userId)
     }
 
-    /** 커버 사진을 지정하거나 해제한다. `photoId` 가 null 이면 해제한다. */
+    /** 커버 사진을 지정하거나 해제한다. */
     @PatchMapping("/{tripId}/cover")
     fun changeCover(
         @PathVariable tripId: Long,
@@ -113,7 +106,7 @@ class TripController(
         return TripResponse.from(tripService.changeCover(tripId, userId, request.photoId), userId)
     }
 
-    /** 여행을 삭제한다. soft delete 이며 하위 기록도 함께 사라진다. */
+    /** 여행을 기록과 함께 지운다. */
     @DeleteMapping("/{tripId}")
     fun delete(
         @PathVariable tripId: Long,

@@ -8,9 +8,8 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 }
 
-// 스키마의 기준은 external-api 의 마이그레이션이다. 배치는 코드로 의존하지 않고 테스트 때만 이 스크립트를
-// 받아 테스트 DB 를 만든다. local·dev·prod 에서는 API 서버가 만든 스키마를 그대로 쓴다.
-// 배치가 마이그레이션을 직접 돌리지 않는 것은 같은 DB 의 스키마를 두 애플리케이션이 나눠 갖지 않기 위해서다.
+// 테스트 DB 를 만들 때만 API 서버의 마이그레이션을 가져다 쓴다.
+// 스키마는 API 서버가 관리하므로 배치는 그 밖에서 마이그레이션을 돌리지 않는다.
 tasks.processTestResources {
 	from("../external-api/src/main/resources/db/migration") { into("db/migration") }
 }

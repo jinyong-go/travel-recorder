@@ -19,19 +19,17 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder
 import org.springframework.data.jpa.domain.Specification
 import java.time.Instant
 
-/** 기록 조회의 동적 조건. 목록과 단건 모두 공개 범위 판정이 소속 여행 조인과 함께 여기서 쿼리에 실린다. */
+/** 기록 조회 조건. 공개 범위는 소속 여행으로 판정한다. */
 object TripRecordSpecifications {
 
-    /** id 일치 조건. 단건 조회를 [visibleTo] 와 묶는다. */
+    /** id 일치. */
     fun withId(recordId: Long): Specification<TripRecordEntity> =
         Specification { root, _, cb -> cb.equal(root.get<Long>("id"), recordId) }
 
     /**
-     * 요청자가 볼 수 있는 기록 — 소속 여행을 볼 수 있는 기록이다. 단건 상세도 목록과 같은 판정식을 거친다.
+     * 요청자가 볼 수 있는 기록. 여행이 두 번 조인되므로 [withScope] 와 함께 쓰지 않는다.
      *
-     * 소속 여행을 조인하므로 [withScope] 와 함께 쓰지 않는다. 함께 쓰면 trips 가 두 번 붙는다.
-     *
-     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개 여행의 기록만 참이다
+     * @param userId 비로그인이면 null 이며 전체 공개 여행의 기록만 해당한다
      */
     fun visibleTo(userId: Long?): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
@@ -40,14 +38,10 @@ object TripRecordSpecifications {
         }
 
     /**
-     * 조회 범위 조건. 판정 대상은 기록이 아니라 소속 여행이다. 판정식은 [TripVisibilityPredicates] 에 있다.
+     * 조회 범위 조건. 서비스가 여행 열람을 먼저 확인해도 이 판정은 빼지 않는다.
      *
-     * 소속 여행은 범위와 상관없이 한 번만 조인하고, 목록 쿼리는 이 조인으로 여행·소유자를 함께 읽는다.
-     * 조인을 따로 만들면 trips 가 두 번 붙는다. 삭제된 여행의 기록도 이 조인에서 빠진다.
-     *
-     * @param scope 조회 범위. null 이면 볼 수 있는 기록 전부다(`tripId` 로 좁힐 때). 서비스가 여행 열람을
-     *        먼저 확인해도 판정은 쿼리에서 빼지 않는다 — 사전 확인이 빠지면 곧 유출이다
-     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
+     * @param scope null 이면 볼 수 있는 기록 전부다
+     * @param userId 비로그인이면 null 이며 PUBLIC 만 조회된다
      */
     fun withScope(scope: RecordScope?, userId: Long?): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
@@ -61,15 +55,10 @@ object TripRecordSpecifications {
         }
 
     /**
-     * 목록 필터.
+     * 목록 필터. 비어 있는 조건은 걸지 않는다.
      *
-     * `tripId` 는 여행 상세 화면이 하위 기록을 가져올 때 쓴다. 범위 조건과 AND 로 묶이므로,
-     * 볼 수 없는 여행의 id 를 넣어도 결과가 새지 않고 빈 목록이 된다.
-     *
-     * @param tripId 이 여행의 하위 기록으로 한정한다. null 이면 걸지 않는다
-     * @param category 카테고리. null 이면 걸지 않는다
-     * @param tag 태그 이름 완전 일치. 비었으면 걸지 않는다
-     * @param keyword 이름·주소 부분 일치 검색어. 비었으면 걸지 않는다
+     * @param tag 태그 이름 완전 일치
+     * @param keyword 이름·주소 부분 일치
      */
     fun withFilters(
         tripId: Long?,
@@ -94,7 +83,7 @@ object TripRecordSpecifications {
                 )
             }
 
-            // 조인으로 거르면 태그 행만큼 기록이 불어나 DISTINCT 가 필요해진다. EXISTS 는 기록 행을 늘리지 않는다.
+            // 조인하면 기록이 태그 수만큼 늘어나므로 EXISTS 로 거른다.
             tag.trimToNull()?.let {
                 val sub = requireNotNull(query).subquery(Long::class.java)
                 val tagged = sub.correlate(root).join<TripRecordEntity, TagEntity>("tags")
@@ -106,17 +95,12 @@ object TripRecordSpecifications {
         }
 
     /**
-     * 기준 위치에서 가까운 순 정렬. 같은 거리면 최신순이다.
-     *
-     * 거리는 저장된 값이 아니라 요청 좌표에 따라 매번 달라져 Sort 로 표현할 수 없으므로 조건과 함께 둔다.
-     * 페이지 요청의 정렬은 비워 둬야 한다 — 정렬이 있으면 Spring Data 가 이 정렬을 덮어쓴다.
-     * 건수 쿼리에서는 Spring Data 가 정렬을 지운다.
-     *
-     * @return 걸러 내는 조건 없이 정렬만 거는 조건
+     * 기준 위치에서 가까운 순으로 정렬한다. 같은 거리면 최신순이다.
+     * 페이지 요청에 정렬이 있으면 이 정렬을 덮어쓰므로 비워 둬야 한다.
      */
     fun orderByDistanceFrom(origin: GeoPoint): Specification<TripRecordEntity> =
         Specification { root, query, cb ->
-            // cb.literal 은 SQL 에 값을 그대로 박는다. 요청 좌표가 매번 달라 문장이 매번 달라지므로 바인딩한다.
+            // 좌표가 매번 달라 SQL 에 박지 않고 바인딩한다.
             val hcb = cb as HibernateCriteriaBuilder
             val distance = cb.function(
                 PostgisFunctions.KNN_DISTANCE,
@@ -130,11 +114,7 @@ object TripRecordSpecifications {
             cb.conjunction()
         }
 
-    /**
-     * 소속 여행 조인. 목록 쿼리에서는 여행과 소유자를 함께 읽는 fetch 조인이다.
-     *
-     * 건수 쿼리에서는 fetch 를 걸 수 없어(select 에 기록이 없다) 일반 조인으로 둔다.
-     */
+    /** 소속 여행을 조인한다. 목록은 여행·소유자를 함께 읽고, 건수 쿼리는 일반 조인을 쓴다. */
     @Suppress("UNCHECKED_CAST")
     private fun joinTrip(root: Root<TripRecordEntity>, query: CriteriaQuery<*>): Join<TripRecordEntity, TripEntity> {
         if (query.resultType == Long::class.javaObjectType) return root.join("trip")

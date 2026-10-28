@@ -31,12 +31,7 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * 입력 상한과 형식 검증 — 기록 요청 값, 업로드 파일, 검색어, 태그 자동완성, 장소 검색 인증.
- *
- * 받아서는 안 되는 값이 조용히 저장되는 것을 막는 규칙들이라, 위반이 실제로 거부되는지와
- * 정상 값이 통과하는지를 함께 고정한다.
- */
+/** 입력 상한과 형식 검증이 잘못된 값은 거부하고 정상 값은 통과시키는지 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -130,7 +125,7 @@ class InputValidationTest {
     @Test
     fun `태그 자동완성은 20건까지다`() {
         val owner = newUser()
-        // 서비스 입력(Command)에는 요청 DTO 의 개수 상한이 없으므로 한 기록에 25개를 붙여 둔다.
+        // 서비스에는 개수 상한이 없어 한 기록에 25개를 붙인다.
         newRecord(owner, newTrip(owner), List(25) { "자동완성%02d".format(it) })
 
         val tags = tagService.search("자동완성", owner)

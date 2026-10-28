@@ -11,13 +11,13 @@ const CREATE_ERROR = {
   GROUP_NOT_FOUND: '공유할 수 없는 그룹이 선택되어 있어요. 그룹 선택을 다시 확인해주세요.',
 }
 
-/** 여행 만들기 화면. 공개 범위까지 함께 받아 한 번에 만든다. */
+/** 여행 만들기 화면 */
 export default function TripRegisterPage() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  /** 만든 여행 상세로 보낸다. 실패하면 입력값은 폼에 그대로 남는다. */
+  /** 여행을 만들고 상세로 이동한다 */
   const handleSubmit = async (values) => {
     setSubmitting(true)
     setError('')

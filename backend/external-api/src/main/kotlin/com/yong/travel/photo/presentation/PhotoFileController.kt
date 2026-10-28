@@ -13,10 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-/**
- * 사진 바이너리 서빙. 비로그인도 부를 수 있으며, 소속 여행을 볼 수 있는 사진만 내려준다.
- * 쿠키 세션이라 `<img>` 요청에도 로그인이 실린다.
- */
+/** 사진 파일 API. 볼 수 있는 여행의 사진만 내려 준다. */
 @RestController
 class PhotoFileController(
     private val photoService: PhotoService,
@@ -31,8 +28,7 @@ class PhotoFileController(
         val content = photoService.load(photoId, principal?.userId)
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(content.contentType))
-            // 볼 수 있는지가 바뀔 수 있어 오래 캐시하면 공유를 해제하거나 로그아웃한 뒤에도 같은 브라우저에
-            // 남는다. 1시간으로 묶고, 비공개 사진이 공유 캐시(프록시)에 남지 않도록 private 으로 둔다.
+            // 공개 범위가 바뀔 수 있어 캐시는 1시간으로 짧게, 프록시에 남지 않게 private 으로 둔다.
             .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePrivate())
             .body(content.data)
     }

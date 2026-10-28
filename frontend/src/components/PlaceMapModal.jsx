@@ -4,7 +4,7 @@ import NaverMapView from './NaverMapView.jsx'
 import { CloseIcon } from './icons.jsx'
 import './PlaceMapModal.css'
 
-/** 지도 임베드 모달. 목록·상세 양쪽에서 같은 모양으로 쓴다. */
+/** 장소 지도 모달 */
 export default function PlaceMapModal({ place, onClose }) {
   const panelRef = useModal(onClose)
   return (

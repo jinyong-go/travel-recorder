@@ -25,12 +25,7 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * 기록 목록의 거리순 정렬 검증.
- *
- * 정렬은 DB 가 기준 위치로 하므로 페이지를 넘어서도 가까운 순이 이어져야 한다. 페이지 안에서만
- * 다시 정렬하면 두 번째 페이지에 첫 페이지보다 가까운 기록이 섞인다.
- */
+/** 거리순 정렬이 페이지를 넘어서도 이어지는지 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -46,7 +41,7 @@ class RecordDistanceSortTest {
     fun `거리순은 페이지를 넘어 가까운 순으로 이어진다`() {
         val owner = newUser()
         val tripId = newTrip(owner)
-        // 등록 순서와 거리 순서를 일부러 뒤집는다. 최신순으로 자른 뒤 다시 정렬하면 이 테스트가 깨진다.
+        // 등록 순서와 거리 순서를 일부러 반대로 둔다.
         (12 downTo 1).forEach { newRecord(tripId, owner, latitude = BASE_LAT + it * 0.01) }
         flush()
 

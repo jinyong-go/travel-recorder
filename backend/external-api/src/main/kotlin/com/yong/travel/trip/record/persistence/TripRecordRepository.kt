@@ -7,16 +7,10 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.Instant
 
-/** 기록 조회와 여행 삭제에 딸린 벌크 soft delete. 목록용 일괄 조회(태그·기록 수)를 함께 둔다. */
+/** 기록 저장소. */
 interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpecificationExecutor<TripRecordEntity> {
 
-    /**
-     * 여러 기록의 태그 이름을 한 번에 읽는다.
-     *
-     * 기록 목록이 기록마다 태그 컬렉션을 따로 읽지 않도록 두었다. 태그는 컬렉션이라 목록 쿼리에서
-     * fetch 하면 페이징이 메모리에서 일어나므로 이렇게 따로 읽는다. 태그가 없는 기록은 결과에
-     * 나오지 않으므로 호출부가 빈 목록으로 채운다.
-     */
+    /** 여러 기록의 태그 이름을 한 번에 읽는다. 태그가 없는 기록은 결과에 없다. */
     @Query(
         """
         select new com.yong.travel.trip.record.persistence.RecordTagName(r.id, t.name)
@@ -26,12 +20,7 @@ interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpeci
     )
     fun findTagNamesByRecordIds(@Param("recordIds") recordIds: Collection<Long>): List<RecordTagName>
 
-    /**
-     * 여행별 살아 있는 기록 수.
-     *
-     * 목록 한 페이지(10건)마다 count 를 열 번 쏘지 않으려고 한 번에 묶는다.
-     * 기록이 0건인 여행은 결과에 나오지 않으므로 호출부가 0으로 채운다.
-     */
+    /** 여행별 기록 수를 한 번에 센다. 기록이 없는 여행은 결과에 없다. */
     @Query(
         """
         select new com.yong.travel.trip.record.persistence.TripRecordCount(r.trip.id, count(r))
@@ -42,12 +31,7 @@ interface TripRecordRepository : JpaRepository<TripRecordEntity, Long>, JpaSpeci
     )
     fun countByTripIds(@Param("tripIds") tripIds: Collection<Long>): List<TripRecordCount>
 
-    /**
-     * 여행 삭제에 딸려 가는 하위 기록의 soft delete.
-     *
-     * 벌크 update 에는 @SQLRestriction 이 걸리지 않아 `deletedAt is null` 을 직접 적는다 —
-     * 이미 지운 기록의 삭제 시각을 덮어쓰지 않는다.
-     */
+    /** 여행의 기록을 모두 삭제 상태로 바꾼다. 이미 지운 기록의 삭제 시각은 그대로 둔다. */
     @Modifying(flushAutomatically = true)
     @Query("update TripRecordEntity r set r.deletedAt = :now where r.trip.id = :tripId and r.deletedAt is null")
     fun softDeleteByTripId(@Param("tripId") tripId: Long, @Param("now") now: Instant): Int

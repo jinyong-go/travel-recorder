@@ -14,7 +14,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 
-/** 보관 기간을 넘긴 행만 지우고, 그 안의 행은 남기는지 확인한다. */
+/** 보관 기간이 지난 이력만 지우는지 확인한다. */
 @SpringBootTest
 @SpringBatchTest
 class LoginHistoryCleanupJobTest {
@@ -27,7 +27,7 @@ class LoginHistoryCleanupJobTest {
 
     @BeforeEach
     fun setUp() {
-        // 잡이 둘이라 테스트 도구가 스스로 고르지 못한다. 실행할 잡을 지정한다.
+        // 잡이 둘이라 실행할 잡을 지정한다.
         jobOperatorTestUtils.setJob(loginHistoryCleanupJob)
         jdbcTemplate.update("DELETE FROM login_history")
         jdbcTemplate.update("DELETE FROM users")

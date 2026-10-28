@@ -7,10 +7,6 @@ import { TRIP_MEMO_MAX_LENGTH, TRIP_NAME_MAX_LENGTH } from '../config/inputLimit
 import '../styles/form.css'
 import './TripForm.css'
 
-/**
- * 백엔드 요청 검증과 같은 값이다.
- * 제출 검증과 즉시 표시가 같은 문구를 쓴다.
- */
 const DATE_ORDER_ERROR = '종료일은 시작일 이후여야 해요.'
 
 const EMPTY = {
@@ -24,20 +20,7 @@ const EMPTY = {
   sharedGroupIds: [],
 }
 
-/**
- * 여행 입력 폼. 만들기와 수정이 같은 필드·검증을 쓴다.
- *
- * 공개 범위는 만들기에서만 받는다(`showVisibility`). 수정에서는 여행 상세의 공개 범위 섹션이
- * 그 역할을 하므로, 같은 값을 두 곳에서 바꿀 수 있게 만들지 않는다.
- *
- * `submitting` 동안은 제출·취소 버튼을 막고 문구를 `submittingLabel` 로 바꾼다. 두 번 눌러 여행이
- * 둘 생기는 것을 막고, 눌렸다는 것을 보이기 위해서다.
- *
- * `error` 는 제출 결과의 오류로, 버튼 바로 위에 보인다.
- *
- * `onSubmit` 에는 검증을 통과한 값만 넘어온다. 예산은 비어 있으면 `null` 이며 이는 "예산 정보
- * 없음"으로 `0` 과 구분된다.
- */
+/** 여행 입력 폼 — 만들기와 수정이 함께 쓴다 */
 export default function TripForm({
   initialTrip,
   submitLabel,
@@ -60,13 +43,11 @@ export default function TripForm({
   const [sharedGroupIds, setSharedGroupIds] = useState(initial.sharedGroupIds)
   const [errors, setErrors] = useState({})
 
-  // 두 날짜가 다 있고 순서가 뒤집혔으면 제출 전에도 바로 알린다. 달력의 min 만으로는 직접 입력과
-  // "종료일을 정한 뒤 시작일을 뒤로 옮기는" 경우를 막지 못한다.
+  // 날짜 순서가 뒤집혔는지
   const dateOrderInvalid = Boolean(startDate && endDate && endDate < startDate)
-  // 순서 오류는 제출 전에도 보인다. 그 밖의 오류(미입력)는 제출할 때만 보인다.
   const endDateError = dateOrderInvalid ? DATE_ORDER_ERROR : errors.endDate
 
-  // 날짜를 잘못 골랐을 때 저장 전에 알아차리도록 즉시 계산해 보여준다.
+  // 여행 기간(박·일)
   const durationLabel =
     startDate && endDate && !dateOrderInvalid ? tripDurationLabel({ startDate, endDate }) : ''
 
@@ -117,7 +98,6 @@ export default function TripForm({
         {errors.name && <p className="field-error">{errors.name}</p>}
       </div>
 
-      {/* 짝을 이루는 두 입력은 넓은 화면에서 한 줄에 둔다. 폼 길이가 줄어 공개 범위까지 덜 내려간다. */}
       <div className="form-row">
         <div className="form-field">
           <label htmlFor="trip-start" className="field-required">시작일</label>
@@ -137,7 +117,6 @@ export default function TripForm({
             id="trip-end"
             aria-required="true"
             type="date"
-            // 달력에서 시작일 이전 날짜를 처음부터 고를 수 없게 한다.
             min={startDate || undefined}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
@@ -161,7 +140,6 @@ export default function TripForm({
             onChange={(e) => setHeadcount(e.target.value)}
           />
           {errors.headcount && <p className="field-error">{errors.headcount}</p>}
-          {/* 인원과 공유 그룹을 혼동하는 것이 이 화면에서 가장 흔한 오해다. */}
           <p className="field-hint">함께 간 사람 수예요 (공유 대상과 무관)</p>
         </div>
 
@@ -193,7 +171,6 @@ export default function TripForm({
         {errors.memo && <p className="field-error">{errors.memo}</p>}
       </div>
 
-      {/* 공유하면 여행지와 예산이 함께 보인다는 경고는 선택지 설명이 맡는다. */}
       {showVisibility && (
         <VisibilitySelect
           value={visibility}
@@ -204,12 +181,10 @@ export default function TripForm({
         />
       )}
 
-      {/* 대표 사진은 이 폼에 없다. 하위 기록의 사진 중에서 고르는 값이다. */}
 
       {error && <p className="field-error">{error}</p>}
 
       <div className="form-actions">
-        {/* 만드는 도중에 떠나면 여행이 생겼는지 알 수 없게 되므로 제출 중에는 취소도 막는다. */}
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
           취소
         </button>

@@ -16,13 +16,8 @@ import jakarta.persistence.Table
 import java.time.Instant
 
 /**
- * 끝난 초대의 기록. 한 번 쓰면 고치지 않는다 (append-only).
- *
- * 대기 중인 초대에 상태 컬럼을 달지 않고 별도 테이블로 옮기는 이유는
- * `unique(group_id, invitee_id)` 때문이다 — 끝난 초대가 그 자리에 남아 있으면 같은 상대를
- * 다시 초대할 수 없다.
- *
- * 다른 엔티티와 달리 필드를 `val` 로 둔다. 수정 진입점을 만들지 않는 것이 이 테이블의 요점이다.
+ * 끝난 초대의 기록. 한 번 쓰면 고치지 않는다.
+ * 끝난 초대가 대기 초대 자리에 남으면 같은 사람을 다시 초대할 수 없어 별도 테이블로 옮긴다.
  */
 @Entity
 @Table(name = "invite_history")
@@ -31,7 +26,7 @@ class InviteHistoryEntity(
     @Column(nullable = false)
     val groupId: Long,
 
-    /** 삭제된 그룹도 이름을 답할 수 있게 끝난 시점의 값을 복사해 둔다. */
+    /** 그룹이 지워져도 남도록 이름을 복사해 둔다. */
     @Column(nullable = false, length = 30)
     val groupName: String,
 
@@ -47,7 +42,7 @@ class InviteHistoryEntity(
     @Column(nullable = false, length = 20)
     val outcome: InviteOutcome,
 
-    /** 원래 초대의 생성 시각. 언제 보낸 것이 언제 끝났는지 이력만으로 답할 수 있어야 한다. */
+    /** 초대를 보낸 시각. */
     @Column(nullable = false)
     val invitedAt: Instant,
 ) {
@@ -60,14 +55,7 @@ class InviteHistoryEntity(
     val resolvedAt: Instant = Instant.now()
 
     companion object {
-        /**
-         * 끝난 초대를 이력으로 옮긴다.
-         *
-         * 기록 지점이 넷이라(수락·거절·취소·그룹 삭제) 만드는 방법을 한 곳에 모은다.
-         * 한 곳만 빠뜨려도 이력이 조용히 비고, 그런 누락은 조회 시점에 드러나지 않는다.
-         *
-         * @return 그룹 id·이름을 복사해 둔 이력 행. 아직 저장되지 않았다
-         */
+        /** 끝난 초대로 이력 행을 만든다. 저장은 호출부가 한다. */
         fun from(invite: GroupInviteEntity, outcome: InviteOutcome) = InviteHistoryEntity(
             groupId = requireNotNull(invite.group.id),
             groupName = invite.group.name,

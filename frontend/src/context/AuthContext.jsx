@@ -5,23 +5,12 @@ import { AUTH_STATUS } from './authStatus.js'
 
 const AuthContext = createContext(null)
 
-/**
- * 로그인 상태와 본인 정보를 전역으로 제공한다. 서버 데이터 가운데 컨텍스트에 두는 것은 이것뿐이다.
- *
- * 부팅 시 `GET /api/auth/session` 으로 로그인 여부와 CSRF 토큰을 받고, 로그인 상태면
- * `GET /api/auth/me` 로 본인 정보를 받는다. 새로고침해도 로그인이 유지되는 것은 이 조회
- * 덕분이다.
- *
- * 로그인 상태에서 받은 `401` 은 세션 만료로 보고 로그인 화면으로 보낸다.
- */
+/** 로그인 상태와 본인 정보를 제공한다 */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  // loading 을 따로 두는 이유는 비로그인과 "아직 모름" 이 다르기 때문이다.
-  // 구분하지 않으면 새로고침 직후 로그인 상태가 잠깐 비로그인으로 보인다.
   const [status, setStatus] = useState(AUTH_STATUS.LOADING)
   const navigate = useNavigate()
 
-  // 만료 핸들러는 한 번만 등록하므로 최신 status 를 ref 로 읽는다.
   const statusRef = useRef(status)
   useEffect(() => {
     statusRef.current = status
@@ -29,14 +18,11 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      // 부팅 시 본인 정보 조회와 로그인 요청의 401 은 만료가 아니다.
-      // 로그인 상태였을 때만 만료로 본다.
+      // 로그인 상태에서 받은 401 만 세션 만료로 본다
       if (statusRef.current !== AUTH_STATUS.AUTHENTICATED) return
-      // 동시에 나간 요청 여럿이 401 을 받아도 한 번만 처리한다.
       statusRef.current = AUTH_STATUS.ANONYMOUS
       setUser(null)
       setStatus(AUTH_STATUS.ANONYMOUS)
-      // useLocation 을 쓰면 화면을 옮길 때마다 프로바이더가 다시 그려지므로 window.location 을 읽는다.
       const { pathname, search } = window.location
       navigate('/login?error=session_expired', {
         replace: true,
@@ -49,7 +35,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false
 
-    // 비로그인 방문자가 매번 /me 의 401 을 받지 않게 순서대로 부른다.
     fetchSession()
       .then((authenticated) => (authenticated ? apiFetch('/api/auth/me') : null))
       .then((me) => {
@@ -58,7 +43,6 @@ export function AuthProvider({ children }) {
         setStatus(me ? AUTH_STATUS.AUTHENTICATED : AUTH_STATUS.ANONYMOUS)
       })
       .catch(() => {
-        // 서버 장애, 또는 두 조회 사이에 세션이 끝난 경우다. 화면은 비로그인으로 그린다.
         if (cancelled) return
         setUser(null)
         setStatus(AUTH_STATUS.ANONYMOUS)
@@ -69,7 +53,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  /** 로그인에 성공하면 사용자 정보를 반환하고, 실패하면 받은 오류를 그대로 던진다. 문구는 화면이 고른다. */
+  /** 로그인 */
   const login = useCallback(async (username, password) => {
     try {
       const me = await apiFetch('/api/auth/login', {
@@ -87,12 +71,11 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  /** 서버 세션을 버린다. 호출이 실패해도 화면은 비로그인으로 내린다 — 여기서 붙잡아 둘 이유가 없다. */
+  /** 로그아웃 */
   const logout = useCallback(async () => {
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' })
     } finally {
-      // 호출이 실패했어도 버린다. 토큰이 살아 있으면 다음 쓰기 요청에서 다시 받아 오면 그만이다.
       clearCsrfToken()
       setUser(null)
       setStatus(AUTH_STATUS.ANONYMOUS)
@@ -107,7 +90,7 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-/** 로그인 상태와 login·logout. AuthProvider 밖에서 부르면 바로 실패한다. */
+/** 로그인 상태와 login·logout */
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) throw new Error('useAuth 는 AuthProvider 안에서만 쓸 수 있습니다.')

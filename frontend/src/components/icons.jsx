@@ -237,7 +237,7 @@ export function ChevronDownIcon(props) {
   )
 }
 
-/** 네이버 로고의 N 글리프. 버튼 배경(네이버 그린) 위에 흰색으로 올려 쓴다. */
+/** 네이버 로고 */
 export function NaverIcon(props) {
   return (
     <svg
@@ -321,10 +321,7 @@ export function GlobeIcon(props) {
 
 const VISIBILITY_ICONS = { PRIVATE: LockIcon, GROUP: UsersIcon, PUBLIC: GlobeIcon }
 
-/**
- * 공개 범위 아이콘. 모르는 값은 가장 좁은 범위의 자물쇠로 그린다 — 넓게 잘못 보이는 쪽을 피한다
- * (`visibilityMeta` 와 같은 기준).
- */
+/** 공개 범위 아이콘 */
 export function VisibilityIcon({ visibility, ...props }) {
   const Icon = VISIBILITY_ICONS[visibility] ?? LockIcon
   return <Icon {...props} />
@@ -393,7 +390,7 @@ export function SightIcon(props) {
 
 const CATEGORY_ICONS = { FOOD: FoodIcon, SHOPPING: ShoppingIcon, SIGHT: SightIcon }
 
-/** 여행지 카테고리 아이콘. 값이 없거나 모르는 카테고리면 위치 핀으로 그린다. */
+/** 카테고리 아이콘 */
 export function CategoryIcon({ category, ...props }) {
   const Icon = CATEGORY_ICONS[category] ?? MapPinIcon
   return <Icon aria-hidden="true" {...props} />

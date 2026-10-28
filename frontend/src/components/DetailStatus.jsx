@@ -3,10 +3,7 @@ import { ArrowLeftIcon } from './icons.jsx'
 import '../styles/page.css'
 import '../styles/detailPage.css'
 
-/**
- * 상세 화면이 내용을 그리기 전의 자리 — 불러오는 중, 없음, 실패 안내를 한 문장으로 보인다.
- * `backTo` 를 주면 `backLabel` 로 돌아갈 링크를 단다.
- */
+/** 상세 화면의 불러오는 중·없음·실패 안내 */
 export default function DetailStatus({ title, desc, backTo, backLabel }) {
   return (
     <main className="page detail-status">

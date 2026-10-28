@@ -8,18 +8,13 @@ import com.yong.travel.trip.persistence.TripVisibilityPredicates
 import com.yong.travel.trip.record.persistence.TripRecordEntity
 import org.springframework.data.jpa.domain.Specification
 
-/** 태그 자동완성의 조회 조건. */
+/** 태그 조회 조건. */
 object TagSpecifications {
 
     /**
-     * 요청자가 볼 수 있는 기록에 한 번이라도 쓰인 태그. 전체 태그를 내려주면 비공개 기록의 태그가 드러난다.
+     * 요청자가 볼 수 있는 기록에 쓰인 태그. 비공개 기록의 태그가 드러나지 않도록 제한한다.
      *
-     * 태그에서 출발해 EXISTS 로 확인한다. 이름순으로 읽다가 상한만큼 찾으면 멈출 수 있다.
-     *
-     * 판정은 소속 여행을 조인해 한다 — 조인 없는 경로는 우회로가 된다. 지워진 기록·여행은
-     * @SQLRestriction 이 서브쿼리에서도 걸러 낸다.
-     *
-     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개 여행의 기록만 본다
+     * @param userId 비로그인이면 null 이며 전체 공개 여행의 기록만 본다
      */
     fun usedInRecordVisibleTo(userId: Long?): Specification<TagEntity> =
         Specification { tag, query, cb ->
@@ -34,9 +29,9 @@ object TagSpecifications {
         }
 
     /**
-     * 이름의 대소문자 무시 부분 일치.
+     * 이름 부분 일치. 대소문자는 가리지 않는다.
      *
-     * @param keyword 검색어. 비었으면 조건을 걸지 않는다
+     * @param keyword 비었으면 조건을 걸지 않는다
      */
     fun nameContains(keyword: String?): Specification<TagEntity> =
         Specification { tag, _, cb ->

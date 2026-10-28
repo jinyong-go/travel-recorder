@@ -1,16 +1,12 @@
 import { readStorage, writeStorage } from '../utils/storage.js'
 
-/**
- * 기준 위치 — 거리 계산과 거리순 정렬의 기준점이다. 브라우저 위치, 직접 지정한 위치, 서울역 순으로 고른다.
- *
- * 위치는 서버로 보내 저장하지 않는다. 직접 지정한 값만 이 브라우저의 로컬 저장소에 둔다.
- */
+/** 거리 계산의 기준 위치 */
 
 export const SEOUL_STATION = { lat: 37.5546, lng: 126.9706 }
 
 const MANUAL_LOCATION_KEY = 'travel-recorder:manualLocation'
 
-/** 직접 지정해 둔 위치(`{ lat, lng }`). 없거나 저장값이 깨졌으면 null 이다. */
+/** 직접 지정한 위치. 없으면 null. */
 export const getStoredManualLocation = () => {
   const raw = readStorage(MANUAL_LOCATION_KEY)
   if (!raw) return null
@@ -23,7 +19,7 @@ export const getStoredManualLocation = () => {
 
 export const storeManualLocation = (location) => writeStorage(MANUAL_LOCATION_KEY, JSON.stringify(location))
 
-/** 브라우저 위치를 한 번 요청한다. 지원하지 않거나 거부·시간 초과면 reject 한다. */
+/** 브라우저 위치를 요청한다 */
 export const requestGeolocation = () =>
   new Promise((resolve, reject) => {
     if (!('geolocation' in navigator)) {

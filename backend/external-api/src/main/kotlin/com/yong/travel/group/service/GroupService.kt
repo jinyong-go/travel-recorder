@@ -26,11 +26,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/**
- * 공유 그룹의 생성·수정·삭제와 멤버십 관리. 멤버 추가만은 초대를 거치므로 [GroupInviteService] 의 몫이다.
- *
- * 다른 도메인이 쓰는 판정 재료(속한 그룹 id, 공유 가능한 그룹)도 여기서 내준다.
- */
+/** 그룹의 조회·생성·수정·삭제와 탈퇴·제외를 맡는다. */
 @Service
 @Transactional(readOnly = true)
 class GroupService(
@@ -46,24 +42,21 @@ class GroupService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * 요청자가 소유하거나 속한 그룹 목록을 조회한다.
+     * 요청자가 속한 그룹을 이름순으로 조회한다.
      *
-     * @param page 0부터 시작하는 페이지 번호
-     * @return 이름순 그룹 한 페이지. 멤버 행에서 출발하므로 소유자도 자기 그룹을 여기서 본다
+     * @param page 0부터 시작
      */
     fun list(userId: Long, page: Int): PageResult<Group> {
         val groups = groupMemberRepository.findGroupsByUserId(userId, listPageRequest(page))
-        // 명단은 그룹마다 묻지 않고 페이지 전체를 한 번에 읽어 그룹 id 로 묶는다.
         val members = membersOf(groups.content.mapNotNull { it.id })
         return groups.toPageResult().map { it.toDomain(members[requireNotNull(it.id)].orEmpty()) }
     }
 
     /**
-     * 그룹 상세를 멤버 명단과 함께 조회한다.
+     * 그룹을 멤버 명단과 함께 조회한다.
      *
-     * @return 멤버 명단까지 담긴 그룹 상세
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
-     * @throws ApiException `FORBIDDEN` — 그룹은 있으나 요청자가 멤버가 아닐 때
+     * @throws ApiException `FORBIDDEN` — 멤버가 아닐 때
      */
     fun get(groupId: Long, userId: Long): Group {
         val group = findGroup(groupId)
@@ -75,21 +68,16 @@ class GroupService(
     }
 
     /**
-     * 그룹을 만들고 만든 사람을 소유자이자 첫 멤버로 넣는다.
+     * 그룹을 만든다. 만든 사람이 소유자이자 첫 멤버가 된다.
      *
-     * @param userId 그룹을 만드는 사용자 id. 그대로 소유자가 된다
-     * @param name 그룹 이름. 앞뒤 공백을 지워 저장한다
-     * @param memo 메모. 공백만 있으면 `null` 로 저장된다
-     * @throws ApiException `UNAUTHENTICATED` — 세션은 살아 있는데 사용자 행이 없을 때.
-     *         계정이 지워진 뒤의 요청이라 다시 로그인하는 것 말고 할 수 있는 일이 없다
-     * @throws ApiException `GROUP_LIMIT_EXCEEDED` — 이미 소유 그룹 상한만큼 갖고 있을 때
+     * @throws ApiException `UNAUTHENTICATED` — 세션의 사용자가 없을 때
+     * @throws ApiException `GROUP_LIMIT_EXCEEDED` — 소유 그룹 상한에 도달했을 때
      */
     @Transactional
     fun create(userId: Long, name: String, memo: String?): Group {
         val owner = userRepository.findById(userId)
             .orElseThrow { ApiException(ErrorCode.UNAUTHENTICATED) }
-        // 잠그지 않는다. 동시 요청으로 한 건 넘칠 수 있지만, 이 상한은 목록 크기를 묶으려는 것이라
-        // 정원(MEMBER_LIMIT)처럼 정확히 지켜야 할 약속이 아니다.
+        // 정원과 달리 정확히 지킬 필요가 없어 잠그지 않는다. 동시 요청이면 한 건 넘칠 수 있다.
         if (groupRepository.countByOwnerId(userId) >= GroupEntity.OWNED_GROUP_LIMIT) {
             log.debug("그룹 생성 거부: 소유 상한 초과 userId={}", userId)
             throw ApiException(
@@ -100,22 +88,20 @@ class GroupService(
         val group = groupRepository.save(
             GroupEntity(owner = owner, name = name.trim(), memo = memo.trimToNull()),
         )
-        // 소유자도 멤버 행을 가진다. 인원 계산과 조회 권한 판정을 한 경로로 모으기 위해서다.
+        // 인원 계산과 권한 판정을 같은 방식으로 하도록 소유자도 멤버로 넣는다.
         val ownerMember = groupMemberRepository.save(GroupMemberEntity(group = group, user = owner))
         memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, owner, GroupMemberEvent.JOINED))
         log.debug("그룹 생성 groupId={} ownerId={}", group.id, userId)
 
-        // 방금 만든 멤버가 전부라 다시 읽지 않는다. detailOf 를 쓰면 flush 순서에 기대게 된다.
         return group.toDomain(listOf(ownerMember.toDomain()))
     }
 
     /**
      * 그룹의 이름과 메모를 바꾼다. 소유자만 할 수 있다.
      *
-     * @param name 새 이름. 앞뒤 공백을 지워 저장한다
-     * @param memo 새 메모. **이름과 함께 덮어쓰므로 `null` 이면 기존 메모가 지워진다**
+     * @param memo null 이면 메모를 지운다
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
-     * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
+     * @throws ApiException `FORBIDDEN` — 소유자가 아닐 때
      */
     @Transactional
     fun update(groupId: Long, userId: Long, name: String, memo: String?): Group {
@@ -129,14 +115,11 @@ class GroupService(
     }
 
     /**
-     * 그룹과 그에 딸린 멤버·대기 초대·공유 관계를 모두 지운다. 소유자만 할 수 있다.
-     *
-     * 이 그룹으로만 공유되던 여행은 결과적으로 비공개가 되며, 여행과 하위 기록 자체는 삭제되지 않는다.
-     * 대기 중이던 초대는 받는 쪽에서 이유 없이 사라지는 일이라 `GROUP_DELETED` 이력으로 남긴다.
-     * 남아 있던 멤버와 공유도 지우기 전에 권한 변경 이력으로 남긴다.
+     * 그룹을 멤버·대기 초대·여행 공유와 함께 지운다. 소유자만 할 수 있다.
+     * 여행은 지우지 않고, 지워지는 멤버십·초대·공유는 이력으로 남긴다.
      *
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
-     * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
+     * @throws ApiException `FORBIDDEN` — 소유자가 아닐 때
      */
     @Transactional
     fun delete(groupId: Long, userId: Long) {
@@ -150,8 +133,6 @@ class GroupService(
         )
         val pending = groupInviteRepository.findByGroupId(groupId)
         inviteHistoryRepository.saveAll(pending.map { InviteHistoryEntity.from(it, InviteOutcome.GROUP_DELETED) })
-        // 초대 벌크 삭제가 영속성 컨텍스트를 비우므로 이 뒤로 group 은 준영속이다.
-        // groupRepository.delete 가 다시 찾아 지운다 (GroupInviteRepository.deleteByGroupId 참고).
         groupInviteRepository.deleteByGroupId(groupId)
         groupMemberRepository.deleteByGroupId(groupId)
         groupRepository.delete(group)
@@ -162,14 +143,12 @@ class GroupService(
     }
 
     /**
-     * 소유자가 다른 멤버를 그룹에서 내보낸다. 그 멤버가 이 그룹에 걸어 둔 여행 공유도 함께 푼다.
+     * 소유자가 멤버를 내보낸다. 그 멤버가 이 그룹에 공유한 여행도 공유를 푼다.
      *
-     * @param requesterId 요청자의 사용자 id. 소유자여야 한다
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
-     * @throws ApiException `MEMBER_NOT_FOUND` — 지목한 사용자가 이 그룹의 멤버가 아닐 때
-     * @throws ApiException `FORBIDDEN` — 요청자가 소유자가 아닐 때
-     * @throws ApiException `VALIDATION_ERROR` — 소유자 자신을 지목했을 때.
-     *         주인 없는 그룹이 남으므로 허용하지 않는다 — 없애려면 그룹을 삭제해야 한다
+     * @throws ApiException `MEMBER_NOT_FOUND` — 대상이 멤버가 아닐 때
+     * @throws ApiException `FORBIDDEN` — 소유자가 아닐 때
+     * @throws ApiException `VALIDATION_ERROR` — 소유자 자신을 지목했을 때
      */
     @Transactional
     fun removeMember(groupId: Long, targetUserId: Long, requesterId: Long) {
@@ -192,14 +171,10 @@ class GroupService(
     }
 
     /**
-     * 멤버 본인이 그룹에서 나간다. 내가 이 그룹에 걸어 둔 여행 공유도 함께 푼다.
-     *
-     * [removeMember] 와 달리 소유자 확인을 하지 않는다. 요청자가 곧 대상이라 남의 멤버십을
-     * 건드릴 경로가 없기 때문이다.
+     * 그룹에서 탈퇴한다. 내가 이 그룹에 공유한 여행도 공유를 푼다.
      *
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
-     * @throws ApiException `FORBIDDEN` — 요청자가 소유자이거나(나가면 주인 없는 그룹이 남아 삭제만 가능),
-     *         그룹은 있으나 멤버가 아닐 때
+     * @throws ApiException `FORBIDDEN` — 소유자이거나 멤버가 아닐 때
      */
     @Transactional
     fun leave(groupId: Long, userId: Long) {
@@ -222,18 +197,15 @@ class GroupService(
     }
 
     /**
-     * 여행을 이 그룹들에 공유해도 되는지 확인하고 그룹 엔티티를 돌려준다.
+     * 여행을 공유할 그룹에 요청자가 모두 속해 있는지 확인하고 그룹을 돌려준다.
      *
-     * @param groupIds 공유 대상 그룹 id 목록. 중복은 무시한다
-     * @return 요청한 그룹 엔티티 목록. `groupIds` 가 비었으면 빈 목록
-     * @throws ApiException `GROUP_NOT_FOUND` — 요청자가 속하지 않은 그룹이 하나라도 섞였을 때.
-     *         `FORBIDDEN` 이 아닌 것은 그룹의 존재를 알리지 않기 위해서다 (존재 은닉)
+     * @throws ApiException `GROUP_NOT_FOUND` — 속하지 않은 그룹이 섞였을 때. 남의 그룹이 있는지 드러나지 않도록 404 로 답한다
      */
     fun requireAccessibleGroups(groupIds: Collection<Long>, userId: Long): List<GroupEntity> {
         val distinct = groupIds.distinct()
         if (distinct.isEmpty()) return emptyList()
 
-        // (그룹 id, 사용자) 멤버 행은 하나뿐이라, 하나라도 빠졌으면 속하지 않은 그룹이 섞인 것이다.
+        // 하나라도 빠졌으면 속하지 않은 그룹이 섞인 것이다.
         val groups = groupMemberRepository.findGroupsByIdInAndUserId(distinct, userId)
         if (groups.size != distinct.size) {
             log.debug("공유 대상 그룹 차단 userId={} requested={} accessible={}", userId, distinct, groups.map { it.id })
@@ -242,12 +214,12 @@ class GroupService(
         return groups
     }
 
-    /** 그룹 단건 조회. 없으면 GROUP_NOT_FOUND 이고, 열람·수정 권한 판정은 부르는 쪽이 이어서 한다. */
+    /** 그룹을 찾는다. 권한은 확인하지 않는다. */
     private fun findGroup(groupId: Long): GroupEntity =
         groupRepository.findById(groupId)
             .orElseThrow { ApiException(ErrorCode.GROUP_NOT_FOUND) }
 
-    /** 소유자만 통과시킨다. update·delete·removeMember 가 같은 관문을 쓴다. */
+    /** 소유자가 아니면 `FORBIDDEN`. */
     private fun requireOwner(group: GroupEntity, userId: Long) {
         if (group.owner.id != userId) {
             log.debug("그룹 소유자 아님 groupId={} userId={} ownerId={}", group.id, userId, group.owner.id)
@@ -255,25 +227,20 @@ class GroupService(
         }
     }
 
-    /** 단건 응답. 이 그룹의 명단만 읽어 [toDomain] 에 넘긴다. */
+    /** 그룹을 명단과 함께 도메인 객체로 만든다. */
     private fun detailOf(group: GroupEntity): Group {
         val groupId = requireNotNull(group.id)
         return group.toDomain(membersOf(listOf(groupId))[groupId].orEmpty())
     }
 
-    /** 여러 그룹의 명단을 한 번에 읽어 그룹 id 로 묶는다. 가입 순서는 그대로 지켜진다. */
+    /** 여러 그룹의 명단을 가입 순으로 읽어 그룹 id 별로 묶는다. */
     private fun membersOf(groupIds: List<Long>): Map<Long, List<Group.Member>> {
         if (groupIds.isEmpty()) return emptyMap()
         return groupMemberRepository.findWithUserByGroupIdIn(groupIds)
             .groupBy({ requireNotNull(it.group.id) }) { it.toDomain() }
     }
 
-    /**
-     * 그룹 엔티티에 멤버 명단을 붙여 [Group] 으로 만든다. 목록과 단건이 함께 쓴다.
-     *
-     * 명단은 호출부가 미리 읽어 온다. 응답을 만들면서 리포지토리를 다시 부르지 않기 위해 도메인
-     * 객체를 두는 것이므로, 이 함수를 지나면 조회가 끝나 있어야 한다.
-     */
+    /** 그룹에 명단을 붙여 도메인 객체로 만든다. */
     private fun GroupEntity.toDomain(members: List<Group.Member>): Group {
         val groupId = requireNotNull(id)
         val ownerId = requireNotNull(owner.id)
@@ -281,7 +248,7 @@ class GroupService(
             id = groupId,
             name = name,
             memo = memo,
-            // 소유자는 반드시 멤버 행을 갖는다 (create 참고). 없다면 데이터가 깨진 것이라 500 이 맞다.
+            // 소유자는 반드시 멤버다. 없으면 데이터가 깨진 것이다.
             owner = members.firstOrNull { it.user.id == ownerId }
                 ?: error("그룹 $groupId 의 소유자 멤버 행이 없다"),
             members = members,
@@ -289,7 +256,6 @@ class GroupService(
         )
     }
 
-    /** 멤버 행 → 도메인. 이름과 프로필 사진까지만 담는다. */
     private fun GroupMemberEntity.toDomain() = Group.Member(
         user = user.toUser(),
         joinedAt = joinedAt,

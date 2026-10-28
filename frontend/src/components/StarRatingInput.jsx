@@ -3,7 +3,7 @@ import './StarRatingInput.css'
 
 const STARS = [1, 2, 3, 4, 5]
 
-/** 별 하나당 좌/우 절반을 각각 눌러 0.5 단위(0.5 ~ 5.0)로 별점을 매긴다. */
+/** 0.5 단위 별점 입력 */
 export default function StarRatingInput({ value, onChange }) {
   const [hoverValue, setHoverValue] = useState(0)
   const shown = hoverValue || value
@@ -13,13 +13,11 @@ export default function StarRatingInput({ value, onChange }) {
       className="star-rating-input"
       role="radiogroup"
       aria-label="별점"
-      // 별점을 받는 폼(기록 등록·수정)은 모두 평점이 필수다.
       aria-required="true"
       onMouseLeave={() => setHoverValue(0)}
     >
       <div className="star-row">
         {STARS.map((n) => {
-          // 현재 값 기준 이 별이 채워져야 하는 비율 (0 ~ 1)
           const fill = Math.min(Math.max(shown - (n - 1), 0), 1)
           return (
             <span className="star-slot" key={n}>

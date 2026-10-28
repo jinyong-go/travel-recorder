@@ -5,14 +5,7 @@ import com.yong.travel.group.domain.GroupRef
 import java.time.Instant
 import java.time.LocalDate
 
-/**
- * 여행 한 건. 서비스가 조회를 모두 끝낸 결과를 묶어 컨트롤러에 넘기는 경계다.
- *
- * 목록과 단건이 함께 쓴다. 목록 응답에서 `updatedAt` 을 빼는 것은 응답 DTO 의 몫이다.
- *
- * **JPA 엔티티가 아니다.** 커버 사진 URL·기록 수·공유 그룹처럼 여러 조회를 합쳐야 나오는 값을
- * 이미 담고 있으며, 이 객체를 만든 뒤에는 추가 조회가 일어나지 않는다.
- */
+/** 여행 한 건. */
 data class Trip(
     val id: Long,
     val name: String,
@@ -22,7 +15,7 @@ data class Trip(
     val budget: Long?,
     val memo: String?,
 
-    /** 커버가 지정되지 않았으면 null. 서버는 대체 이미지를 고르지 않는다. */
+    /** 커버를 지정하지 않았으면 null. */
     val coverPhotoUrl: String?,
 
     /** 삭제되지 않은 하위 기록 수. */
@@ -30,25 +23,15 @@ data class Trip(
 
     val owner: User,
 
-    /**
-     * 공개 범위. **소유자 본인의 조회에서만 채운다** (그 외에는 null).
-     *
-     * 응답에서 가리는 대신 아예 읽지 않는다 — 누구에게 공유했는지는 열람자에게 알릴 이유가 없고,
-     * 담아 두었다가 가리는 것보다 담지 않는 편이 확실하다.
-     */
+    /** 공개 범위. 소유자에게만 채우고 그 외에는 null 이다. */
     val visibility: TripVisibility?,
 
-    /** 공유 그룹. [visibility] 가 `GROUP` 인 소유자 조회에서만 채운다. 그 외에는 null. */
+    /** 공유 그룹. `GROUP` 여행의 소유자에게만 채우고 그 외에는 null 이다. */
     val sharedGroups: List<GroupRef>?,
 
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
-    /**
-     * 요청자가 소유자인지. 요청자마다 달라지는 값이라 저장하지 않고 물어보게 한다.
-     *
-     * @param userId 요청자의 사용자 id. 비로그인이면 null
-     * @return 소유자면 true
-     */
+    /** 요청자가 소유자인지 확인한다. 비로그인(null)이면 false. */
     fun isOwnedBy(userId: Long?): Boolean = userId != null && owner.id == userId
 }

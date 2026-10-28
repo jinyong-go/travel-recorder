@@ -1,10 +1,8 @@
 package com.yong.travel.auth.domain
 
 /**
- * 로그인한 본인의 정보.
- *
- * **이메일이 담기는 유일한 자리다** — 타인에게 나가는 [User] 와 나누어 둔 이유가 이것이다.
- * 제공 동의를 받지 못한 계정은 이메일이 null 이다.
+ * 로그인한 본인의 정보. 이메일은 본인에게만 보이므로 [User] 와 나눴다.
+ * 이메일 제공에 동의하지 않았으면 null 이다.
  */
 data class MyProfile(
     val id: Long,

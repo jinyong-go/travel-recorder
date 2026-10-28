@@ -2,8 +2,7 @@ package com.yong.travel.place.client
 
 /**
  * NAVER API HUB 지역 검색 원본 응답.
- * mapx(경도)/mapy(위도) 는 WGS84 기준 정수형 문자열(x 10^7)로 내려오므로 변환이 필요하다.
- * 공식 문서는 배율을 밝히지 않지만 실제 응답 표본으로 10^7 임을 확인했다.
+ * mapx(경도)·mapy(위도)는 WGS84 좌표에 10^7 을 곱한 정수 문자열이다. 배율은 문서에 없어 실제 응답으로 확인했다.
  */
 data class NaverLocalSearchResponse(
     val total: Int = 0,

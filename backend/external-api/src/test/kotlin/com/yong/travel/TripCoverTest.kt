@@ -26,12 +26,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * 커버 사진 지정·해제 검증.
- *
- * `cover_photo_id` 에 외래키를 두지 않기로 했으므로, 사진이 여행에서 사라지는 경로마다
- * 커버가 풀리는지 직접 확인해야 한다. 빠뜨리면 없는 사진을 가리키는 커버가 남아 조회가 깨진다.
- */
+/** 커버 사진 지정과, 사진이 여행에서 빠질 때마다 커버가 해제되는지 확인한다. */
 @SpringBootTest
 @Transactional
 class TripCoverTest {
@@ -51,7 +46,7 @@ class TripCoverTest {
 
         assertNotNull(tripService.changeCover(tripId, owner, photoId).coverPhotoUrl)
 
-        // 다른 여행의 사진은 404 다. 아예 없는 사진과 구분되지 않아야 한다.
+        // 다른 여행의 사진은 없는 사진과 같은 404 다.
         val otherTripId = newTrip(owner)
         assertEquals(
             ErrorCode.PHOTO_NOT_FOUND,
@@ -79,7 +74,7 @@ class TripCoverTest {
         tripService.changeCover(tripId, owner, null)
         flush()
 
-        // 커버가 없으면 null 이다. 서버는 대체 이미지를 고르지 않는다.
+        // 커버가 없으면 null 이다.
         assertNull(tripService.get(tripId, owner).coverPhotoUrl)
     }
 
@@ -95,7 +90,6 @@ class TripCoverTest {
         photoService.delete(recordId, photoId, owner)
         flush()
 
-        // 외래키가 없으므로 애플리케이션이 풀지 않으면 없는 사진을 가리킨 채 남는다.
         assertNull(tripService.get(tripId, owner).coverPhotoUrl)
     }
 
@@ -247,7 +241,7 @@ class TripCoverTest {
                 "files",
                 "photo-${System.nanoTime()}.jpg",
                 MediaType.IMAGE_JPEG_VALUE,
-                // 서버가 파일 앞부분의 시그니처를 확인하므로 JPEG 시그니처로 시작해야 한다.
+                // 서버가 파일 내용을 확인하므로 JPEG 시그니처로 시작한다.
                 byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte()),
             ),
         ),

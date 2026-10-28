@@ -7,7 +7,7 @@ data class LoginHistoryEntry(
     val id: Long,
     val ipAddress: String,
 
-    /** User-Agent 원문. 헤더가 없던 요청이면 null 이다. 해석은 화면의 몫이다. */
+    /** User-Agent 원문. 헤더가 없었으면 null. */
     val userAgent: String?,
 
     val loggedInAt: Instant,

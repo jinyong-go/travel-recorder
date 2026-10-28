@@ -9,12 +9,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-/**
- * 쿼리 파라미터의 열거형 표기 검증.
- *
- * 열거형 값은 쿼리·본문·응답 모두 대문자 한 가지 표기다. 소문자를 다시 받아 주는 변환기가 끼어들면
- * 같은 값이 두 이름을 갖게 되므로, 소문자가 거부되는 것까지 고정한다.
- */
+/** 열거형 쿼리 파라미터가 대문자만 받는지 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 class EnumParamBindingTest {

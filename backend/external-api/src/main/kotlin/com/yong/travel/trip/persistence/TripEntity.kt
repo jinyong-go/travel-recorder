@@ -21,12 +21,8 @@ import java.time.LocalDate
 import java.util.UUID
 
 /**
- * 여행 — 여행 기록의 상위 그룹이자 공유의 단위.
- *
- * **공개 범위 컬럼은 이 엔티티에만 존재한다**. 하위 기록은 범위를 갖지 않고 소속
- * 여행의 값을 그대로 따르므로, 여행 하나만 바꾸면 하위 기록 전체의 노출이 함께 바뀐다.
- *
- * 소유자는 하위 기록 전부의 작성자이기도 하다. 편집 권한 판정의 유일한 근거다.
+ * 여행. 기록을 묶고 공개 범위를 정하는 단위다.
+ * 기록은 소속 여행의 공개 범위를 따르고, 여행 소유자만 기록을 편집할 수 있다.
  */
 @Entity
 @Table(name = "trips")
@@ -42,15 +38,15 @@ class TripEntity(
     @Column(nullable = false)
     var startDate: LocalDate,
 
-    /** startDate 와 같은 날이면 당일치기다. 미래 날짜를 막지 않는다 — 여행 중 등록이 정상 사용이다. */
+    /** 시작일과 같으면 당일치기다. 여행 중에도 등록하므로 미래 날짜를 허용한다. */
     @Column(nullable = false)
     var endDate: LocalDate,
 
-    /** 본인을 포함한 사람 수. 계정·공유 그룹과 무관하며 상한을 두지 않는다. */
+    /** 본인을 포함한 인원. 공유 그룹과는 상관없다. */
     @Column(nullable = false)
     var headcount: Int,
 
-    /** 원 단위. null 은 "예산 정보 없음" 이고 0 과 구분된다. */
+    /** 원 단위. null 은 정보 없음이고 0 과 다르다. */
     var budget: Long? = null,
 
     @Column(length = 1000)
@@ -66,12 +62,8 @@ class TripEntity(
         protected set
 
     /**
-     * 커버 사진. 그 여행의 하위 기록에 속한 사진만 지정할 수 있다.
-     *
-     * 생성자 파라미터가 아닌 이유는 생성 시점에 고를 사진이 아직 존재할 수 없기 때문이다.
-     *
-     * **DB 에 외래키를 두지 않는다.** 사진이 이 여행에서 사라질 때의 커버 해제는 DB 가 아니라
-     * 애플리케이션이 [clearCoverIfAmong] 으로 한다.
+     * 커버 사진. 이 여행의 기록에 속한 사진만 지정할 수 있다.
+     * 외래키가 없으므로 사진이 사라지면 [clearCoverIfAmong] 으로 직접 해제한다.
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cover_photo_id")
@@ -81,34 +73,29 @@ class TripEntity(
     var createdAt: Instant = Instant.now()
         protected set
 
-    // 만든 직후에는 수정 시각이 생성 시각과 같아야 한다. 따로 now() 를 부르면 몇 µs 어긋나
-    // 새로 만든 행도 "수정됨" 으로 보인다.
+    // 새 행이 수정된 것으로 보이지 않도록 생성 시각과 같은 값으로 시작한다.
     @Column(nullable = false)
     var updatedAt: Instant = createdAt
         protected set
 
-    /** soft delete 시각. null 이면 살아 있는 행이다 (@SQLRestriction 으로 조회에서 자동 제외). */
+    /** 삭제 시각. 삭제된 행은 조회에서 빠진다. */
     var deletedAt: Instant? = null
         protected set
 
-    /** 수정 시각을 갱신한다. flush 시점에 JPA 가 부른다. */
+    /** 수정 시각을 갱신한다. */
     @PreUpdate
     fun onUpdate() {
         updatedAt = Instant.now()
     }
 
-    /** 하위 기록도 함께 지워야 하지만, 그것은 서비스의 몫이다 — 엔티티는 자기 상태만 바꾼다. */
+    /** 여행을 삭제 상태로 바꾼다. 기록은 따로 지워야 한다. */
     fun softDelete() {
         if (deletedAt == null) deletedAt = Instant.now()
     }
 
     /**
-     * 지정된 사진 중 하나가 커버였다면 커버 지정을 푼다.
-     *
-     * `cover_photo_id` 에 외래키가 없어, 사진이 여행에서 사라지는 **모든 경로**(사진 삭제, 기록 삭제,
-     * 기록 이동)가 이 처리를 거쳐야 한다. 빠뜨리면 없는 사진을 가리키는 커버가 남는다.
-     *
-     * @param photoIds 이 여행에서 사라지는 사진 id 들
+     * 주어진 사진 중 하나가 커버면 커버를 해제한다.
+     * 사진 삭제·기록 삭제·기록 이동처럼 사진이 여행에서 빠지는 곳에서 모두 불러야 한다.
      */
     fun clearCoverIfAmong(photoIds: Collection<UUID>) {
         val current = coverPhoto?.id ?: return

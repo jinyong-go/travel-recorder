@@ -6,7 +6,7 @@ plugins {
 	id("io.spring.dependency-management") version "1.1.7" apply false
 }
 
-// 두 모듈 모두 Kotlin·Spring Boot 애플리케이션이라 공통 설정을 여기 둔다.
+// 두 모듈의 공통 빌드 설정.
 // subprojects 블록에서는 타입 안전 접근자를 쓸 수 없어 설정 이름을 문자열로 적는다.
 subprojects {
 	group = "com.yong"
@@ -41,7 +41,7 @@ subprojects {
 
 	tasks.withType<Test> {
 		useJUnitPlatform()
-		// 기본 프로파일(local)은 초기 데이터를 넣으므로 테스트는 전용 프로파일로 띄운다.
+		// 기본 프로파일은 초기 데이터를 넣으므로 테스트 전용 프로파일을 쓴다.
 		systemProperty("spring.profiles.active", "test")
 	}
 }

@@ -6,29 +6,29 @@ import com.yong.travel.common.util.trimToNull
 import com.yong.travel.trip.domain.TripScope
 import org.springframework.data.jpa.domain.Specification
 
-/** 여행 조회의 동적 조건. 목록과 단건 모두 공개 범위 판정이 여기서 쿼리에 실린다. */
+/** 여행 조회 조건. */
 object TripSpecifications {
 
-    /** id 일치 조건. 단건 조회를 [visibleTo]·[ownedBy] 와 묶어 판정까지 한 쿼리에 싣는다. */
+    /** id 일치. */
     fun withId(tripId: Long): Specification<TripEntity> =
         Specification { root, _, cb -> cb.equal(root.get<Long>("id"), tripId) }
 
     /**
-     * 요청자가 볼 수 있는 여행. 단건 열람도 목록과 같은 판정식을 거친다.
+     * 요청자가 볼 수 있는 여행.
      *
-     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개만 참이다
+     * @param userId 비로그인이면 null 이며 전체 공개만 해당한다
      */
     fun visibleTo(userId: Long?): Specification<TripEntity> =
         Specification { root, query, cb -> TripVisibilityPredicates.visibleTo(root, requireNotNull(query), cb, userId) }
 
-    /** 요청자가 소유한 여행. 기록을 담거나 옮길 대상 여행을 고를 때 쓴다. */
+    /** 요청자가 소유한 여행. */
     fun ownedBy(userId: Long): Specification<TripEntity> =
         Specification { root, _, cb -> TripVisibilityPredicates.ownedBy(root, cb, userId) }
 
     /**
-     * 조회 범위 조건. 판정식은 [TripVisibilityPredicates] 에 있다.
+     * 조회 범위 조건.
      *
-     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며, 이 경우 PUBLIC 만 조회된다
+     * @param userId 비로그인이면 null 이며 PUBLIC 만 조회된다
      */
     fun withScope(scope: TripScope, userId: Long?): Specification<TripEntity> =
         Specification { root, query, cb ->
@@ -40,9 +40,9 @@ object TripSpecifications {
         }
 
     /**
-     * 여행 이름 부분 일치 조건. 기록 목록과 달리 주소는 보지 않는다 — 여행은 주소를 갖지 않는다.
+     * 여행 이름 부분 일치.
      *
-     * @param keyword 검색어. 비었으면 조건을 걸지 않는다
+     * @param keyword 비었으면 조건을 걸지 않는다
      */
     fun withKeyword(keyword: String?): Specification<TripEntity> =
         Specification { root, _, cb ->

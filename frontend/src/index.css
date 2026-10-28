@@ -1,5 +1,4 @@
-/* 마루 부리는 여행 이름·큰 제목에만 쓰므로 굵기 하나만 받는다. 네이버가 주는 CSS 는 굵기마다
-   파일을 다 걸고 font-display 가 없어, 받는 동안 글자가 비어 보인다 — 그래서 직접 선언한다. */
+/* 여행 이름·큰 제목용 글꼴 */
 @font-face {
   font-family: 'MaruBuri';
   font-weight: 600;
@@ -11,54 +10,45 @@
   --bg: #fbfcf8;
   --surface: #ffffff;
   --surface-soft: #f0f5ec;
-  /* 브랜드 연두 파스텔. 면(선택 표시·배지 바탕·플레이스홀더)에만 쓴다 — 글자색이나 흰 글자를
-     얹는 바탕으로 쓰면 대비가 2:1 남짓이라 읽히지 않는다. */
+  /* 브랜드 연두 — 면에만 쓴다 */
   --accent-soft: #d4ecc6;
   --text: #1f2a1d;
   --text-muted: #56644f;
-  /* 테두리는 연두가 아니라 회녹색이다. 테두리까지 연두면 화면 전체가 강조색으로 덮인다. */
   --border: #dde4d6;
-  /* 글자·버튼·링크용 녹색. 흰 바탕 위 글자로도, 흰 글자를 얹는 바탕으로도 4.5:1 을 넘긴다. */
+  /* 글자·버튼·링크용 녹색 */
   --accent: #2f6b33;
   --accent-strong: #24552a;
   --accent-contrast: #ffffff;
-  /* 되돌릴 수 없는 동작(삭제·거절)에만 쓰는 색. 연두 브랜드 컬러와 구분되어야 하므로
-     라이트·다크가 같은 값을 쓴다 — 테마별 재정의를 두지 않는다. */
+  /* 되돌릴 수 없는 동작의 색 */
   --danger: #b34c4c;
   --danger-border: #d97b7b;
   --danger-hover: #9a3d3d;
   --danger-contrast: #ffffff;
-  /* 되돌릴 수 없는 동작을 글자로 쓸 때(삭제 버튼 글자, 실패 배지)의 붉은색. 채움·테두리의
-     --danger 는 테마와 무관하지만, 글자는 같은 값으로 어두운 바탕에서 대비가 3:1 남짓이라
-     --error 처럼 테마별로 둔다. */
+  /* 되돌릴 수 없는 동작의 글자색 */
   --danger-text: #b34c4c;
-  /* 오류 안내 문구. 되돌릴 수 없는 동작의 --danger 와 용도가 다르고, 어두운 배경 위의
-     글자라 다크에서 밝게 올려야 대비(4.5:1)가 나온다 — 그래서 테마별 값을 둔다. */
+  /* 오류 문구 */
   --error: #c0453c;
   --error-border: #e0685f;
   --error-bg: rgba(224, 104, 95, 0.1);
-  /* 성공·완료 표시용 파랑. 브랜드가 연두라 초록을 성공색으로 쓰면 액센트와 섞인다.
-     테두리는 --danger 와 같은 규칙으로 테마별 재정의를 두지 않지만, 글자는 같은 값으로는
-     어두운 배경에서 대비가 4.5:1 에 못 미쳐 --error 처럼 테마별로 둔다. */
+  /* 성공·완료 표시 */
   --info-border: #7ba0d1;
   --info-text: #416ca8;
   --shadow: 0 8px 24px -10px rgba(31, 42, 29, 0.25);
   --shadow-sm: 0 2px 6px -2px rgba(31, 42, 29, 0.15);
   --badge-bg: rgba(255, 255, 255, 0.85);
   --overlay: rgba(20, 26, 19, 0.45);
-  /* 사진 위에 얹는 조작 버튼. 사진은 테마와 무관하므로 다크 값을 두지 않는다. */
+  /* 사진 위 조작 버튼 */
   --photo-control-bg: rgba(20, 30, 18, 0.6);
   --photo-control-text: #ffffff;
 
-  /* 글자 크기 척도. 힌트·날짜·배지도 13px 아래로 내리지 않는다. 회녹색 보조 글자는 대비 기준을
-     넘어도 작아지면 읽히지 않는다. 사용자가 지은 이름과 랜딩 같은 큰 제목은 자리마다 따로 정한다. */
+  /* 글자 크기 */
   --fs-xs: 13px;
   --fs-sm: 14px;
   --fs-md: 15px;
   --fs-lg: 17px;
   --fs-xl: 24px;
 
-  /* 모양으로 역할을 나눈다. 조작(버튼·입력·탭) < 사진·카드 < 모달. 알약은 상태 배지 전용이다. */
+  /* 모서리 */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -66,7 +56,7 @@
 
   --sans: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', system-ui,
     'Segoe UI', Roboto, sans-serif;
-  /* 여행 이름·큰 제목 전용. 사용자가 지은 이름을 본문과 다른 결로 보이게 한다. */
+  /* 여행 이름·큰 제목 서체 */
   --serif: 'MaruBuri', 'AppleMyungjo', 'Noto Serif KR', 'Nanum Myeongjo', serif;
 
   font: 16px/1.5 var(--sans);
@@ -80,7 +70,7 @@
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* 다크 테마 — 짙은 녹회색 바탕. 어두운 바탕에서는 연두 파스텔이 그대로 대비를 내므로 글자·버튼에 쓴다. */
+/* 다크 테마 */
 [data-theme='dark'] {
   --bg: #141913;
   --surface: #1b2119;
@@ -135,8 +125,7 @@ button {
   font: inherit;
 }
 
-/* 키보드 포커스는 한 곳에서 그린다. :where 라 우선순위가 0 이어서, 모양이 다른 자리
-   (카드 전체 링크·별점·접기 요약줄)는 각자의 규칙이 그대로 이긴다. */
+/* 키보드 포커스 표시 */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

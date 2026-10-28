@@ -19,23 +19,10 @@ import './RecordForm.css'
 
 const EMPTY = { place: null, category: '', rating: 0, memo: '', photos: [] }
 
-/** 사진 하나를 그릴 주소. 이미 올라간 사진(`{ id, url }`)은 서버 URL, 새로 고른 파일은 미리보기다. */
+/** 사진을 그릴 주소 */
 const photoSrc = (photo) => photo.previewUrl ?? fileUrl(photo.url)
 
-/**
- * 기록 입력 폼. 등록(모달)과 수정(기록 상세)이 같은 필드·검증을 쓴다.
- *
- * `initialValues` 로 초안을 채운다 — `{ place, category, rating, memo, photos }`. `photos` 에는 이미
- * 올라간 사진(`{ id, url }`)이 들어 있을 수 있고, 새로 고른 파일은 `{ file, previewUrl }` 로 덧붙는다.
- * 무엇을 지우고 무엇을 올릴지는 `onSubmit` 을 받은 쪽이 원래 목록과 비교해 정한다.
- *
- * `onSubmit` 에는 검증을 통과한 값만 넘어온다. 메모는 앞뒤 공백을 지우고, 비었으면 `null` 이다.
- * `error` 는 제출 결과의 오류로, 버튼 바로 위에 보인다.
- *
- * 장소명은 직접 입력할 수 없고 장소 검색 모달에서만 채운다. 기준 위치(`reference`)는 쓰는 화면의
- * `useReferenceLocation()` 결과를 받아 넘긴다 — 따로 부르면 검색 모달에서 위치를 지정해도 뒤 화면의
- * 거리가 바뀌지 않는다.
- */
+/** 기록 입력 폼 — 등록과 수정이 함께 쓴다 */
 export default function RecordForm({
   initialValues = EMPTY,
   reference,
@@ -54,11 +41,9 @@ export default function RecordForm({
   const [errors, setErrors] = useState({})
   const [photoErrors, setPhotoErrors] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
-  // 확인을 거쳐 뺄 사진의 위치. 0번도 있으므로 없음은 null 로 구분한다.
   const [removingPhotoIndex, setRemovingPhotoIndex] = useState(null)
 
-  // 폼이 사라질 때(제출·취소 어느 쪽이든) 미리보기 URL 을 해제한다. 마지막 목록을 알아야 하므로
-  // ref 로 들고 있는다.
+  // 폼이 사라질 때 미리보기 URL 을 해제한다
   const photosRef = useRef(photos)
   useEffect(() => {
     photosRef.current = photos
@@ -72,7 +57,6 @@ export default function RecordForm({
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files ?? [])
-    // 이미 올라간 사진은 다시 보내지 않으므로 합계 검사는 새로 고른 파일만 대상으로 한다.
     const selectedBytes = photos.reduce((sum, p) => sum + (p.file?.size ?? 0), 0)
     const { accepted, errors: rejected } = validatePhotoFiles(files, selectedBytes)
     setPhotoErrors(rejected)
@@ -82,7 +66,7 @@ export default function RecordForm({
         ...accepted.map((file) => ({ file, previewUrl: URL.createObjectURL(file) })),
       ])
     }
-    // 같은 파일을 연이어 고를 수 있도록 값을 비운다.
+    // 같은 파일을 다시 고를 수 있게 비운다
     e.target.value = ''
   }
 
@@ -95,8 +79,7 @@ export default function RecordForm({
     })
   }
 
-  // 새로 고른 파일은 바로 빼고, 이미 올라간 사진은 확인을 거친다. 초안에서만 빠지고 저장해야 실제로
-  // 지워진다는 사실을 알려야 하기 때문이다.
+  // 이미 올라간 사진은 확인을 거쳐 뺀다
   const handlePhotoRemoveClick = (index) => {
     if (photos[index].file) removePhoto(index)
     else setRemovingPhotoIndex(index)
@@ -233,12 +216,7 @@ export default function RecordForm({
         </div>
       </form>
 
-      {/*
-        검색·사진 확인 모달은 body 에 그린다. 폼이 등록 모달 안에 있으면 그 패널의 스크롤·쌓임 맥락에
-        갇혀 화면 전체를 덮지 못한다. 포털이어도 React 이벤트는 이 컴포넌트를 감싼 쪽으로 전파되므로
-        등록 패널이 전파를 멈춰, 검색 모달의 클릭이 등록 모달의 바깥 클릭으로 새지 않는다. <form> 바깥에
-        두는 것은 검색 모달 자신의 제출이 이 폼의 제출로 번지지 않게 하기 위해서다.
-      */}
+      {/* 모달은 body 에 포털로 그린다 */}
       {searchOpen &&
         createPortal(
           <PlaceSearchModal

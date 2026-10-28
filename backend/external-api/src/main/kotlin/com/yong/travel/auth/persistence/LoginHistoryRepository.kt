@@ -4,13 +4,9 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 
-/**
- * 성공한 로그인의 기록. 읽기는 본인 것뿐이며, 조건이 곧 본인 필터다.
- *
- * 지우는 메서드를 두지 않는다 — 보관 기간 정리는 batch 모듈이 SQL 로 한다.
- */
+/** 로그인 이력 저장소. 보관 기간이 지난 이력은 배치가 지운다. */
 interface LoginHistoryRepository : JpaRepository<LoginHistoryEntity, Long> {
 
-    /** 한 사용자의 로그인 이력을 최신순으로 읽는다. 응답에 사용자를 싣지 않으므로 fetch join 이 필요 없다. */
+    /** 한 사용자의 로그인 이력을 최신순으로 읽는다. */
     fun findByUserIdOrderByLoggedInAtDesc(userId: Long, pageable: Pageable): Page<LoginHistoryEntity>
 }

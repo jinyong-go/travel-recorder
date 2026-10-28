@@ -1,4 +1,4 @@
-# 운영. API 서버와 같은 PostgreSQL 을 쓴다. 스키마는 배포 절차에서 적용되므로 여기서 실행하지 않는다.
+# 운영. API 서버와 같은 DB 를 쓴다.
 spring:
   datasource:
     url: ${DB_URL}

@@ -1,8 +1,6 @@
-/* 상세 화면 공통 부품 — 여행·기록·그룹 상세가 함께 쓰는 불러오기 안내·섹션·이름·작성자 버튼.
-   화면 틀은 styles/page.css 다. */
+/* 상세 화면 공통 부품 */
 
-/* 불러오는 중·없음·실패 안내를 화면 한가운데 둔다. 안내만 있는 화면이라 틀을 flex 로 바꿔
-   세로로도 가운데에 놓는다. */
+/* 불러오는 중·없음·실패 안내 */
 .detail-status {
   display: flex;
 }
@@ -36,8 +34,7 @@
   text-decoration: underline;
 }
 
-/* 상세의 섹션은 카드로 감싸지 않고 위쪽 구분선으로만 나눈다. 카드를 쌓으면 모든 섹션이
-   같은 무게로 보여 무엇이 본문인지 흐려진다. */
+/* 상세 섹션 */
 .detail-summary,
 .detail-section {
   border-top: 1px solid var(--border);
@@ -47,13 +44,11 @@
   gap: 14px;
 }
 
-/* 기록 상세의 첫 섹션이라 위에 나눌 대상이 없다. */
 .detail-summary {
   border-top: none;
   padding-top: 0;
 }
 
-/* 사용자가 지은 이름이라 본문과 다른 서체로 둔다. */
 .detail-name {
   font-family: var(--serif);
   font-weight: 600;
@@ -88,9 +83,7 @@
   color: var(--text-muted);
 }
 
-/* 이름과 소유자용 버튼(수정·삭제)을 한 줄에 둔다 — 여행·기록 상세가 같은 자리에 둔다. 목록이 길어도
-   버튼을 찾으러 내려가지 않게 하기 위해서다. 좁은 화면에서는 버튼을 이름 아래로 내려 긴 이름이
-   버튼 폭만큼 좁아지지 않게 한다. */
+/* 이름과 수정·삭제 버튼 줄 */
 .detail-title-row {
   display: flex;
   align-items: flex-start;
@@ -104,7 +97,7 @@
   }
 }
 
-/* 상세의 사실 목록(기간·인원·거리·작성자 등). 숫자가 여럿 나란히 놓이므로 항목명을 작게 위에 붙인다. */
+/* 상세 정보 목록 */
 .detail-meta {
   margin: 0;
   display: grid;
@@ -120,7 +113,6 @@
   gap: 3px;
 }
 
-/* 값이 긴 항목(여행 기간)은 두 칸을 쓴다. */
 .detail-meta-wide {
   grid-column: span 2;
 }
@@ -137,8 +129,7 @@
   color: var(--text);
 }
 
-/* 수정과 삭제를 제목 줄 오른쪽에 묶는다 — 여행·기록 상세가 같은 자리에 둔다. 삭제는 테두리만
-   붉은 모양이라 수정과 나란히 두어도 주 동작처럼 보이지 않는다. 이름이 길면 이름 쪽이 줄바꿈된다. */
+/* 수정·삭제 버튼 묶음 */
 .detail-author-actions {
   display: flex;
   flex-shrink: 0;

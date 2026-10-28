@@ -9,12 +9,7 @@ import { ArrowLeftIcon } from '../components/icons.jsx'
 import '../styles/page.css'
 import './LoginHistoryPage.css'
 
-/**
- * 내 로그인 이력 전체. 최신순이며 "더 보기" 로 이어 붙인다.
- *
- * 대상은 언제나 본인이라 경로에 사용자를 담지 않는다. 계정 메뉴에는 두지 않고 내 정보의
- * "전체 보기" 로만 들어온다.
- */
+/** 내 로그인 이력 전체 */
 export default function LoginHistoryPage() {
   const loginHistory = usePagedList(fetchLoginHistory)
 

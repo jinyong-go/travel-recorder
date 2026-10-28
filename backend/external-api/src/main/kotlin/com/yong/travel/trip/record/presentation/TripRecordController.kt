@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
-/** 여행 기록 API (`/api/records`). */
+/** 기록 API. */
 @RestController
 @RequestMapping("/api/records")
 class TripRecordController(
@@ -34,17 +34,14 @@ class TripRecordController(
 ) {
 
     /**
-     * 기록 목록 조회.
+     * 기록 목록을 조회한다. `scope` 나 `tripId` 중 하나가 있어야 한다.
+     * 남의 여행이 공유인지 공개인지 모르는 열람자도 볼 수 있도록 `tripId` 만으로도 조회한다.
      *
-     * `scope` 는 `tripId` 가 없으면 필수다 ([RecordScope]). `tripId` 만 주면 그 여행의 하위 기록이다 —
-     * 열람자는 남의 여행이 공유인지 공개인지 몰라 scope 를 고를 수 없다.
-     * MINE/SHARED 는 로그인해야 하며, 비로그인은 PUBLIC 과 tripId 조회만 할 수 있다.
-     *
-     * @param tag 태그 이름 완전 일치 필터
-     * @param keyword 이름·주소 부분 일치 검색어
-     * @param lat 기준 위도. 거리 계산·거리순 정렬에만 쓴다. 거리순이면 필수
-     * @param lng 기준 경도. 거리 계산·거리순 정렬에만 쓴다. 거리순이면 필수
-     * @param page 0부터 시작하는 페이지 번호
+     * @param tag 태그 이름 완전 일치
+     * @param keyword 이름·주소 부분 일치
+     * @param lat 기준 위도. 거리순이면 필수
+     * @param lng 기준 경도. 거리순이면 필수
+     * @param page 0부터 시작
      */
     @GetMapping
     fun list(
@@ -67,7 +64,6 @@ class TripRecordController(
         if (origin != null && !GeoPoint.isValid(origin.latitude, origin.longitude)) {
             throw ApiException(ErrorCode.VALIDATION_ERROR, "lat·lng 가 좌표 범위를 벗어났습니다.")
         }
-        // 거리순은 DB 가 기준 위치로 정렬하므로 좌표 없이는 정렬할 기준이 없다.
         if (sort == RecordSort.DISTANCE && origin == null) {
             throw ApiException(ErrorCode.VALIDATION_ERROR, "거리순 정렬에는 lat 과 lng 가 필요합니다.")
         }
@@ -83,7 +79,7 @@ class TripRecordController(
         return PageResponse.of(records).map { TripRecordSummaryResponse.from(it, userId) }
     }
 
-    /** 기록 상세를 조회한다. 비로그인도 부를 수 있다. */
+    /** 기록을 조회한다. */
     @GetMapping("/{recordId}")
     fun get(
         @PathVariable recordId: Long,
@@ -93,7 +89,7 @@ class TripRecordController(
         return TripRecordResponse.from(recordService.get(recordId, userId), userId)
     }
 
-    /** 기록을 등록한다. 소속 여행은 요청자가 소유한 것이어야 하며, 작성자는 그 여행의 소유자다. */
+    /** 기록을 등록한다. 요청자가 소유한 여행에만 등록할 수 있다. */
     @PostMapping
     fun create(
         @RequestBody @Valid request: TripRecordCreateRequest,
@@ -104,7 +100,7 @@ class TripRecordController(
         return ResponseEntity.status(HttpStatus.CREATED).body(TripRecordResponse.from(record, userId))
     }
 
-    /** 기록을 수정한다. 작성자만 할 수 있다. */
+    /** 기록을 수정한다. 여행 소유자만 할 수 있다. */
     @PutMapping("/{recordId}")
     fun update(
         @PathVariable recordId: Long,
@@ -115,10 +111,7 @@ class TripRecordController(
         return TripRecordResponse.from(recordService.update(recordId, userId, request.toCommand()), userId)
     }
 
-    /**
-     * 소속 여행 변경. 공개 범위를 바꾸는 수단은 기록에 없다 —
-     * `PATCH /api/trips/{id}/visibility` 로 여행에서 바꾼다.
-     */
+    /** 기록을 다른 여행으로 옮긴다. */
     @PatchMapping("/{recordId}/trip")
     fun changeTrip(
         @PathVariable recordId: Long,
@@ -129,7 +122,7 @@ class TripRecordController(
         return TripRecordResponse.from(recordService.changeTrip(recordId, userId, request.tripId), userId)
     }
 
-    /** 기록을 삭제한다. soft delete 라 행은 남고 조회에서만 사라진다. */
+    /** 기록을 지운다. */
     @DeleteMapping("/{recordId}")
     fun delete(
         @PathVariable recordId: Long,

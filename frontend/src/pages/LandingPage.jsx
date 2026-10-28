@@ -10,17 +10,16 @@ import TripCover from '../components/TripCover.jsx'
 import './LandingPage.css'
 import { AUTH_STATUS } from '../context/authStatus.js'
 
-/** 공개 여행 첫 페이지(최근 등록순). 앞의 몇 건과 전체 건수를 쓴다. */
+/** 최근 공개 여행 조회 */
 const loadPublicTrips = () => fetchTrips('PUBLIC', 'RECENT', 0)
 
-/** 랜딩에 보여 줄 최근 공개 여행 수. */
+/** 랜딩에 보여 줄 공개 여행 수 */
 const RECENT_TRIP_COUNT = 4
 
-/** 첫 화면. 기능을 설명하는 대신 최근 공개된 여행을 보여 준다. 비로그인도 보는 화면이다. */
+/** 첫 화면 — 최근 공개된 여행을 보여 준다 */
 export default function LandingPage() {
   const { status } = useAuth()
-  // 랜딩은 비로그인도 보는 화면이므로 전체 공개 여행만 읽는다. 받기 전·실패·0건이면 최근 여행
-  // 영역을 통째로 그리지 않는다 — 빈 자리나 "0건"은 처음 온 사람에게 비어 있는 서비스로 읽힌다.
+  // 공개 여행이 없으면 영역을 그리지 않는다
   const publicTrips = useResource(loadPublicTrips).data
   const recentTrips = publicTrips?.content.slice(0, RECENT_TRIP_COUNT) ?? []
 
@@ -51,9 +50,7 @@ export default function LandingPage() {
             <Link to="/trips?scope=PUBLIC" className="btn-primary">
               여행 둘러보기
             </Link>
-            {/* 네이버 로그인 복구 시 "네이버로 시작하기" 로 되돌린다.
-                이미 로그인했으면 보이지 않는다. 확인 중에도 그리지 않는다 — 먼저 그리면
-                로그인한 사용자에게 한 번 깜빡인다 (헤더 로그인 링크와 같은 이유). */}
+            {/* 비로그인일 때만 보이는 로그인 버튼 */}
             {status === AUTH_STATUS.ANONYMOUS && (
               <Link to="/login" className="btn-secondary">
                 로그인하고 시작하기
@@ -80,7 +77,7 @@ export default function LandingPage() {
                 <li key={trip.id} className="landing-trip">
                   <TripCover trip={trip} />
                   <h4 className="landing-trip-name">
-                    {/* 카드 전체가 눌리도록 링크를 카드 위에 덮는다 (.landing-trip-link::after) */}
+                    {/* 카드 전체를 덮는 링크 */}
                     <Link to={`/trips/${trip.id}`} className="landing-trip-link">
                       {trip.name}
                     </Link>

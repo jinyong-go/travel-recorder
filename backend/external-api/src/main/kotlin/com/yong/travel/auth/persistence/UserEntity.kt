@@ -12,8 +12,8 @@ import jakarta.persistence.UniqueConstraint
 import java.time.Instant
 
 /**
- * 동일인 판정은 `provider + providerId` 로 한다. 이메일은 초대 대상을 지정하는 유일한 열쇠라
- * 계정마다 하나여야 하므로 유니크 제약을 함께 건다.
+ * 사용자. 로그인 수단과 수단 안의 id 로 동일인을 가린다.
+ * 이메일은 초대 대상을 찾는 열쇠라 중복을 막는다.
  */
 @Entity
 @Table(
@@ -31,9 +31,8 @@ class UserEntity(
     var providerId: String,
 
     /**
-     * 네이버가 이메일 제공 동의를 받지 못하면 내려주지 않으므로 null 을 허용한다.
-     * 빈 문자열로 채우면 그런 계정이 둘째로 생기는 순간 유니크 제약에 걸려 로그인 자체가 실패한다.
-     * null 끼리는 충돌하지 않는다. 이메일이 없는 계정은 초대 대상으로 지정할 수 없다.
+     * 이메일 제공에 동의하지 않으면 null 이다. 빈 문자열로 채우면 그런 계정끼리 유니크 제약에 걸린다.
+     * 이메일이 없는 계정은 초대할 수 없다.
      */
     var email: String? = null,
 
@@ -52,16 +51,8 @@ class UserEntity(
         protected set
 }
 
-/**
- * 엔티티 → 본인 정보 도메인 값. 이메일이 함께 담기는 유일한 변환이다.
- *
- * @return 이메일까지 담긴 본인 정보
- */
+/** 이메일을 포함한 본인 정보로 바꾼다. */
 fun UserEntity.toProfile(): MyProfile = MyProfile(requireNotNull(id), name, email, profileImageUrl)
 
-/**
- * 엔티티 → 타인에게 보이는 사용자 값. 이메일을 담지 않으며, 본인 정보가 아닌 곳은 모두 이 변환을 쓴다.
- *
- * @return 이름·프로필 사진까지의 사용자 값
- */
+/** 타인에게 보이는 사용자 정보로 바꾼다. 이메일은 담지 않는다. */
 fun UserEntity.toUser(): User = User(requireNotNull(id), name, profileImageUrl)

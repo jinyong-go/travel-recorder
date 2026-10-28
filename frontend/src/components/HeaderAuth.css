@@ -18,7 +18,7 @@
   color: var(--accent-strong);
 }
 
-/* 계정 메뉴 — 프로필 버튼과 그 아래 드롭다운 */
+/* 계정 메뉴 */
 .account-menu {
   position: relative;
 }
@@ -48,7 +48,7 @@
   font-weight: 600;
 }
 
-/* 받은 초대 건수. 이름이 숨는 좁은 화면에서도 남아야 해서 아바타 옆에 붙인다. */
+/* 받은 초대 건수 배지 */
 .header-invite-badge {
   display: inline-grid;
   place-items: center;

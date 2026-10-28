@@ -16,10 +16,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-/**
- * 세션 조회로 받은 CSRF 토큰이 쓰기 요청에 그대로 통하는지, 토큰 쿠키가 JS 에 닫혀 있는지,
- * 로그아웃이 토큰을 비우는지 확인한다.
- */
+/** CSRF 토큰 발급·사용과 로그아웃 시 토큰 정리를 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 class AuthSessionTest {
@@ -74,7 +71,7 @@ class AuthSessionTest {
         return response.getCookie("XSRF-TOKEN")!! to token
     }
 
-    /** 로그아웃은 로그인이 필요한 경로라 로그인 상태로 보낸다. 서비스까지 가지 않아 사용자 행은 필요 없다. */
+    /** 로그아웃은 로그인이 필요해 로그인 상태로 보낸다. */
     private fun loggedIn() = authentication(
         UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", 1L), null, emptyList()),
     )

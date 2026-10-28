@@ -13,7 +13,7 @@ const SEARCH_ERROR = {
   PLACE_SEARCH_UNAVAILABLE: '지금은 장소 검색을 할 수 없어요. 잠시 후 다시 시도해주세요.',
 }
 
-/** 검색 결과 거리의 기준이 무엇인지. 확인 중이면 출처보다 그 사실을 먼저 알린다. */
+/** 기준 위치 출처 문구 */
 const REFERENCE_LOCATION_LABEL = {
   locating: '현재 위치 확인 중…',
   geo: '현재 위치',
@@ -21,16 +21,11 @@ const REFERENCE_LOCATION_LABEL = {
   default: '기본 위치(서울역)',
 }
 
-/**
- * 우편번호 검색 방식의 장소 검색 모달. 백엔드가 네이버 지역 검색을 집계해 페이지로 준다.
- *
- * 기준 위치는 서버로 보내지 않으므로 거리순 정렬은 받은 페이지 안에서만 이뤄진다. 원본 API 의
- * 검색어당 건수 상한 때문에 결과가 적게 와도 오류가 아니다.
- */
+/** 장소 검색 모달 */
 export default function PlaceSearchModal({ reference, onSelect, onClose }) {
   const { location: referenceLocation, source, status: referenceStatus, setManualLocation } = reference
   const panelRef = useModal(onClose)
-  // true 면 고른 장소를 기록에 넣지 않고 기준 위치로 저장한다.
+  // 기준 위치를 고르는 중인지
   const [pickingReference, setPickingReference] = useState(false)
   const title = pickingReference ? '내 위치 지정' : '장소 검색'
   const referenceLabel =
@@ -38,7 +33,6 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
   const [queryInput, setQueryInput] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState(null)
   const [emptyKeyword, setEmptyKeyword] = useState(false)
-  // 서버 페이지 번호라 0 부터다. 화면에는 1 을 더해 보인다.
   const [page, setPage] = useState(0)
 
   const load = useCallback(() => searchPlaces(submittedQuery, page), [submittedQuery, page])
@@ -59,11 +53,11 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
 
   const handleSearch = (e) => {
     e.preventDefault()
-    // 빈 검색어는 외부 API 호출 한도만 쓰므로 보내지 않고 안내만 한다.
+    // 빈 검색어는 보내지 않는다
     const keyword = queryInput.trim()
     setEmptyKeyword(!keyword)
     if (!keyword) return
-    // 같은 검색어로 다시 검색하면 load 가 바뀌지 않아 요청이 나가지 않는다. 직접 다시 읽는다.
+    // 같은 검색어로 다시 검색하면 직접 다시 읽는다
     if (keyword === submittedQuery && page === 0) {
       reload()
       return
@@ -75,7 +69,6 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
   const handleSelect = (place) => {
     if (pickingReference) {
       setManualLocation(place.location)
-      // 지정을 마치면 장소 검색으로 돌아간다. 새 기준으로 다시 검색하도록 결과를 비운다.
       setPickingReference(false)
       setSubmittedQuery(null)
       setQueryInput('')
@@ -85,10 +78,8 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
       name: place.name,
       address: place.address,
       roadAddress: place.roadAddress ?? null,
-      // 검색 결과에는 지역명이 따로 없어 기존 기록(placeOf)처럼 주소를 대신 쓴다.
       region: place.address,
       location: place.location,
-      // 네이버 지역 검색 결과의 원본 링크. 있을 때만 등록 요청의 externalLink 로 넘어간다.
       link: place.link ?? null,
     })
   }
@@ -161,7 +152,6 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
               <p className="place-search-count">
                 총 <strong>{totalCount}</strong>건 · 이 페이지 안에서 가까운 순
               </p>
-              {/* 페이지를 넘기는 동안 이전 결과를 남겨 두되, 바뀌는 중임을 알린다. */}
               <ul className="place-search-list" aria-busy={status === REQUEST_STATUS.LOADING}>
                 {results.map((p) => (
                   <li key={`${p.name}-${p.location.lat}-${p.location.lng}`}>
@@ -180,7 +170,7 @@ export default function PlaceSearchModal({ reference, onSelect, onClose }) {
                 ))}
               </ul>
 
-              {/* 상한 미만이면 그 검색어의 결과가 전부라 안내하지 않는다. */}
+              {/* 결과가 상한에 닿으면 검색어를 좁히도록 안내한다 */}
               {totalCount >= PLACE_SEARCH_RESULT_LIMIT && (
                 <p className="place-search-limit-note">
                   최대 {PLACE_SEARCH_RESULT_LIMIT}곳까지만 보여줘요. 찾는 곳이 없으면 지역명을 함께 넣어 검색해 보세요.

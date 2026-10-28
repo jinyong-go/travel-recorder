@@ -1,4 +1,4 @@
-/* 입력 폼 공통 — 여행 폼·기록 등록 모달·기록 상세 수정·그룹 만들기가 함께 쓴다. */
+/* 입력 폼 공통 */
 
 .form-field {
   display: flex;
@@ -6,7 +6,6 @@
   gap: 8px;
 }
 
-/* 필드 제목만 대상으로 한다 (버튼처럼 쓰이는 .photo-upload-btn 라벨 제외) */
 .form-field > label,
 .field-label {
   font-size: var(--fs-sm);
@@ -14,8 +13,7 @@
   color: var(--text);
 }
 
-/* 텍스트·숫자·날짜 입력과 여러 줄 입력. 장소 검색 input 과 같은 생김새를 쓴다. 입력 요소는 글꼴을
-   물려받지 않으므로 font 를 명시한다. */
+/* 입력칸 */
 .form-field > input[type='text'],
 .form-field > input[type='number'],
 .form-field > input[type='date'],
@@ -51,8 +49,6 @@
   min-width: 0;
   border: 1px solid var(--border);
   background: var(--surface-soft);
-  /* 직접 입력하지 않는 칸이라 바탕은 흐리게 두되, 고른 장소명은 본문처럼 읽혀야 한다. 비활성
-     입력의 글자색은 브라우저가 덮어쓰므로 text-fill-color 로 고정한다. */
   color: var(--text);
   -webkit-text-fill-color: var(--text);
   font-weight: 600;
@@ -116,7 +112,7 @@
   gap: 10px;
 }
 
-/* 브라우저 기본 파일 입력은 숨기고 라벨을 버튼처럼 노출한다 (접근성 위해 제거하지 않음) */
+/* 파일 입력은 숨기고 라벨을 버튼으로 쓴다 */
 .photo-upload-input {
   position: absolute;
   width: 1px;
@@ -146,9 +142,7 @@
   margin-top: 4px;
 }
 
-/* 필수 항목 표시. 기호는 CSS 로 붙이고 대체 텍스트를 비워 스크린리더가 읽지 않게 한다 —
-   필수라는 사실은 입력 요소의 aria-required 가 전한다. 글자로 읽혀야 하므로 오류 문구와 같은
-   --error 색을 쓴다 (대비 4.5:1 이상). */
+/* 필수 항목 표시(*) */
 .field-required::after {
   content: ' *' / '';
   color: var(--error);
@@ -158,7 +152,7 @@
   color: var(--error);
 }
 
-/* 짝을 이루는 두 입력(시작일·종료일, 인원·예산)을 한 줄에 둔다. 좁은 화면에서는 위아래로 쌓는다. */
+/* 두 입력을 한 줄에 둔다 */
 .form-row {
   display: grid;
   grid-template-columns: 1fr;
@@ -167,7 +161,6 @@
 
 @media (min-width: 480px) {
   .form-row {
-    /* 입력 요소의 기본 폭이 칸보다 넓어도 칸을 밀어내지 않게 최소 폭을 0 으로 둔다. */
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }

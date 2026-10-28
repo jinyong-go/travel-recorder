@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/** 로그인 이력의 기록과 조회. 본인이 모르는 로그인을 알아차리게 하는 것이 목적이다. */
+/** 로그인 이력을 남기고 조회한다. 본인이 모르는 로그인을 알아차리게 한다. */
 @Service
 @Transactional(readOnly = true)
 class LoginHistoryService(
@@ -22,17 +22,12 @@ class LoginHistoryService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * 로그인 성공을 기록한다. 세션을 발급하기 **전에** 부른다.
+     * 로그인 성공을 기록한다. 기록이 실패하면 로그인도 실패하도록 세션 발급 전에 부른다.
      *
-     * 실패하면 예외가 그대로 올라가 로그인도 실패한다. 이력 없이 로그인이 성립하면 목록에 빈틈이
-     * 생기고, 그 빈틈은 본인이 볼 때 드러나지 않는다.
-     *
-     * @param ipAddress 요청의 원 클라이언트 주소
-     * @param userAgent `User-Agent` 헤더 원문. 길면 잘라 저장하고, 없으면 null 로 둔다
+     * @param userAgent 길면 잘라 저장한다
      */
     @Transactional
     fun record(userId: Long, ipAddress: String, userAgent: String?) {
-        // 인증을 막 통과한 사용자라 행이 있다. 존재 확인 조회를 따로 하지 않고 FK 가 보장하게 둔다.
         val saved = loginHistoryRepository.save(
             LoginHistoryEntity(
                 user = userRepository.getReferenceById(userId),
@@ -40,20 +35,19 @@ class LoginHistoryService(
                 userAgent = userAgent?.take(LoginHistoryEntity.USER_AGENT_MAX_LENGTH),
             ),
         )
-        // IP·User-Agent 는 로그에 남기지 않는다. 보관 기간을 둔 값을 로그가 기한 없이 들고 있게 된다.
+        // IP·User-Agent 는 보관 기간이 있는 값이라 로그에 남기지 않는다.
         log.debug("로그인 이력 기록 userId={} historyId={}", userId, saved.id)
     }
 
     /**
-     * 내 로그인 이력을 최신순으로 조회한다. 대상은 언제나 요청자 본인이다.
+     * 내 로그인 이력을 최신순으로 조회한다.
      *
-     * @param page 0부터 시작하는 페이지 번호
+     * @param page 0부터 시작
      */
     fun list(userId: Long, page: Int): PageResult<LoginHistoryEntry> =
         loginHistoryRepository.findByUserIdOrderByLoggedInAtDesc(userId, listPageRequest(page))
             .toPageResult().map { it.toDomain() }
 
-    /** 저장된 로그인 이력 한 건 → 도메인 객체. */
     private fun LoginHistoryEntity.toDomain() = LoginHistoryEntry(
         id = requireNotNull(id),
         ipAddress = ipAddress,

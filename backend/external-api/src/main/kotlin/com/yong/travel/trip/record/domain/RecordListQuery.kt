@@ -1,11 +1,6 @@
 package com.yong.travel.trip.record.domain
 
-/**
- * 목록 조회 범위. 세 범위는 성격이 달라 한 목록에 섞지 않는다.
- *
- * 성격과 필수인 이유는 [com.yong.travel.trip.domain.TripScope] 와 같다.
- * 판정 근거는 기록이 아니라 소속 여행에 있다.
- */
+/** 기록 목록 조회 범위. 소속 여행으로 판정한다. */
 enum class RecordScope {
     /** 내 여행의 기록 전부 (공개 범위 무관) */
     MINE,
@@ -17,22 +12,22 @@ enum class RecordScope {
     PUBLIC,
 }
 
-/** 기록 목록 정렬. 거리순은 기준 좌표가 있을 때만 의미가 있다. */
+/** 기록 목록 정렬. 거리순은 기준 위치가 있어야 한다. */
 enum class RecordSort {
     RECENT,
 
-    /** 등록순. 여행 상세의 하위 기록이 쓴다. */
+    /** 등록순 */
     OLDEST,
     RATING,
     DISTANCE,
 }
 
-/** 기록 목록 조회 조건. 컨트롤러가 쿼리 파라미터를 옮겨 담아 서비스에 넘긴다. */
+/** 기록 목록 조회 조건. */
 data class RecordListQuery(
-    /** null 이면 `tripId` 가 반드시 있고, 그 여행의 하위 기록 전부다. */
+    /** null 이면 `tripId` 여행의 기록 전부다. */
     val scope: RecordScope?,
 
-    /** 특정 여행의 하위 기록으로 한정한다. 여행 상세 화면이 이 경우다. */
+    /** 이 여행의 기록으로 좁힌다. */
     val tripId: Long? = null,
 
     val category: Category? = null,
@@ -40,6 +35,6 @@ data class RecordListQuery(
     val keyword: String? = null,
     val sort: RecordSort = RecordSort.RECENT,
 
-    /** 기준 위치. 거리 계산에 쓰며, `sort = DISTANCE` 면 반드시 있다 (컨트롤러가 보장). */
+    /** 기준 위치. 거리순이면 반드시 있다. */
     val origin: GeoPoint? = null,
 )

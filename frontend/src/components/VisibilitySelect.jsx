@@ -5,17 +5,7 @@ import PagedListBody from './PagedListBody.jsx'
 import { VisibilityIcon } from './icons.jsx'
 import './VisibilitySelect.css'
 
-/**
- * 공개 범위 선택. 등록 폼과 상세 화면이 같은 컴포넌트를 쓴다.
- *
- * 기본 선택은 언제나 "나만 보기" 이며, 넓히는 것은 사용자가 직접 고른 결과여야 한다.
- * "그룹 공유" 인데 선택된 그룹이 없으면 결과적으로 비공개라는 사실을 그 자리에서 알린다 —
- * 저장을 막지는 않는다. 범위를 먼저 고르고 그룹을 나중에 붙이는 순서가 자연스럽기 때문이다.
- *
- * 공유할 그룹 목록은 이 컴포넌트가 직접 읽는다. "그룹 공유" 를 골랐을 때만 필요하므로 그때
- * 읽고, 여는 화면이 미리 받아 두지 않는다. 목록은 페이지 단위라 "더 보기" 로 이어 붙이며, 고른 그룹은
- * id 로 들고 있어 아직 펼치지 않은 페이지의 그룹도 선택이 유지된다.
- */
+/** 공개 범위 선택 */
 export default function VisibilitySelect({
   value,
   onChange,
@@ -24,7 +14,6 @@ export default function VisibilitySelect({
   onCreateGroupClick,
 }) {
   const wantsGroups = value === 'GROUP'
-  // 다른 범위로 갔다가 다시 "그룹 공유" 를 고르면 새로 읽는다. 그 사이 그룹이 바뀌었을 수 있다.
   const groups = usePagedList(fetchGroups, wantsGroups)
 
   const toggleGroup = (groupId) => {
@@ -34,10 +23,7 @@ export default function VisibilitySelect({
     onChangeGroups(next)
   }
 
-  /**
-   * "그룹 공유" 아래의 그룹 자리. 불러오는 중·실패를 "그룹 없음" 과 구분해 보여 준다 — 공개 범위를
-   * 정하는 자리에서 사실과 다른 안내를 하지 않기 위해서다. 그 판정은 `PagedListBody` 가 한다.
-   */
+  /** 공유할 그룹 목록 */
   const renderGroups = () => (
     <PagedListBody
       list={groups}

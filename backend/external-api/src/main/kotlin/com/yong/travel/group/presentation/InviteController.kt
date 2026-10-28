@@ -14,10 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
-/**
- * 받은 초대를 다루는 경로. 초대는 받은 사람의 계정에 쌓이므로 **비로그인으로 열 수 있는 경로가 없다**.
- * 보내는 쪽은 `GroupController` 의 `/api/groups/{groupId}/invites` 다.
- */
+/** 내 초대 목록, 이력, 수락·거절 API. */
 @RestController
 @RequestMapping("/api/invites")
 class InviteController(
@@ -25,9 +22,9 @@ class InviteController(
 ) {
 
     /**
-     * 내 앞으로 온 초대 목록을 조회한다.
+     * 받은 초대를 조회한다.
      *
-     * @param page 0부터 시작하는 페이지 번호
+     * @param page 0부터 시작
      */
     @GetMapping
     fun received(
@@ -38,9 +35,9 @@ class InviteController(
             .map { ReceivedInviteResponse.from(it) }
 
     /**
-     * 내가 보낸 대기 초대 목록을 그룹을 가로질러 조회한다.
+     * 내가 보낸 대기 초대를 모든 그룹에 걸쳐 조회한다.
      *
-     * @param page 0부터 시작하는 페이지 번호
+     * @param page 0부터 시작
      */
     @GetMapping("/sent")
     fun sent(
@@ -51,12 +48,9 @@ class InviteController(
             .map { SentInviteResponse.from(it) }
 
     /**
-     * 끝난 초대 이력. `role` 로 받은 관점과 보낸 관점을 고르며 기본값은 받은 쪽이다.
+     * 끝난 초대 이력을 조회한다. 기본은 받은 이력이다.
      *
-     * 남의 이력을 볼 경로는 없다 — 조회 조건이 곧 본인 필터다.
-     *
-     * @param role 받은 관점(`RECEIVED`)인지 보낸 관점(`SENT`)인지
-     * @param page 0부터 시작하는 페이지 번호
+     * @param page 0부터 시작
      */
     @GetMapping("/history")
     fun history(
@@ -67,7 +61,7 @@ class InviteController(
         PageResponse.of(groupInviteService.listHistory(requireLogin(principal), role, page))
             .map { InviteHistoryResponse.from(it) }
 
-    /** 초대를 수락해 그룹 멤버가 된다. 정원이 차 있으면 거부되고 초대는 남는다. */
+    /** 초대를 수락한다. 정원이 차 있으면 거부되고 초대는 남는다. */
     @PostMapping("/{inviteId}/accept")
     fun accept(
         @PathVariable inviteId: Long,
@@ -77,7 +71,7 @@ class InviteController(
         return ResponseEntity.noContent().build()
     }
 
-    /** 초대를 거절한다. 대기 목록에서 지우고 이력에 `REJECTED` 로 남긴다 — 보낸 사람도 본다. */
+    /** 초대를 거절한다. */
     @PostMapping("/{inviteId}/reject")
     fun reject(
         @PathVariable inviteId: Long,

@@ -1,11 +1,11 @@
-/* 여행 폼의 배치. 입력 요소의 생김새는 styles/form.css 를 따른다. */
+/* 여행 폼 */
 .trip-form {
   display: flex;
   flex-direction: column;
   gap: 22px;
 }
 
-/* 만들기 화면에서는 카드 안에 담긴다. 상세의 수정 폼은 이미 섹션 안이라 테두리를 더하지 않는다. */
+/* 만들기 화면의 카드 틀 */
 .trip-form-card {
   background: var(--surface);
   border: 1px solid var(--border);

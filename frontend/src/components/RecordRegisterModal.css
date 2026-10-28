@@ -1,4 +1,4 @@
-/* 기록 등록 모달. 폼 스타일은 RecordForm.css 에 있다. */
+/* 기록 등록 모달 */
 .record-register-panel {
   max-width: 600px;
   max-height: calc(100vh - 40px);

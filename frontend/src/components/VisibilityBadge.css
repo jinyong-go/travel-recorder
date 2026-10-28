@@ -21,7 +21,6 @@
   font-size: var(--fs-xs);
 }
 
-/* 세 상태를 색으로만 구분하지 않도록 아이콘·텍스트를 항상 함께 넣는다. */
 .visibility-private {
   background: var(--surface-soft);
   color: var(--text-muted);

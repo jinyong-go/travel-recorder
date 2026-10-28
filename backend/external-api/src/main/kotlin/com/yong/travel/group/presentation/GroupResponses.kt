@@ -8,7 +8,7 @@ import com.yong.travel.group.domain.InviteHistoryEntry
 import com.yong.travel.group.domain.InviteOutcome
 import java.time.Instant
 
-/** 그룹 목록 항목. 멤버 명단 대신 인원수만 담으며, 명단은 그룹 상세에서만 내려준다. */
+/** 그룹 목록 항목. 명단 대신 인원수만 담는다. */
 data class GroupSummaryResponse(
     val id: Long,
     val name: String,
@@ -18,7 +18,7 @@ data class GroupSummaryResponse(
     val isOwner: Boolean,
 ) {
     companion object {
-        /** 그룹 요약 → 응답. */
+        /** 그룹 → 응답. */
         fun from(group: Group, requesterId: Long) = GroupSummaryResponse(
             id = group.id,
             name = group.name,
@@ -38,7 +38,7 @@ data class GroupMemberResponse(
     val joinedAt: Instant,
 ) {
     companion object {
-        /** 멤버 → 응답. 이메일은 담지 않는다. */
+        /** 멤버 → 응답. */
         fun from(member: Group.Member) = GroupMemberResponse(
             id = member.user.id,
             name = member.user.name,
@@ -48,7 +48,7 @@ data class GroupMemberResponse(
     }
 }
 
-/** 그룹 상세. 멤버 명단까지 담는다. */
+/** 그룹 상세. */
 data class GroupResponse(
     val id: Long,
     val name: String,
@@ -60,11 +60,7 @@ data class GroupResponse(
     val isOwner: Boolean,
 ) {
     companion object {
-        /**
-         * 그룹 상세 → 응답.
-         *
-         * @param group 멤버 명단까지 담긴 그룹
-         */
+        /** 그룹 → 응답. */
         fun from(group: Group, requesterId: Long) = GroupResponse(
             id = group.id,
             name = group.name,
@@ -78,12 +74,7 @@ data class GroupResponse(
     }
 }
 
-/**
- * 그룹의 id 와 이름만 담는 참조. 초대와 여행의 공유 그룹이 함께 쓴다.
- *
- * 멤버 수·정원·명단은 담지 않는다. 초대받은 사람은 수락 전이라 볼 수 없고, 여행 응답에는
- * 그룹의 인원 사정까지 실을 이유가 없다.
- */
+/** 그룹의 id 와 이름. 초대와 여행 공유에서 쓴다. */
 data class GroupRefResponse(
     val id: Long,
     val name: String,
@@ -94,19 +85,14 @@ data class GroupRefResponse(
     }
 }
 
-/**
- * 소유자가 보는 대기 중인 초대.
- *
- * 소유자가 직접 입력한 이메일이라도 응답으로 되돌려주지 않는다. 누구에게 보냈는지는 이름과
- * 프로필 사진으로 구분되며, 이메일은 본인 조회 외의 어떤 응답에도 담지 않는다.
- */
+/** 소유자가 보는 대기 초대. 이메일은 소유자가 입력했어도 돌려주지 않는다. */
 data class PendingInviteResponse(
     val id: Long,
     val invitee: UserResponse,
     val createdAt: Instant,
 ) {
     companion object {
-        /** 대기 초대 → 소유자가 보는 응답. */
+        /** 대기 초대 → 응답. */
         fun from(invite: GroupInvite) = PendingInviteResponse(
             id = invite.id,
             invitee = UserResponse.from(invite.invitee),
@@ -115,7 +101,7 @@ data class PendingInviteResponse(
     }
 }
 
-/** 받은 초대. 그룹명·초대자·보낸 시각까지가 수락 전에 보여 줄 수 있는 전부다. */
+/** 받은 초대. 수락 전이라 그룹명·초대자·보낸 시각만 담는다. */
 data class ReceivedInviteResponse(
     val id: Long,
     val group: GroupRefResponse,
@@ -123,7 +109,7 @@ data class ReceivedInviteResponse(
     val createdAt: Instant,
 ) {
     companion object {
-        /** 대기 초대 → 받은 사람이 보는 응답. */
+        /** 대기 초대 → 응답. */
         fun from(invite: GroupInvite) = ReceivedInviteResponse(
             id = invite.id,
             group = GroupRefResponse.from(invite.group),
@@ -133,12 +119,7 @@ data class ReceivedInviteResponse(
     }
 }
 
-/**
- * 내가 보낸 대기 초대. 그룹을 가로지르는 목록이라 그룹명이 함께 필요하다.
- *
- * 그룹 상세에서 쓰는 `PendingInviteResponse` 와 나누어 둔다 — 그쪽은 어느 그룹인지가 화면에
- * 이미 드러나 있어 같은 값을 다시 실어 보낼 이유가 없다.
- */
+/** 내가 보낸 대기 초대. 여러 그룹에 걸친 목록이라 그룹명을 함께 담는다. */
 data class SentInviteResponse(
     val id: Long,
     val group: GroupRefResponse,
@@ -146,7 +127,7 @@ data class SentInviteResponse(
     val createdAt: Instant,
 ) {
     companion object {
-        /** 대기 초대 → 보낸 사람이 보는 응답. */
+        /** 대기 초대 → 응답. */
         fun from(invite: GroupInvite) = SentInviteResponse(
             id = invite.id,
             group = GroupRefResponse.from(invite.group),
@@ -156,27 +137,24 @@ data class SentInviteResponse(
     }
 }
 
-/** 끝난 시점의 그룹. 삭제되었으면 화면이 링크를 걸지 않도록 `deleted` 로 알린다. */
+/** 초대 이력의 그룹. 삭제됐는지 함께 알린다. */
 data class HistoryGroupResponse(
     val id: Long,
     val name: String,
     val deleted: Boolean,
 ) {
     companion object {
-        /** 끝난 초대 한 건의 그룹 → 응답. 삭제 여부는 그룹이 아니라 이력 항목이 안다. */
+        /** 이력 항목의 그룹 → 응답. */
         fun from(entry: InviteHistoryEntry) =
             HistoryGroupResponse(id = entry.group.id, name = entry.group.name, deleted = entry.groupDeleted)
     }
 }
 
-/** 끝난 초대 한 건. 받은 관점과 보낸 관점이 같은 모양을 쓴다. */
+/** 끝난 초대 한 건. 받은 이력과 보낸 이력이 같은 모양을 쓴다. */
 data class InviteHistoryResponse(
     val id: Long,
     val group: HistoryGroupResponse,
-    /**
-     * 상대. `role` 에 따라 초대받았던 사람이 되기도, 보냈던 사람이 되기도 한다.
-     * 관점마다 필드 이름을 달리하면 화면이 같은 목록을 두 가지 모양으로 다뤄야 한다.
-     */
+    /** 상대. 받은 이력이면 보낸 사람, 보낸 이력이면 받은 사람이다. */
     val counterpart: UserResponse,
     val outcome: InviteOutcome,
     val invitedAt: Instant,

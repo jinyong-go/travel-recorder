@@ -9,7 +9,7 @@ const MESSAGES = {
   noLocation: '좌표 정보가 없어 지도를 표시할 수 없어요.',
 }
 
-/** 네이버 지도 SDK v3 로 지도를 그리고 여행지 좌표에 마커를 찍는다. */
+/** 네이버 지도에 장소를 표시한다 */
 export default function NaverMapView({ place, zoom = 15 }) {
   const status = useNaverMapsSdk()
   const containerRef = useRef(null)

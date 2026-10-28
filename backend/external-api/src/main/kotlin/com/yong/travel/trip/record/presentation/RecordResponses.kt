@@ -7,12 +7,7 @@ import com.yong.travel.trip.record.domain.Category
 import com.yong.travel.trip.record.domain.TripRecord
 import java.time.Instant
 
-/**
- * 기록 상세.
- *
- * **공개 범위와 공유 그룹은 담지 않는다** — 소유자에게도 마찬가지다. 그 값은 여행에 있으므로
- * `GET /api/trips/{id}` 로 내려간다.
- */
+/** 기록 상세. 공개 범위는 여행에 있으므로 담지 않는다. */
 data class TripRecordResponse(
     val id: Long,
     val trip: TripRefResponse,
@@ -27,19 +22,19 @@ data class TripRecordResponse(
     val rating: Double,
     val memo: String?,
     val photos: List<PhotoResponse>,
-    /** `trip.owner` 를 그대로 옮긴 값이다. 기록은 작성자 컬럼을 갖지 않는다. */
+    /** 소속 여행의 소유자. */
     val author: UserResponse,
 
-    /** 요청자가 `trip.owner` 인지. 필드 이름은 이전 판 그대로 유지한다. */
+    /** 요청자가 소속 여행의 소유자인지. */
     val isAuthor: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
     companion object {
         /**
-         * 기록 상세 → 응답.
+         * 기록 → 응답.
          *
-         * @param requesterId 요청자의 사용자 id. 비로그인이면 null
+         * @param requesterId 비로그인이면 null
          */
         fun from(record: TripRecord, requesterId: Long?) = TripRecordResponse(
             id = record.id,
@@ -84,9 +79,9 @@ data class TripRecordSummaryResponse(
 ) {
     companion object {
         /**
-         * 기록 목록 항목 → 응답.
+         * 기록 → 응답.
          *
-         * @param requesterId 요청자의 사용자 id. 비로그인이면 null
+         * @param requesterId 비로그인이면 null
          */
         fun from(record: TripRecord, requesterId: Long?) = TripRecordSummaryResponse(
             id = record.id,

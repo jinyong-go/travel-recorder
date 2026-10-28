@@ -1,4 +1,4 @@
-/* 대표 사진 자리. 비율을 고정해 사진이 있든 없든 카드 높이가 같다. */
+/* 여행 카드의 대표 사진 */
 .trip-cover {
   aspect-ratio: 4 / 3;
   border-radius: var(--radius-md);
@@ -14,7 +14,7 @@
   object-fit: cover;
 }
 
-/* 사진이 없을 때의 연·월. 장식 아이콘 대신 어느 여행인지 알아보는 단서를 둔다. */
+/* 사진이 없을 때의 연·월 */
 .trip-cover-month {
   padding: 14px 16px;
   font-family: var(--serif);

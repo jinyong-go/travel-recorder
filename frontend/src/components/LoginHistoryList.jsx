@@ -2,21 +2,15 @@ import { formatDateTime } from '../utils/date.js'
 import { describeDevice } from '../utils/userAgent.js'
 import './LoginHistoryList.css'
 
-/**
- * 로그인 이력 항목 목록. 조회·상태 처리는 쓰는 화면이 하고 여기서는 그리기만 한다.
- *
- * @param items `LoginHistoryItem[]`
- */
+/** 로그인 이력 목록 */
 export default function LoginHistoryList({ items }) {
   return (
     <ul className="login-history-list">
       {items.map((item) => (
         <li key={item.id} className="login-history-item">
-          {/* 모르는 로그인을 확인하는 목록이라 "3시간 전" 같은 상대 표기를 쓰지 않는다. */}
           <time className="login-history-time" dateTime={item.loggedInAt}>
             {formatDateTime(item.loggedInAt)}
           </time>
-          {/* 판별이 틀렸을 때 확인할 수 있게 원문을 남긴다. */}
           <span className="login-history-device" title={item.userAgent ?? undefined}>
             {describeDevice(item.userAgent)}
           </span>

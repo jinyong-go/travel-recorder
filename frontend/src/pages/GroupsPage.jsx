@@ -16,25 +16,18 @@ import './GroupsPage.css'
 import { GROUP_MEMO_MAX_LENGTH, GROUP_NAME_MAX_LENGTH } from '../config/inputLimits.js'
 import { OWNED_GROUP_LIMIT } from '../config/groupLimits.js'
 
-/** 그룹 만들기 실패 안내. 입력 규칙은 화면이 먼저 거르므로 서버만 아는 소유 상한만 따로 둔다. */
+/** 그룹 만들기 실패 안내 */
 const CREATE_ERROR = {
   GROUP_LIMIT_EXCEEDED: `그룹은 ${OWNED_GROUP_LIMIT}개까지 만들 수 있어요.`,
 }
 
-/** 받은 초대 첫 페이지. 건수(`totalElements`)만 쓴다. */
+/** 받은 초대 건수 조회 */
 const loadReceivedInvites = () => fetchReceivedInvites(0)
 
-/**
- * 내가 만들었거나 참여 중인 그룹 목록과 새 그룹 만들기.
- *
- * 받은 초대는 목록으로 그리지 않고 건수만 알려 초대함으로 보낸다.
- */
+/** 그룹 목록과 그룹 만들기 */
 export default function GroupsPage() {
-  // 그룹을 만든 뒤에도 처음부터 다시 읽는다. 실패 사유는 나누지 않는다 — 목록을 못 받았다는 사실만
-  // 화면에 필요하다.
   const groups = usePagedList(fetchGroups)
 
-  /** 받은 초대 알림 줄의 건수. 못 읽으면 알림 줄을 그리지 않을 뿐이다. */
   const receivedCount = useResource(loadReceivedInvites).data?.totalElements ?? 0
 
   const [creating, setCreating] = useState(false)
@@ -49,10 +42,8 @@ export default function GroupsPage() {
     setMemo('')
     setError('')
   }
-  // 생성 모달은 조건부로 붙으므로 훅은 늘 부르고 열림 여부로 켜고 끈다.
   const createPanelRef = useModal(closeCreate, creating)
 
-  // 클라이언트 검증은 서버 검증을 대신하지 않는다. 같은 규칙을 먼저 걸러 왕복을 줄일 뿐이다.
   const handleCreate = async (e) => {
     e.preventDefault()
     const trimmed = name.trim()
@@ -68,7 +59,6 @@ export default function GroupsPage() {
     setSubmitting(true)
     setError('')
     try {
-      // 공백만 남은 메모는 "메모 없음" 과 같다. 서버도 같은 규칙이다.
       await createGroupApi(trimmed, memo.trim() || null)
       await groups.reload()
       closeCreate()
@@ -81,7 +71,6 @@ export default function GroupsPage() {
 
   return (
     <>
-      {/* 알림 줄에 쓰려고 이미 받은 건수다. 헤더가 같은 요청을 다시 보내지 않게 넘긴다. */}
       <AppHeader receivedCount={receivedCount} />
 
       <main className="page">
@@ -90,7 +79,7 @@ export default function GroupsPage() {
             <ArrowLeftIcon /> 여행 목록으로
           </Link>
 
-          {/* 같은 목록을 두 화면이 각자 그리지 않도록 여기서는 건수만 알린다. */}
+          {/* 받은 초대 알림 */}
           {receivedCount > 0 && (
             <Link to="/invites/received" className="invite-notice">
               받은 초대 {receivedCount}건 <span aria-hidden="true">→</span>

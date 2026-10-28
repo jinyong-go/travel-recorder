@@ -39,10 +39,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * 공개 범위 판정 검증. 이 서비스에서 실수가 가장 치명적인 지점이라
- * "볼 수 있어야 하는 경우" 보다 "보이면 안 되는 경우" 를 더 촘촘히 확인한다.
- *
- * 1차 캐시 때문에 변경 직후 조회가 DB 를 타지 않으므로 검증 전에 flush/clear 로 영속성 컨텍스트를 비운다.
+ * 기록·초대의 공개 범위와 권한을 확인한다. 보이면 안 되는 경우를 특히 촘촘히 본다.
+ * 변경이 DB 에 반영된 뒤 읽도록 검증 전에 영속성 컨텍스트를 비운다.
  */
 @SpringBootTest
 @Transactional
@@ -85,7 +83,7 @@ class RecordVisibilityTest {
         flush()
 
         assertEquals(recordId, recordService.get(recordId, member).id)
-        // 존재를 이미 아는 사람이라 숨길 이유가 없다. 기록 편집과 사진은 같은 응답이어야 한다.
+        // 볼 수 있는 사람에게는 403 이고, 기록 편집과 사진이 같게 답한다.
         assertEquals(ErrorCode.FORBIDDEN, assertThrows<ApiException> { recordService.delete(recordId, member) }.errorCode)
         assertEquals(
             ErrorCode.FORBIDDEN,
@@ -116,7 +114,7 @@ class RecordVisibilityTest {
         val recordId = newRecord(newTrip(owner))
         flush()
 
-        // 403 이 아니라 404 여야 한다. 403 은 "그 기록이 존재한다" 는 사실을 알려주는 셈이다.
+        // 기록이 있다는 사실이 드러나지 않도록 404 여야 한다.
         assertEquals(ErrorCode.RECORD_NOT_FOUND, assertThrows<ApiException> { recordService.get(recordId, other) }.errorCode)
         assertEquals(ErrorCode.RECORD_NOT_FOUND, assertThrows<ApiException> { recordService.get(recordId, null) }.errorCode)
     }
@@ -165,7 +163,7 @@ class RecordVisibilityTest {
         flush()
         assertEquals(recordId, recordService.get(recordId, member).id)
 
-        // 기록은 손대지 않는다. 범위는 여행 한 곳에만 있어서 여행만 바꾸면 하위가 전부 따라온다.
+        // 여행만 바꿔도 기록이 따라온다.
         changeTripVisibility(tripId, TripVisibility.PRIVATE)
         flush()
 
@@ -214,7 +212,7 @@ class RecordVisibilityTest {
         val myRecordId = newRecord(myTripId, authorId = stranger)
         flush()
 
-        // 볼 수 있는 공개 여행이라도 남의 것이면 404 다. 403 이면 그 여행의 존재가 드러난다.
+        // 볼 수 있는 공개 여행이라도 남의 것이면 404 다.
         assertEquals(
             ErrorCode.TRIP_NOT_FOUND,
             assertThrows<ApiException> { newRecord(foreignTripId, authorId = stranger) }.errorCode,
@@ -371,7 +369,7 @@ class RecordVisibilityTest {
         flush()
 
         assertEquals(2, groupService.get(groupId, owner).members.size)
-        // 수락한 초대는 남지 않는다. 상태 컬럼도 이력도 두지 않기 때문이다.
+        // 수락한 초대는 대기 목록에서 사라진다.
         assertTrue(groupInviteService.listReceived(invitee, firstPage()).content.isEmpty())
     }
 
@@ -384,7 +382,7 @@ class RecordVisibilityTest {
         val result = groupInviteService.invite(groupId, owner, "friend@EXAMPLE.com")
         flush()
 
-        // 소유자가 직접 입력한 값이라도 되돌려주지 않는다. 상대는 이름·프로필 사진으로만 식별한다.
+        // 소유자가 입력한 이메일이라도 돌려주지 않는다.
         assertEquals("테스터", result.invite.invitee.name)
     }
 
@@ -431,7 +429,7 @@ class RecordVisibilityTest {
         val inviteId = groupInviteService.invite(groupId, owner, "friend@example.com").invite.id
         flush()
 
-        // 403 이면 "그런 초대가 있다" 는 뜻이 되므로 없는 id 와 같은 404 여야 한다.
+        // 초대가 있다는 사실이 드러나지 않도록 없는 id 와 같은 404 여야 한다.
         assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.accept(inviteId, stranger) }.errorCode)
         assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.reject(inviteId, stranger) }.errorCode)
         assertTrue(groupInviteService.listReceived(stranger, firstPage()).content.isEmpty())
@@ -447,7 +445,7 @@ class RecordVisibilityTest {
         val inviteId = groupInviteService.invite(groupId, owner, "friend@example.com").invite.id
         flush()
 
-        // 소유자 확인이 초대 조회보다 먼저라, 없는 초대 id 로도 같은 403 이어서 초대의 존재가 드러나지 않는다.
+        // 소유자 확인이 먼저라 없는 초대 id 로도 같은 403 이다.
         assertEquals(ErrorCode.FORBIDDEN, assertThrows<ApiException> { groupInviteService.revoke(groupId, inviteId, stranger) }.errorCode)
         assertEquals(ErrorCode.FORBIDDEN, assertThrows<ApiException> { groupInviteService.revoke(groupId, Long.MAX_VALUE, stranger) }.errorCode)
         assertEquals(ErrorCode.INVITE_NOT_FOUND, assertThrows<ApiException> { groupInviteService.revoke(otherGroupId, inviteId, owner) }.errorCode)
@@ -510,14 +508,14 @@ class RecordVisibilityTest {
         val stranger = newUser()
         val groupId = newGroupWith(owner, member)
 
-        // 그룹은 존재를 숨기지 않는다. 그룹은 있는데 "그룹이 없다"고 답하지 않는다.
+        // 그룹은 존재를 숨기지 않는다.
         assertEquals(
             ErrorCode.MEMBER_NOT_FOUND,
             assertThrows<ApiException> { groupService.removeMember(groupId, stranger, owner) }.errorCode,
         )
     }
 
-    /** 목록 검증은 첫 페이지만 본다. 페이지 크기는 서버가 정하므로 테스트도 그 값을 그대로 쓴다. */
+    /** 목록의 첫 페이지만 본다. */
     @Test
     fun `태그 자동완성은 볼 수 있는 여행의 기록에 쓰인 태그만 내준다`() {
         val owner = newUser()
@@ -554,7 +552,7 @@ class RecordVisibilityTest {
     fun `태그로 거른 목록은 기록이 중복되지 않고 건수도 맞다`() {
         val owner = newUser()
         val tripId = newTrip(owner, TripVisibility.PUBLIC)
-        // 한 페이지(10건)를 넘겨야 건수 쿼리가 따로 나간다. 태그가 여럿인 기록도 한 번만 나와야 한다.
+        // 건수 쿼리가 따로 나가도록 한 페이지를 넘긴다. 태그가 여럿인 기록도 한 번만 나와야 한다.
         repeat(11) { newRecord(tripId, tags = listOf("필터태그", "다른태그$it")) }
         newRecord(tripId, tags = listOf("다른태그"))
         flush()
@@ -576,7 +574,7 @@ class RecordVisibilityTest {
     ): List<Long> =
         recordService.list(RecordListQuery(scope, tripId, sort = sort), userId, 0).content.map { it.id }
 
-    /** 이메일은 계정마다 고유해야 한다 (users.email 유니크). 초대 대상 조회에 쓰이는 값이라 필요하면 직접 지정한다. */
+    /** 이메일은 계정마다 달라야 한다. 초대에 쓸 때는 직접 지정한다. */
     private fun newUser(email: String = "tester-${System.nanoTime()}@example.com"): Long = requireNotNull(
         userRepository.save(
             UserEntity(
@@ -598,12 +596,7 @@ class RecordVisibilityTest {
         return groupId
     }
 
-    /**
-     * 여행을 만들고 id 를 돌려준다.
-     *
-     * `/api/trips` 가 아직 없어 리포지토리로 직접 만든다. 공유 행 정리 같은 쓰기 규칙은
-     * TripService 가 생기면 그쪽 테스트에서 검증한다.
-     */
+    /** 리포지토리로 여행을 만들고 id 를 돌려준다. */
     private fun newTrip(
         ownerId: Long,
         visibility: TripVisibility = TripVisibility.PRIVATE,
@@ -631,7 +624,7 @@ class RecordVisibilityTest {
         tripRepository.saveAndFlush(trip)
     }
 
-    /** 기록은 여행 없이 존재할 수 없다. 작성자를 따로 주지 않으면 여행 소유자로 만든다. */
+    /** 여행에 기록을 만든다. */
     private fun newRecord(
         tripId: Long,
         name: String = "테스트 기록",
@@ -651,7 +644,7 @@ class RecordVisibilityTest {
         ).toCommand(),
     ).id
 
-    /** 서버가 파일 앞부분의 시그니처를 확인하므로 JPEG 시그니처로 시작하는 최소 파일이다. */
+    /** 서버가 파일 내용을 확인하므로 JPEG 시그니처로 시작하는 최소 파일. */
     private fun jpeg() = MockMultipartFile(
         "files",
         "photo.jpg",

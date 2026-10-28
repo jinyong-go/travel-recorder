@@ -1,4 +1,4 @@
-/* 그룹 목록·그룹 상세·초대함 공통 설명·섹션·목록 항목. 화면 틀은 styles/page.css 다. */
+/* 그룹·초대 화면 공통 */
 
 .groups-desc {
   margin: 0;
@@ -7,7 +7,6 @@
   color: var(--text-muted);
 }
 
-/* 섹션은 카드로 감싸지 않고 위쪽 구분선으로 나눈다 (여행·기록 상세와 같은 원칙). */
 .group-section {
   border-top: 1px solid var(--border);
   padding-top: 20px;
@@ -30,7 +29,6 @@
   list-style: none;
 }
 
-/* 멤버 목록과 같은 줄 구성이되, 참여일 자리에 보낸 날짜가 온다. */
 .invite-item {
   display: flex;
   align-items: center;
@@ -61,7 +59,7 @@
   color: var(--error);
 }
 
-/* 그룹 상세의 메모. 소유자와 멤버 모두에게 보인다. */
+/* 그룹 메모 */
 .group-memo {
   margin: 0;
   font-size: var(--fs-sm);

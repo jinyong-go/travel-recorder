@@ -2,7 +2,7 @@ const EARTH_RADIUS_KM = 6371
 
 const toRad = (deg) => (deg * Math.PI) / 180
 
-/** 두 좌표(`{ lat, lng }`) 사이의 직선거리(km). 지구를 구로 근사하는 하버사인 공식이다. */
+/** 두 좌표 사이의 직선거리(km) */
 export function haversineDistanceKm(a, b) {
   const dLat = toRad(b.lat - a.lat)
   const dLng = toRad(b.lng - a.lng)

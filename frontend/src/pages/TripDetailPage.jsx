@@ -25,13 +25,12 @@ import { ArrowLeftIcon, CategoryIcon, ChevronDownIcon, MapViewIcon, PlusIcon } f
 import '../styles/page.css'
 import '../styles/detailPage.css'
 import './TripDetailPage.css'
-/** 여행을 서버에서 읽고, 읽는 중·없음·실패를 처리한다. 화면은 여행이 도착한 뒤 TripDetailView 가 그린다. */
+/** 여행 상세 화면 */
 export default function TripDetailPage() {
   const { tripId } = useParams()
   const { trip, status, setTrip } = useTrip(tripId)
 
   if (status === REQUEST_STATUS.COMPLETE) {
-    // key 로 여행이 바뀌면 초안 상태를 새로 만든다. 초안의 초깃값이 여행 값이기 때문이다.
     return <TripDetailView key={trip.id} trip={trip} onTripChange={setTrip} />
   }
 
@@ -46,43 +45,34 @@ const VISIBILITY_ERROR = {
   GROUP_NOT_FOUND: '공유할 수 없는 그룹이 선택되어 있어요. 그룹 선택을 다시 확인해주세요.',
 }
 
-/** 공유 그룹 id 를 순서와 무관하게 비교할 수 있는 문자열로 만든다. */
+/** 공유 그룹 id 비교용 키 */
 const groupKey = (ids) => [...ids].sort((a, b) => a - b).join(',')
 
-/**
- * 불러온 여행을 그린다. 수정·공개 범위 변경은 서버 응답으로 `onTripChange` 를 불러 갈아 끼운다.
- *
- * 하위 기록은 등록순으로 한 페이지씩 읽어 "더 보기"로 이어 붙인다. 여행지 수는
- * 목록 길이가 아니라 여행의 `recordCount` 다 — 목록은 아직 다 읽지 않았을 수 있다.
- */
+/** 여행 상세 본문 */
 function TripDetailView({ trip, onTripChange }) {
   const navigate = useNavigate()
-  // 헤더의 설정 메뉴와 같은 상태를 써야 지도 방식을 바꾸는 즉시 이 화면에 반영된다.
   const mapMode = useMapMode()
   const placeMap = usePlaceMap(mapMode.isEmbed)
-  // 등록 모달과 같은 상태를 써야 모달에서 위치를 지정했을 때 이 화면의 거리도 바뀐다.
   const reference = useReferenceLocation()
   const referenceLocation = reference.location
   const isOwner = trip.isOwner
 
-  // 기준 위치가 바뀌면 거리가 달라지므로 처음부터 다시 읽는다.
   const loadRecords = useCallback(
     (page) => fetchTripRecords(trip.id, referenceLocation, page),
     [trip.id, referenceLocation],
   )
   const records = usePagedList(loadRecords)
   const [registerOpen, setRegisterOpen] = useState(false)
-  // 사진만 올리지 못한 채 등록된 기록. 재업로드하러 갈 수 있게 링크를 남긴다.
+  // 사진 업로드에 실패한 기록
   const [photoFailedRecord, setPhotoFailedRecord] = useState(null)
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  // 삭제 요청이 나가 있는 동안 같은 버튼을 다시 누르지 못하게 한다.
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
 
   const recordCount = trip.recordCount
 
-  /** 등록 후 목록과 여행지 수를 다시 읽는다. 낙관적으로 붙이지 않는다 — 서버가 정한 순서·거리를 따른다. */
+  /** 기록 등록 후 목록과 여행을 다시 읽는다 */
   const handleRecordCreated = async (record, { photoFailed }) => {
     setRegisterOpen(false)
     setPhotoFailedRecord(photoFailed ? record : null)
@@ -90,14 +80,13 @@ function TripDetailView({ trip, onTripChange }) {
     try {
       onTripChange(await tripApi.fetchTrip(trip.id))
     } catch {
-      // 여행지 수만 늦게 맞춰진다. 다음에 화면에 들어오면 다시 읽는다.
+      // 실패하면 여행지 수만 늦게 맞춰진다
     }
   }
 
   const handleDelete = async () => {
     setBusy(true)
     try {
-      // 하위 기록은 서버가 함께 지운다.
       await tripApi.deleteTrip(trip.id)
       navigate('/trips')
     } catch (err) {
@@ -111,7 +100,7 @@ function TripDetailView({ trip, onTripChange }) {
     setActionError('')
   }
 
-  /** 하위 기록 카드 목록. 불러오는 중·실패·빈 목록 안내는 PagedListBody 가 맡는다. */
+  /** 기록 카드 목록 */
   const renderRecords = () => (
     <ul className="place-grid">
       {records.items.map((record) => (
@@ -131,8 +120,6 @@ function TripDetailView({ trip, onTripChange }) {
           </Link>
 
           <section className="trip-detail-head">
-            {/* 대표 사진은 지정된 경우에만 보인다. 없을 때 연·월 자리 표시를 두지 않는 것은
-                바로 아래에 기간이 적혀 있어 같은 정보를 두 번 보이게 되기 때문이다. */}
             {trip.coverPhotoUrl && (
               <img src={fileUrl(trip.coverPhotoUrl)} alt="" className="trip-detail-cover" />
             )}
@@ -154,7 +141,6 @@ function TripDetailView({ trip, onTripChange }) {
                 </div>
               )}
             </div>
-            {/* 숫자가 여럿이라 항목명을 붙인다. 간격만으로 나누면 인원·여행지 수·예산이 섞여 읽힌다. */}
             <dl className="detail-meta">
               <div className="detail-meta-item detail-meta-wide">
                 <dt>기간</dt>
@@ -170,7 +156,6 @@ function TripDetailView({ trip, onTripChange }) {
                 <dt>여행지</dt>
                 <dd>{recordCount}곳</dd>
               </div>
-              {/* 예산은 여행을 볼 수 있는 사람에게 함께 보인다. */}
               {trip.budget != null && (
                 <div className="detail-meta-item">
                   <dt>예산</dt>
@@ -185,13 +170,11 @@ function TripDetailView({ trip, onTripChange }) {
             {trip.memo && <p className="trip-detail-memo">{trip.memo}</p>}
           </section>
 
-          {/* 범위는 여행에만 있다. 기록 화면에는 바꾸는 수단을 두지 않는다. */}
           {isOwner && <TripVisibilitySection trip={trip} onTripChange={onTripChange} />}
 
           <section className="detail-section">
             <div className="trip-records-head">
               <h2 className="detail-section-title">여행지 ({recordCount}곳)</h2>
-              {/* 0건이면 목록 자리의 큰 버튼이 대신한다. 같은 버튼이 두 개 보이지 않게 한다. */}
               {isOwner && recordCount > 0 && (
                 <button
                   type="button"
@@ -222,7 +205,6 @@ function TripDetailView({ trip, onTripChange }) {
               {renderRecords()}
             </PagedListBody>
 
-            {/* 첫 여행지를 남기는 것이 이 화면에서 다음에 할 일이라 목록 자리에서 크게 권한다. */}
             {isOwner && recordCount === 0 && (
               <button
                 type="button"
@@ -247,7 +229,6 @@ function TripDetailView({ trip, onTripChange }) {
           onConfirm={handleDelete}
           onCancel={closeDeleteConfirm}
         >
-          {/* 하위 기록이 함께 지워진다는 사실과 건수를 반드시 문구에 담는다. */}
           이 여행과 여행지 {recordCount}곳의 기록이 함께 삭제돼요. 되돌릴 수 없어요.
         </ConfirmDialog>
       )}
@@ -266,29 +247,21 @@ function TripDetailView({ trip, onTripChange }) {
   )
 }
 
-/** 저장 결과 문구. 저장된 실제 범위(`effectiveVisibility`)로 고른다. */
+/** 저장 결과 문구 */
 const SAVED_SCOPE_TEXT = {
   PUBLIC: '전체 공개돼요',
   GROUP: '선택한 그룹에만 보여요',
   PRIVATE: '이제 나만 볼 수 있어요',
 }
 
-/**
- * 여행 상세의 공개 범위 섹션. 소유자에게만 그린다.
- *
- * 초안(범위·공유 그룹)을 고르고 저장한다. 넓히는 변경은 확인 모달을 거치고, 좁히는 변경은 바로
- * 저장한 뒤 결과만 알린다. 범위를 바꾸면 하위 기록이 전부 함께 영향을 받으므로 확인·결과 문구에
- * 여행지 수를 함께 말한다. 저장 응답은 `onTripChange` 로 올려 화면의 여행을 갈아 끼운다.
- */
+/** 여행의 공개 범위 설정 섹션 */
 function TripVisibilitySection({ trip, onTripChange }) {
   const navigate = useNavigate()
   const saved = tripAudience(trip)
   const [visibilityDraft, setVisibilityDraft] = useState(trip.visibility ?? DEFAULT_VISIBILITY)
   const [groupDraft, setGroupDraft] = useState(saved.groupIds)
-  // 저장 결과. 성공과 실패를 같은 색으로 보이면 실패가 성공처럼 읽힌다.
   const [message, setMessage] = useState(null)
   const [confirmingWiden, setConfirmingWiden] = useState(false)
-  // 요청이 나가 있는 동안 저장을 다시 누르지 못하게 한다.
   const [saving, setSaving] = useState(false)
 
   const recordCount = trip.recordCount
@@ -298,7 +271,7 @@ function TripVisibilitySection({ trip, onTripChange }) {
     (visibilityDraft === 'GROUP' && groupKey(groupDraft) !== groupKey(saved.groupIds))
   const widening = isWideningVisibility(saved, { visibility: visibilityDraft, groupIds: groupDraft })
 
-  /** 범위나 그룹을 다시 고르기 시작하면 지난 저장 결과는 지금 고른 값과 맞지 않으므로 지운다. */
+  /** 공개 범위 초안을 바꾼다 */
   const changeVisibilityDraft = (next) => {
     setVisibilityDraft(next)
     setMessage(null)
@@ -308,7 +281,7 @@ function TripVisibilitySection({ trip, onTripChange }) {
     setMessage(null)
   }
 
-  /** 넓히는 변경은 확인 모달을 거친다. 좁히는 변경은 바로 저장하고 결과만 알린다. */
+  /** 공개 범위를 저장한다. 넓히는 변경은 확인을 거친다. */
   const handleSaveClick = () => {
     setMessage(null)
     if (widening) setConfirmingWiden(true)
@@ -330,7 +303,6 @@ function TripVisibilitySection({ trip, onTripChange }) {
     }
   }
 
-  // 여행을 넓히면 하위 기록과 예산이 전부 함께 보인다. 일부만 공유된다고 오해하지 않게 건수와 함께 말한다.
   const withBudget = trip.budget != null ? '과 예산' : ''
   const widenText =
     visibilityDraft === 'PUBLIC'
@@ -339,10 +311,6 @@ function TripVisibilitySection({ trip, onTripChange }) {
 
   return (
     <>
-      {/*
-        접기는 details/summary 로 만든다. 직접 만든 토글보다 짧고 키보드·스크린리더
-        동작이 기본으로 따라온다. 접혀 있어도 지금 누구에게 보이는지는 요약 줄에 남긴다.
-      */}
       <details className="detail-section collapsible-section">
         <summary className="collapsible-summary">
           <ChevronDownIcon className="collapsible-chevron" aria-hidden="true" />
@@ -373,7 +341,6 @@ function TripVisibilitySection({ trip, onTripChange }) {
             >
               {saving ? '저장하는 중…' : '저장'}
             </button>
-            {/* 영역은 항상 두고 안의 문구만 바꾼다. 그래야 결과가 바뀔 때마다 스크린리더가 읽어 준다. */}
             <span aria-live="polite">
               {message && (
                 <span className={message.type === 'error' ? 'field-error' : 'detail-saved-msg'}>
@@ -385,7 +352,6 @@ function TripVisibilitySection({ trip, onTripChange }) {
         </div>
       </details>
 
-      {/* details 밖에 둔다. 섹션을 접어도 모달이 함께 가려지지 않게 한다. */}
       {confirmingWiden && (
         <ConfirmDialog
           title="공개 범위를 넓힐까요?"
@@ -403,15 +369,11 @@ function TripVisibilitySection({ trip, onTripChange }) {
   )
 }
 
-/**
- * 여행 상세의 하위 기록 카드 한 장. 카드 전체가 기록 상세로 가는 링크이고, 지도 버튼만 따로 눌린다.
- * 공개 범위 배지와 소속 여행 이름은 달지 않는다 — 한 여행의 목록이라 화면 위에 한 번 보인 값과 같다.
- */
+/** 기록 카드 */
 function RecordCard({ record, onMapClick }) {
   return (
     <li className="place-card">
       <div className="place-thumb">
-        {/* 첫 사진이 있으면 그것을, 없으면 카테고리 아이콘을 둔다. */}
         {record.thumbnailUrl ? (
           <img src={fileUrl(record.thumbnailUrl)} alt="" className="place-thumb-img" />
         ) : (

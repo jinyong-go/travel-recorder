@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 
-/** NAVER API HUB 지역 검색 호출. 응답 모델은 [NaverLocalSearchResponse] 다. */
+/** NAVER API HUB 지역 검색을 호출한다. */
 @Component
 class NaverLocalSearchClient(
     private val naverSearchRestClient: RestClient,
@@ -16,17 +16,16 @@ class NaverLocalSearchClient(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * 지역 검색 API 를 부른다. 호출당 최대 5건(display <= 5)까지만 반환된다.
+     * 지역 검색 결과를 가져온다. 호출당 최대 5건이다.
      *
-     * @param display 받을 건수. 1~5 로 잘라 보낸다
-     * @return 원본 검색 결과. 응답 본문이 없으면 빈 목록
-     * @throws ApiException `PLACE_SEARCH_UNAVAILABLE` — 호출이 실패했을 때
+     * @param display 1~5 로 잘라 보낸다
+     * @return 응답 본문이 없으면 빈 목록
+     * @throws ApiException `PLACE_SEARCH_UNAVAILABLE` — 호출 실패
      */
     fun search(query: String, display: Int = MAX_DISPLAY): List<NaverLocalSearchItem> {
         val response = try {
             naverSearchRestClient.get()
-                // 검색어를 URI 템플릿 문자열에 넣지 않고 빌더로 붙인다. 호출 지표의 경로 라벨은 템플릿이라
-                // 이렇게 해야 사용자가 입력한 검색어가 지표에 남지 않는다.
+                // 검색어가 호출 지표의 경로 라벨에 남지 않도록 템플릿이 아닌 빌더로 붙인다.
                 .uri { builder ->
                     builder
                         .queryParam("query", query)
@@ -36,7 +35,7 @@ class NaverLocalSearchClient(
                 .retrieve()
                 .body(NaverLocalSearchResponse::class.java)
         } catch (e: RestClientException) {
-            // 사용자에게는 고정 문구만 나가므로 원인은 이 로그에만 남는다.
+            // 사용자에게는 고정 문구만 나가므로 원인은 로그로 남긴다.
             log.warn("장소 검색 API 호출 실패", e)
             throw ApiException(ErrorCode.PLACE_SEARCH_UNAVAILABLE)
         }

@@ -24,12 +24,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
 import kotlin.test.assertEquals
 
-/**
- * 사용자당 그룹 수 상한과 그룹 목록 페이지네이션 검증.
- *
- * 소유 상한은 생성 시점, 참여 상한은 수락 시점에 판정한다. 두 상한이 서로를 막지 않는지와, 참여 상한으로
- * 거부된 수락이 정원 초과처럼 초대를 남기는지를 경계값으로 확인한다.
- */
+/** 사용자당 그룹 수 상한과 그룹 목록 페이지를 경계값으로 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -112,10 +107,7 @@ class GroupLimitTest {
         groupInviteService.accept(invite(userId, name), userId)
     }
 
-    /**
-     * 새 사용자가 그룹을 만들어 user 에게 초대를 보내고 초대 id 를 돌려준다. 그룹마다 소유자를 따로 두어
-     * 소유 상한에 걸리지 않게 한다.
-     */
+    /** 새 사용자의 그룹에서 user 에게 초대를 보내고 초대 id 를 돌려준다. */
     private fun invite(userId: Long, name: String): Long {
         val hostId = newUser()
         val groupId = requireNotNull(groupService.create(hostId, name, null).id)
@@ -123,7 +115,7 @@ class GroupLimitTest {
         return groupInviteService.invite(groupId, hostId, email).invite.id
     }
 
-    /** 컨트롤러가 principal 을 `LoginUser` 로 받으므로 임시 로그인과 같은 타입을 세션 대신 직접 넣는다. */
+    /** 로그인한 사용자로 요청하도록 principal 을 직접 넣는다. */
     private fun loggedInAs(userId: Long) = authentication(
         UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", userId), null, emptyList()),
     )
@@ -133,7 +125,7 @@ class GroupLimitTest {
         entityManager.clear()
     }
 
-    /** 이메일은 계정마다 고유해야 한다 (users.email 유니크). */
+    /** 이메일은 계정마다 달라야 한다. */
     private fun newUser(): Long = requireNotNull(
         userRepository.save(
             UserEntity(

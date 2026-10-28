@@ -117,7 +117,7 @@
   color: var(--text-muted);
 }
 
-/* 사실상 비공개라는 점을 그 자리에서 알린다. 저장을 막지는 않는다. */
+/* 공유할 그룹을 고르지 않았을 때의 경고 */
 .visibility-groups-warning {
   margin-top: 8px;
   color: var(--accent-strong);

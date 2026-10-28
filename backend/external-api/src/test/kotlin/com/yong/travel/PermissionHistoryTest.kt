@@ -19,12 +19,8 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 
 /**
- * 권한 변경 이력과, 그룹을 나갈 때 공유가 함께 풀리는지 검증.
- *
- * 이력을 남기는 지점이 여행 쪽 둘(생성·공개 범위 변경)과 그룹 쪽 다섯(생성·수락·탈퇴·제외·삭제)이라
- * **한 곳만 빠져도 조용히 비는** 자리다. 조회 API 가 없으므로 테이블을 직접 읽어 경로마다 고정한다.
- *
- * 1차 캐시 때문에 변경 직후 조회가 DB 를 타지 않으므로 검증 전에 flush/clear 로 영속성 컨텍스트를 비운다.
+ * 권한 변경 이력이 남는지, 그룹을 나가면 공유가 풀리는지 확인한다.
+ * 변경이 DB 에 반영된 뒤 읽도록 검증 전에 영속성 컨텍스트를 비운다.
  */
 @SpringBootTest
 @Transactional
@@ -111,7 +107,7 @@ class PermissionHistoryTest {
 
         assertEquals(TripHistoryRow("GROUP|$otherGroupId", "GROUP_DELETED"), tripHistory(tripId).last())
         assertEquals(TripHistoryRow("GROUP|", "GROUP_DELETED"), tripHistory(membersTripId).last())
-        // 그룹 행이 사라져도 이름으로 무엇이었는지 답할 수 있어야 한다.
+        // 그룹이 지워져도 이름은 남는다.
         assertEquals(
             setOf(MemberHistoryRow(owner, "가족", "GROUP_DELETED"), MemberHistoryRow(member, "가족", "GROUP_DELETED")),
             memberHistory(groupId).filter { it.event == "GROUP_DELETED" }.toSet(),

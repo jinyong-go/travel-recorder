@@ -5,20 +5,17 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 
-/** 목록 기본 페이지 크기. 장소 검색만 원본 API 제약으로 다른 값을 쓴다. */
+/** 목록 페이지 크기. */
 const val DEFAULT_PAGE_SIZE = 10
 
 /**
- * 목록 요청의 `page` 를 페이지 요청으로 바꾼다.
+ * 페이지 번호로 페이지 요청을 만든다. 크기는 서버가 정한다.
  *
- * 크기는 서버가 정하므로 요청에서 받지 않는다.
- *
- * @param page 0부터 시작하는 페이지 번호. 음수는 0으로 본다
- * @param sort 정렬. 생략하면 정렬하지 않는다
+ * @param page 0부터 시작. 음수는 0으로 본다
  */
 fun listPageRequest(page: Int, sort: Sort = Sort.unsorted()): PageRequest =
     PageRequest.of(page.coerceAtLeast(0), DEFAULT_PAGE_SIZE, sort)
 
-/** 조회 결과 → 서비스 반환형. Spring Data 타입이 서비스 밖으로 나가지 않게 하는 경계다. */
+/** 조회 결과를 서비스 반환형으로 바꾼다. */
 fun <T : Any> Page<T>.toPageResult(): PageResult<T> =
     PageResult(content, number, size, totalElements)

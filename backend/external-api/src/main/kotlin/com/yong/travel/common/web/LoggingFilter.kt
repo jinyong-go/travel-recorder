@@ -10,16 +10,8 @@ import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 /**
- * 요청 한 건을 끝난 뒤 한 줄로 남긴다 — 메서드·경로·상태·소요 시간.
- *
- * 시작·끝을 두 줄로 나누지 않는다. 두 줄이면 짝을 잇는 요청 id 와 MDC 가 필요해진다.
- *
- * **본문·헤더는 남기지 않는다.** 초대 본문의 이메일과 세션 쿠키가 로그로 새고, 본문 버퍼링은
- * 사진 업로드를 힙에 통째로 올린다.
- *
- * 요청자 id 는 찍지 않는다. 보안 필터 체인 바깥이라 이 시점의 `SecurityContextHolder` 는 비어 있다.
- *
- * 레벨은 `INFO` 다. 운영 기록이라 `DEBUG` 를 거르는 prod 에서도 남아야 한다.
+ * 요청마다 메서드·경로·상태·소요 시간을 한 줄로 남긴다.
+ * 이메일·세션 쿠키가 새지 않도록 본문과 헤더는 남기지 않는다.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -27,11 +19,7 @@ class LoggingFilter : OncePerRequestFilter() {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /**
-     * 요청을 그대로 넘기고, 끝난 뒤 한 줄을 남긴다.
-     *
-     * @param response 나갈 응답. 상태 코드를 읽는다
-     */
+    /** 요청을 처리한 뒤 한 줄을 남긴다. */
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -41,8 +29,7 @@ class LoggingFilter : OncePerRequestFilter() {
         try {
             filterChain.doFilter(request, response)
         } finally {
-            // 예외로 끝난 요청도 남아야 하므로 finally 에서 찍는다. 이 시점의 상태 코드는
-            // GlobalExceptionHandler 가 이미 채운 값이다.
+            // 예외로 끝난 요청도 남긴다.
             log.info(
                 "{} {}{} -> {} ({}ms)",
                 request.method,
@@ -54,22 +41,13 @@ class LoggingFilter : OncePerRequestFilter() {
         }
     }
 
-    /**
-     * 로그를 남기지 않을 요청인지. 파일 서빙(`/api/files/` 아래)은 건당 한 줄을 남길 값어치가 없다.
-     *
-     * @return 건너뛸 요청이면 true
-     */
+    /** 파일 요청은 수가 많아 남기지 않는다. */
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
         request.requestURI.startsWith(FILE_SERVING_PREFIX)
 
     /**
-     * 쿼리 문자열. 두 가지를 걸러 낸다.
-     *
-     * OAuth 경로의 쿼리는 통째로 생략한다 — 인가 코드와 state 뿐이라 개발 중에도 볼 값어치가
-     * 없고, 남으면 그 자체가 자격 증명이다.
-     *
-     * 기준 좌표는 값만 가린다. 계산에만 쓰고 사용자와 묶어 저장하지 않기로 한 값이라
-     * 로그가 대신 보관하게 두지 않는다. 좌표가 함께 왔는지는 디버깅에 필요하므로 이름은 남긴다.
+     * 로그에 남길 쿼리 문자열. OAuth 인가 코드는 자격 증명이라 통째로 빼고,
+     * 저장하지 않기로 한 기준 좌표는 값만 가린다.
      */
     private fun queryOf(request: HttpServletRequest): String {
         if (request.requestURI.startsWith("/oauth2/") || request.requestURI.startsWith("/login/oauth2/")) {
@@ -83,10 +61,9 @@ class LoggingFilter : OncePerRequestFilter() {
     }
 
     private companion object {
-        /** 값을 가릴 쿼리 파라미터 — 요청자의 기준 위치다. */
+        /** 값을 가릴 쿼리 파라미터(기준 위치). */
         val MASKED_PARAMS = setOf("lat", "lng")
 
-        /** 파일 서빙 경로. 도메인(사진)의 상수를 끌어오지 않도록 공통 접두사로 거른다. */
         const val FILE_SERVING_PREFIX = "/api/files/"
     }
 }

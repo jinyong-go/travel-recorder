@@ -1,16 +1,13 @@
-# 공통 설정. 환경별로 달라지는 값(데이터소스, 스키마 초기화, CORS, 로깅)은
-# application-{local,dev,prod}.yml 에 둔다.
+# 공통 설정. 환경별 값은 프로파일 파일에 둔다.
 server:
   servlet:
     session:
       cookie:
         http-only: true
-        # 모든 프로파일에 Secure 를 건다. 주요 브라우저는 http://localhost 를 보안
-        # 컨텍스트로 보아 로컬에서도 받는다. 받지 않는 브라우저로 개발할 때만 false 로 끈다.
+        # 주요 브라우저는 localhost 에서도 Secure 쿠키를 받으므로 모든 환경에 건다.
         secure: ${SESSION_COOKIE_SECURE:true}
         same-site: lax
-  # TLS 를 프록시에서 끝내는 배포에서 Secure 판정·리다이렉트 주소가 맞도록 X-Forwarded-* 를 해석한다.
-  # native(Tomcat RemoteIpValve)는 사설망 프록시만 신뢰하므로 외부에서 헤더를 위조해도 반영되지 않는다.
+  # 프록시 뒤에서도 원래 주소를 알도록 X-Forwarded-* 를 읽는다. 사설망 프록시만 신뢰해 위조를 막는다.
   forward-headers-strategy: native
 
 spring:
@@ -22,7 +19,7 @@ spring:
 
   servlet:
     multipart:
-      # 사진 업로드 제한. 프론트엔드 VITE_MAX_PHOTO_SIZE_MB / VITE_MAX_PHOTO_TOTAL_MB 와 같은 값을 유지한다.
+      # 사진 업로드 제한. 프론트엔드 제한값과 맞춘다.
       max-file-size: ${MAX_PHOTO_SIZE:5MB}
       max-request-size: ${MAX_PHOTO_REQUEST_SIZE:30MB}
 
@@ -50,7 +47,7 @@ spring:
             user-name-attribute: response
 
 naver:
-  # NAVER API HUB(NCP API Gateway) 지역 검색 — 네이버 로그인/NCP Maps 와는 별도의 키다.
+  # 지역 검색 API. 네이버 로그인·지도와는 다른 키다.
   api:
     client-id: ${NAVER_API_CLIENT_ID:changeit}
     client-secret: ${NAVER_API_CLIENT_SECRET:changeit}
@@ -58,14 +55,13 @@ naver:
 
 app:
   upload:
-    # 서비스 레벨 검증 값. 멀티파트 단계 제한과 항상 같도록 그 값을 그대로 따른다.
+    # 멀티파트 제한과 같은 값을 쓴다.
     max-photo-size: ${spring.servlet.multipart.max-file-size}
     allowed-content-types: ${ALLOWED_PHOTO_CONTENT_TYPES:image/jpeg,image/png,image/webp}
 
 management:
   server:
-    # 관리 엔드포인트는 서비스 포트와 나눈다. 수집기가 로그인하지 않아 SecurityConfig 가 노출한 두 엔드포인트를
-    # 열어 두므로, 같은 포트에 두면 외부에 그대로 열린다. 포트를 나누면 배포에서 이 포트를 공개하지 않는 것만으로 막힌다.
+    # 관리 엔드포인트는 로그인 없이 열려 있으므로 외부에 공개하지 않을 별도 포트에 둔다.
     port: ${MANAGEMENT_PORT:8081}
   endpoints:
     web:
@@ -73,5 +69,5 @@ management:
         include: health, prometheus
   metrics:
     tags:
-      # Grafana 기성 대시보드가 앱을 application 라벨로 구분한다.
+      # 대시보드가 앱을 구분하는 라벨.
       application: ${spring.application.name}

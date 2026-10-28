@@ -16,40 +16,35 @@ import RecordDetailPage from './pages/RecordDetailPage.jsx'
 import TripDetailPage from './pages/TripDetailPage.jsx'
 import TripListPage from './pages/TripListPage.jsx'
 
-/** 라우트 구성. 로그인이 필요한 화면은 RequireAuth 로 감싼다. */
+/** 앱의 라우트 구성 */
 function App() {
   return (
-    // 전역 상태는 로그인 상태 하나다. 여행·기록·그룹은 쓰는 화면이 직접 읽는다.
     <AuthProvider>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/trips" element={<TripListPage />} />
-        {/* 여행·기록 상세는 막지 않는다. 전체 공개 여행은 비로그인도 봐야 한다. */}
+        {/* 비로그인도 볼 수 있는 상세 화면 */}
         <Route path="/trips/:tripId" element={<TripDetailPage />} />
         <Route path="/records/:recordId" element={<RecordDetailPage />} />
-        {/* 기록 목록은 여행 목록으로 대체됐다. 남아 있는 링크·북마크를 404 로 떨어뜨리지 않는다. */}
+        {/* 예전 기록 목록 주소는 여행 목록으로 보낸다 */}
         <Route path="/records" element={<Navigate to="/trips" replace />} />
-        {/* 기록 등록은 여행 상세의 모달로 옮겼다. /records/:recordId 로 잡혀
-            "기록 없음" 이 되지 않도록 먼저 받아 여행 목록으로 보낸다. */}
+        {/* 예전 기록 등록 주소는 여행 목록으로 보낸다 */}
         <Route path="/records/register" element={<Navigate to="/trips" replace />} />
-        {/* 로그인이 필요한 화면. */}
+        {/* 로그인이 필요한 화면 */}
         <Route element={<RequireAuth />}>
-          {/* react-router 는 구체적인 경로를 우선 매칭하므로 /trips/new 가 tripId 로 잡히지 않는다. */}
           <Route path="/trips/new" element={<TripRegisterPage />} />
           <Route path="/trips/:tripId/edit" element={<TripEditPage />} />
           <Route path="/me" element={<MyInfoPage />} />
           <Route path="/me/login-history" element={<LoginHistoryPage />} />
-          {/* 받은/보낸은 담기는 항목과 동작이 다른 별개 목록이라 경로로 나눈다. */}
           <Route path="/invites" element={<Navigate to="/invites/received" replace />} />
-          {/* key 를 나눠 탭이 바뀌면 새로 그린다. 같은 인스턴스를 쓰면 이전 탭의 항목이 새 탭의 모양으로
-              한 번 그려져, 없는 필드(받은 초대의 invitee 등)를 읽다 화면이 깨진다. */}
+          {/* 탭이 바뀌면 화면을 새로 그린다 */}
           <Route path="/invites/received" element={<InvitesPage key="received" tab="received" />} />
           <Route path="/invites/sent" element={<InvitesPage key="sent" tab="sent" />} />
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="/groups/:groupId" element={<GroupDetailPage />} />
         </Route>
-        {/* 위 경로에 매칭되지 않는 모든 주소는 404 페이지로 보낸다. */}
+        {/* 그 밖의 주소는 404 화면 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AuthProvider>

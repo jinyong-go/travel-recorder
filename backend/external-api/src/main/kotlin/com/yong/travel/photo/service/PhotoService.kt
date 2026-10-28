@@ -16,10 +16,7 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
-/**
- * 기록에 딸린 사진의 업로드와 삭제. 사진은 기록에 종속되며, 올리고 지울 수 있는 사람은 소속
- * 여행의 소유자뿐이다.
- */
+/** 기록 사진의 업로드·삭제·조회를 맡는다. 올리고 지우는 것은 여행 소유자만 할 수 있다. */
 @Service
 @Transactional(readOnly = true)
 class PhotoService(
@@ -32,14 +29,13 @@ class PhotoService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * 요청자가 볼 수 있는 사진의 바이너리를 읽는다. 소속 여행을 볼 수 있어야 한다.
+     * 요청자가 볼 수 있는 사진의 바이너리를 읽는다.
      *
-     * @param userId 요청자의 사용자 id. 비로그인이면 null 이며 전체 공개 여행의 사진만 읽힌다
-     * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없거나 볼 권한이 없을 때 (존재 은닉)
+     * @param userId 비로그인이면 null 이며 전체 공개 여행의 사진만 읽힌다
+     * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없거나 볼 권한이 없을 때
      */
     fun load(photoId: UUID, userId: Long?): PhotoContent {
         if (!photoRepository.exists(PhotoSpecifications.viewableBy(photoId, userId))) {
-            // 응답이 "없음"과 같으므로 막혔을 수 있다는 사실은 이 로그에만 남는다.
             log.debug("사진 조회 차단 photoId={} userId={}", photoId, userId)
             throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
         }
@@ -47,15 +43,12 @@ class PhotoService(
     }
 
     /**
-     * 기록에 사진 여러 장을 올린다.
+     * 기록에 사진 여러 장을 올린다. 한 장이라도 실패하면 모두 되돌린다.
      *
-     * 검증은 파일마다 저장 직전에 하며, 한 장이라도 실패하면 트랜잭션이 통째로 되돌아간다.
-     *
-     * @param requesterId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
-     * @return 저장된 사진들. 올린 순서 그대로다
-     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
-     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
-     * @throws ApiException `INVALID_FILE` — 형식·용량·파일 시그니처 중 하나라도 맞지 않을 때
+     * @return 올린 순서대로의 사진
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 여행 소유자가 아닐 때
+     * @throws ApiException `INVALID_FILE` — 형식·용량·파일 내용이 맞지 않을 때
      */
     @Transactional
     fun upload(recordId: Long, requesterId: Long, files: List<MultipartFile>): List<Photo> {
@@ -71,7 +64,7 @@ class PhotoService(
             val photo = photoRepository.save(
                 PhotoEntity(
                     record = record,
-                    // 표시용 값이라 길면 잘라 저장한다. 업로드를 거부할 이유가 없다.
+                    // 표시용이라 길면 잘라 저장한다.
                     originalFileName = file.originalFilename.orEmpty().take(MAX_FILE_NAME_LENGTH),
                     contentType = requireNotNull(file.contentType),
                     fileSizeBytes = file.size,
@@ -81,7 +74,6 @@ class PhotoService(
             val id = requireNotNull(photo.id)
             Photo(id, photoDatabaseService.urlOf(id))
         }
-        // 원본 파일명과 바이너리는 남기지 않는다. 건수와 크기면 업로드 추적에 충분하다.
         log.debug(
             "사진 업로드 recordId={} requesterId={} count={} totalBytes={}",
             recordId, requesterId, files.size, files.sumOf { it.size },
@@ -90,52 +82,47 @@ class PhotoService(
     }
 
     /**
-     * 사진을 지운다. 그 사진이 여행 커버였다면 지정도 푼다.
+     * 사진을 지운다. 여행 커버였다면 커버도 해제한다.
      *
-     * @param requesterId 요청자의 사용자 id. 소속 여행의 소유자여야 한다
-     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때 (존재 은닉)
-     * @throws ApiException `FORBIDDEN` — 볼 수는 있으나 소속 여행의 소유자가 아닐 때
+     * @throws ApiException `RECORD_NOT_FOUND` — 기록이 없거나 볼 권한이 없을 때
+     * @throws ApiException `FORBIDDEN` — 여행 소유자가 아닐 때
      * @throws ApiException `PHOTO_NOT_FOUND` — 사진이 없거나 그 기록의 사진이 아닐 때
      */
     @Transactional
     fun delete(recordId: Long, photoId: UUID, requesterId: Long) {
-        // 기록을 먼저 읽어 지워진 기록의 사진은 404 로 막는다. 사진 행은 기록이 soft delete 돼도 남아 있다.
+        // 지워진 기록의 사진도 남아 있으므로 기록을 먼저 확인한다.
         val record = recordService.findEditableRecord(recordId, requesterId)
         val photo = photoRepository.findByIdAndRecordId(photoId, recordId)
             ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
 
-        // 외래키가 없어 ON DELETE SET NULL 이 돌지 않는다. 여기서 직접 풀지 않으면
-        // 없는 사진을 가리키는 커버가 남아 여행 조회가 깨진다.
+        // 커버는 외래키가 없어 직접 해제해야 한다.
         record.trip.clearCoverIfAmong(listOf(photoId))
 
-        // 바이너리(photo_data)는 ON DELETE CASCADE 로 함께 지워진다.
+        // 바이너리는 DB 가 함께 지운다.
         photoRepository.delete(photo)
         log.debug("사진 삭제 recordId={} photoId={} requesterId={}", recordId, photoId, requesterId)
     }
 
     /**
-     * 파일 앞부분이 선언된 형식의 시그니처와 맞는지 본다.
-     *
-     * Content-Type 은 클라이언트가 적어 보내는 값이라 그대로 믿지 않는다. 시그니처를 아는 형식은
-     * 아래 셋뿐이며, 허용 형식 설정에 다른 형식을 더해도 여기에 추가하기 전까지는 거부된다.
+     * 파일 내용이 선언한 형식과 맞는지 확인한다. Content-Type 은 클라이언트가 보낸 값이라 믿지 않는다.
+     * 여기 없는 형식은 허용 목록에 있어도 거부된다.
      */
     private fun hasSignatureOf(file: MultipartFile, contentType: String): Boolean {
         val head = file.inputStream.use { it.readNBytes(12) }
         return when (contentType) {
             "image/jpeg" -> head.startsWith(JPEG)
             "image/png" -> head.startsWith(PNG)
-            // RIFF 컨테이너라 앞 4바이트(RIFF)와 8~11바이트(WEBP)를 함께 본다.
+            // WebP 는 앞 4바이트(RIFF)와 8~11바이트(WEBP)를 함께 본다.
             "image/webp" -> head.startsWith(RIFF) && head.size >= 12 && head.copyOfRange(8, 12).contentEquals(WEBP)
             else -> false
         }
     }
 
-    /** 바이트 배열이 주어진 접두 바이트로 시작하는지. */
     private fun ByteArray.startsWith(prefix: ByteArray) =
         size >= prefix.size && copyOfRange(0, prefix.size).contentEquals(prefix)
 
     private companion object {
-        /** photos.original_file_name 컬럼 길이. */
+        /** 원본 파일명 컬럼 길이. */
         const val MAX_FILE_NAME_LENGTH = 255
 
         val JPEG = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte())

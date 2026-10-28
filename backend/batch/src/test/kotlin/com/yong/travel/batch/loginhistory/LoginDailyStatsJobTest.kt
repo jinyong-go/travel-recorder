@@ -17,7 +17,7 @@ import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** 한국 시간 하루 범위로 합계를 내고, 다시 돌리면 덮어쓰며, 받을 수 없는 날짜는 거부하는지 확인한다. */
+/** 로그인 통계 집계의 날짜 범위, 덮어쓰기, 날짜 거부를 확인한다. */
 @SpringBootTest
 @SpringBatchTest
 class LoginDailyStatsJobTest {
@@ -31,7 +31,7 @@ class LoginDailyStatsJobTest {
 
     @BeforeEach
     fun setUp() {
-        // 잡이 둘이라 테스트 도구가 스스로 고르지 못한다. 실행할 잡을 지정한다.
+        // 잡이 둘이라 실행할 잡을 지정한다.
         jobOperatorTestUtils.setJob(loginDailyStatsJob)
         jdbcTemplate.update("DELETE FROM login_daily_stats")
         jdbcTemplate.update("DELETE FROM login_history")
@@ -84,10 +84,8 @@ class LoginDailyStatsJobTest {
     }
 
     /**
-     * 같은 날짜를 거듭 돌려도 새 실행으로 잡히도록 고유 파라미터에 대상 날짜를 얹는다.
-     *
-     * 실행 결과(`JobExecution`)가 아니라 상태를 돌려준다. `@SpringBatchTest` 는 테스트 클래스에서
-     * `JobExecution` 을 돌려주는 메서드를 스코프용 팩토리로 보고 매 테스트 전에 호출하려 든다.
+     * 날짜를 넣어 잡을 돌리고 상태를 돌려준다.
+     * `JobExecution` 을 돌려주면 `@SpringBatchTest` 가 매 테스트 전에 이 메서드를 호출한다.
      */
     private fun run(date: LocalDate): BatchStatus =
         jobOperatorTestUtils.startJob(

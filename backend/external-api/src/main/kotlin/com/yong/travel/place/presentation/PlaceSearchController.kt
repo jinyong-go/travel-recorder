@@ -11,11 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 /**
- * 등록 폼용 장소 검색.
- *
- * 경로가 `/api/records` 와 분리된 이유는, 이 API 가 저장 단위를 다루지 않고 외부(네이버 지역 검색)
- * 조회 결과를 집계해 돌려줄 뿐이기 때문이다. 자체 DB 에 장소 테이블은 없다.
- * API 키를 브라우저에 노출하지 않으려고 백엔드를 경유한다.
+ * 기록 등록 폼에서 쓰는 장소 검색.
+ * 저장 단위가 아닌 외부 조회라 기록과 경로를 나눴고, API 키를 숨기려고 서버를 거친다.
  */
 @RestController
 @RequestMapping("/api/places")
@@ -24,12 +21,9 @@ class PlaceSearchController(
 ) {
 
     /**
-     * 장소 검색. 네이버 지역 검색 결과를 집계해 페이지로 돌려준다.
+     * 장소를 검색한다. 익명 요청으로 외부 API 일일 한도가 소진되지 않도록 로그인을 요구한다.
      *
-     * 로그인을 요구한다. 검색 한 번이 외부 API 를 여러 번 부르므로, 열어 두면
-     * 익명 요청만으로 일일 호출 한도가 소진된다.
-     *
-     * @param page 0부터 시작하는 페이지 번호
+     * @param page 0부터 시작
      */
     @GetMapping("/search")
     fun search(

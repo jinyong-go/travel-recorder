@@ -11,10 +11,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * 장소 검색의 외부 호출이 지표로 남되, 사용자가 입력한 검색어는 지표에 남지 않는지 검증.
- *
- * 외부 API 를 실제로 부르지 않도록 기본 주소를 닫힌 로컬 포트로 돌린다. 호출은 연결 실패로 끝나지만
- * 실패한 호출도 지표에 남아야 한다 — 외부 장애를 보려고 두는 지표다.
+ * 장소 검색 호출이 지표로 남고 검색어는 남지 않는지 확인한다.
+ * 외부 API 대신 닫힌 포트를 불러, 실패한 호출도 지표에 남는지 함께 본다.
  */
 @SpringBootTest(properties = ["naver.api.base-url=http://localhost:1/search/v1/local"])
 class PlaceSearchMetricsTest {

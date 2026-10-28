@@ -9,31 +9,19 @@ import { ChevronDownIcon } from './icons.jsx'
 import './HeaderAuth.css'
 import { AUTH_STATUS } from '../context/authStatus.js'
 
-/** 받은 초대 첫 페이지. 건수(`totalElements`)만 쓴다. */
+/** 받은 초대 건수 조회 */
 const loadReceivedInvites = () => fetchReceivedInvites(0)
 
-/**
- * 헤더 우상단의 인증 영역.
- * 비로그인이면 로그인 링크를, 로그인 상태면 계정 메뉴(내 정보·그룹 관리·초대함·로그아웃)를 그린다.
- *
- * 로그인해야만 쓰는 진입점을 여기에 모아, 비로그인 헤더에서 한꺼번에 빠지게 한다.
- *
- * 받은 초대 수는 여기서 직접 읽는다. 화면마다 헤더가 새로 그려지므로 화면을 옮길 때마다 새 값이
- * 된다. 단 `receivedCount` 를 넘기면 그 값을 쓰고 조회하지 않는다 — 같은 요청을 이미 보낸 화면
- * (그룹 목록, 초대함 받은 탭)이 넘겨 중복 호출을 막는다. 그 화면이 다시 읽으면 배지도 따라 바뀐다.
- */
+/** 헤더의 로그인 링크와 계정 메뉴 */
 export default function HeaderAuth({ receivedCount: givenCount }) {
   const { user, status, logout } = useAuth()
-  // 넘겨받던 값이 없어지면(초대함 받은 탭 → 보낸 탭) 그때부터 직접 읽는다. 배지는 보조 정보라
-  // 못 읽으면 배지를 달지 않을 뿐 헤더는 그대로 쓴다.
   const fetched = useResource(loadReceivedInvites, status === AUTH_STATUS.AUTHENTICATED && givenCount === undefined)
   const receivedCount = givenCount ?? fetched.data?.totalElements ?? 0
   const [open, setOpen] = useState(false)
   const wrapRef = useDismissable(open, () => setOpen(false))
   const panelId = useId()
 
-  // 세션 확인 전에는 아무것도 그리지 않는다. 로그인 링크를 먼저 보여 주면
-  // 로그인한 사용자에게 화면이 한 번 깜빡인다.
+  // 로그인 확인 전에는 그리지 않는다
   if (status === AUTH_STATUS.LOADING) return null
 
   if (status !== AUTH_STATUS.AUTHENTICATED) {
@@ -72,7 +60,6 @@ export default function HeaderAuth({ receivedCount: givenCount }) {
       >
         <UserAvatar user={user} size={28} />
         <span className="header-user-name">{user.name}</span>
-        {/* 메뉴를 열기 전에도 초대가 온 것이 보여야 한다. */}
         {badge}
         <ChevronDownIcon />
       </button>

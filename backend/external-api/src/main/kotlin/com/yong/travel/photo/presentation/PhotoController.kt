@@ -16,18 +16,14 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
-/** 기록에 딸린 사진의 업로드·삭제 API. 바이너리 서빙은 [PhotoFileController] 의 몫이다. */
+/** 기록 사진 업로드·삭제 API. */
 @RestController
 @RequestMapping("/api/records/{recordId}/photos")
 class PhotoController(
     private val photoService: PhotoService,
 ) {
 
-    /**
-     * 기록에 사진을 여러 장 올린다. 기록 작성자만 할 수 있다.
-     *
-     * @param files 올릴 이미지 파일들 (`files` 파트)
-     */
+    /** 기록에 사진을 여러 장 올린다. 여행 소유자만 할 수 있다. */
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun upload(
         @PathVariable recordId: Long,
@@ -38,7 +34,7 @@ class PhotoController(
         return ResponseEntity.status(HttpStatus.CREATED).body(photos.map { PhotoResponse.from(it) })
     }
 
-    /** 사진을 삭제한다. 바이너리까지 함께 지우는 물리 삭제다. */
+    /** 사진을 지운다. */
     @DeleteMapping("/{photoId}")
     fun delete(
         @PathVariable recordId: Long,

@@ -14,10 +14,8 @@ import jakarta.persistence.UniqueConstraint
 import java.time.Instant
 
 /**
- * 그룹 멤버. 소유자도 멤버 행을 가진다 (인원 계산과 조회 권한 판정을 한 곳에서 처리하기 위해서다).
- *
- * soft delete 대상이 아니다. 탈퇴·제외는 즉시 조회 권한을 없애야 하는 동작이라,
- * 남아 있는 행이 권한 판정에 끼어들 여지를 만들지 않는다.
+ * 그룹 멤버. 소유자도 멤버로 둔다.
+ * 탈퇴·제외 즉시 권한이 사라지도록 soft delete 하지 않고 바로 지운다.
  */
 @Entity
 @Table(

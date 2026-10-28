@@ -35,7 +35,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 360px 에서는 한 줄에 셋이 들어가지 않는다. 시각을 위에, 기기·IP 를 아래에 둔다. */
+/* 좁은 화면에서는 두 줄로 나눈다 */
 @media (max-width: 520px) {
   .login-history-item {
     grid-template-columns: 1fr auto;

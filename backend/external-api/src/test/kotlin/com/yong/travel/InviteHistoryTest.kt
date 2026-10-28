@@ -19,12 +19,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * 끝난 초대가 이력으로 남는지 검증.
- *
- * 이력을 남기는 지점이 넷(수락·거절·취소·그룹 삭제)이라 **한 곳만 빠져도 조용히 비는** 자리다.
- * 조회 시점에는 "원래 없었던 것"과 구분되지 않으므로 네 경로를 각각 고정한다.
- *
- * 1차 캐시 때문에 변경 직후 조회가 DB 를 타지 않으므로 검증 전에 flush/clear 로 영속성 컨텍스트를 비운다.
+ * 끝난 초대가 이력으로 남는지 확인한다.
+ * 변경이 DB 에 반영된 뒤 읽도록 검증 전에 영속성 컨텍스트를 비운다.
  */
 @SpringBootTest
 @Transactional
@@ -62,7 +58,7 @@ class InviteHistoryTest {
         groupInviteService.reject(inviteId, invitee)
         flush()
 
-        // 거절을 감추지 않는 것이 이번 개정의 결정이다.
+        // 보낸 사람도 거절을 본다.
         val sent = historyOf(owner, InviteHistoryRole.SENT)
         assertEquals(InviteOutcome.REJECTED, sent.single().outcome)
         assertEquals(InviteOutcome.REJECTED, historyOf(invitee, InviteHistoryRole.RECEIVED).single().outcome)
@@ -93,7 +89,7 @@ class InviteHistoryTest {
 
         val item = historyOf(invitee, InviteHistoryRole.RECEIVED).single()
         assertEquals(InviteOutcome.GROUP_DELETED, item.outcome)
-        // 그룹 행이 사라져도 이름으로 무엇에 대한 초대였는지 답할 수 있어야 한다.
+        // 그룹이 지워져도 이름은 남는다.
         assertEquals("가족", item.group.name)
         assertTrue(item.groupDeleted)
     }
@@ -128,7 +124,7 @@ class InviteHistoryTest {
         )
         flush()
 
-        // 끝난 것이 아니므로 이력이 아니다. 자리가 나면 같은 초대로 다시 수락할 수 있어야 한다.
+        // 끝난 초대가 아니므로 이력에 남지 않는다.
         assertTrue(historyOf(latecomer, InviteHistoryRole.RECEIVED).isEmpty())
         assertEquals(1, groupInviteService.listReceived(latecomer, page()).totalElements.toInt())
     }
@@ -158,7 +154,6 @@ class InviteHistoryTest {
 
         groupInviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
-        // unique(group_id, invitee_id) 가 비어 있어야 재초대가 가능하다.
         groupInviteService.reject(invite(groupId, owner, "invitee@example.com"), invitee)
         flush()
 

@@ -9,7 +9,7 @@ import './LoginPage.css'
 
 const LOGIN_FAILED = '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.'
 
-/** 주소의 `?error=` 로 넘어오는 안내. 세션 만료는 AuthContext 가 이 화면으로 보낼 때 붙인다. */
+/** 주소의 ?error= 로 넘어오는 안내 */
 const QUERY_ERROR = {
   access_denied: '네이버 로그인 동의가 취소되었어요. 다시 시도해 주세요.',
   session_expired: '세션이 만료되었어요. 다시 로그인해 주세요.',
@@ -19,9 +19,7 @@ const LOGIN_ERROR = {
   UNAUTHENTICATED: '아이디 또는 비밀번호가 올바르지 않아요.',
 }
 
-/**
- * 로그인 화면. 지금은 임시 아이디/비밀번호 로그인이며, 성공하면 들어오기 전에 보던 곳으로 돌려보낸다.
- */
+/** 로그인 화면 */
 export default function LoginPage() {
   const [searchParams] = useSearchParams()
   const { login } = useAuth()
@@ -39,7 +37,7 @@ export default function LoginPage() {
     : null
   const shownError = formError ?? queryErrorMessage
 
-  // 공유받은 여행 링크를 타고 들어온 경우처럼, 보던 곳으로 돌려보낸다.
+  // 로그인 후 돌아갈 곳
   const redirectTo = location.state?.from ?? '/trips'
 
   const handleSubmit = async (e) => {
@@ -113,7 +111,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* 임시 계정이므로 안내를 숨기지 않는다. 네이버 로그인 복구 시 함께 걷어낸다. */}
+          {/* 임시 계정 안내 */}
           <p className="login-hint">
             임시 계정: <code>user1</code> / <code>user2</code> / <code>user3</code>, 비밀번호는 모두{' '}
             <code>password</code>

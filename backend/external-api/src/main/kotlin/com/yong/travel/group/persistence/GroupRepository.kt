@@ -6,19 +6,15 @@ import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
-/** 그룹 조회. 정원 판정용 잠금 조회와 소유 상한 판정용 건수 조회를 함께 둔다. */
+/** 그룹 저장소. */
 interface GroupRepository : JpaRepository<GroupEntity, Long> {
 
-    /** 사용자가 소유한 그룹 수. 소유 그룹 상한 판정에 쓴다. */
+    /** 사용자가 소유한 그룹 수. */
     fun countByOwnerId(ownerId: Long): Long
 
     /**
-     * 정원 검사와 멤버 입력을 한 트랜잭션에 묶기 위해 그룹 행을 잠그고 읽는다.
-     *
-     * 정원을 강제하는 DB 제약이 없어 애플리케이션 검사가 유일한 관문인데, 검사와 입력 사이에
-     * 다른 수락이 끼어들면 6명짜리 그룹이 만들어진다.
-     *
-     * @return 쓰기 잠금을 건 그룹. 없으면 null
+     * 그룹을 잠그고 읽는다. 없으면 null.
+     * 동시에 수락해 정원을 넘지 않도록 정원 확인과 멤버 추가 사이를 잠근다.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select g from GroupEntity g where g.id = :id")

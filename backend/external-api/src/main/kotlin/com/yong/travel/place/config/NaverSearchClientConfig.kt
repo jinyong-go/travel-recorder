@@ -6,16 +6,13 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders
 import org.springframework.web.client.RestClient
 
-/** NAVER API HUB 지역 검색을 부를 `RestClient`. NCP API Gateway 인증 헤더와 Accept 를 기본값으로 싣는다. */
+/** 지역 검색 API 클라이언트 설정. */
 @Configuration
 class NaverSearchClientConfig {
 
     /**
-     * 지역 검색 API 클라이언트를 만든다.
-     *
-     * 관측 레지스트리를 걸어야 호출마다 http.client.requests 지표가 남는다. 빠뜨리면 외부 호출이
-     * 지표에서 통째로 빠진다. 관측이 걸린 빌더를 내주는 Spring Boot 모듈(spring-boot-restclient)을
-     * 들이지 않고 레지스트리만 직접 건다 — 쓰는 클라이언트가 이것 하나뿐이다.
+     * 인증 헤더를 실은 지역 검색 API 클라이언트를 만든다.
+     * 외부 호출 지표가 남도록 관측 레지스트리를 직접 건다. 클라이언트가 하나뿐이라 별도 모듈은 들이지 않았다.
      */
     @Bean
     fun naverSearchRestClient(
@@ -26,7 +23,7 @@ class NaverSearchClientConfig {
             .baseUrl(properties.baseUrl)
             .defaultHeader("X-NCP-APIGW-API-KEY-ID", properties.clientId)
             .defaultHeader("X-NCP-APIGW-API-KEY", properties.clientSecret)
-            // Accept 를 명시하지 않으면 API 가 JSON 본문에 text/plain 을 붙여 보내 변환에 실패한다.
+            // Accept 가 없으면 API 가 JSON 을 text/plain 으로 보내 변환에 실패한다.
             .defaultHeader(HttpHeaders.ACCEPT, JSON_UTF8)
             .observationRegistry(observationRegistry)
             .build()

@@ -7,13 +7,9 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.util.UUID
 
-/** 사진 바이너리 조회. 저장은 기본 `save` 를 쓴다. */
+/** 사진 바이너리 저장소. */
 interface PhotoDataRepository : JpaRepository<PhotoDataEntity, UUID> {
-    /**
-     * 서빙에 필요한 Content-Type 과 바이트를 한 번에 읽는다.
-     *
-     * @return 바이너리와 Content-Type. 없으면 null
-     */
+    /** 사진의 바이너리와 형식을 읽는다. 없으면 null. */
     @Query(
         """
         select new com.yong.travel.photo.domain.PhotoContent(d.photo.contentType, d.data)
@@ -24,10 +20,8 @@ interface PhotoDataRepository : JpaRepository<PhotoDataEntity, UUID> {
     fun findContentById(@Param("photoId") photoId: UUID): PhotoContent?
 
     /**
-     * 기록에 달린 사진의 바이너리를 지운다. 기록 soft delete 에 딸려 간다.
-     *
-     * 네이티브 SQL 로 둔다. JPQL 로 사진 → 기록을 따라가면 TripRecordEntity 의 @SQLRestriction 이 붙어,
-     * 기록을 먼저 soft delete 한 뒤에 부르면 아무것도 지우지 못한다. 호출 순서에 기대지 않게 한다.
+     * 기록에 달린 사진의 바이너리를 지운다.
+     * JPQL 은 삭제된 기록을 걸러 내 호출 순서에 따라 아무것도 못 지울 수 있어 네이티브 SQL 로 쓴다.
      */
     @Modifying(flushAutomatically = true)
     @Query(
@@ -36,10 +30,7 @@ interface PhotoDataRepository : JpaRepository<PhotoDataEntity, UUID> {
     )
     fun deleteByRecordId(@Param("recordId") recordId: Long): Int
 
-    /**
-     * 여행의 하위 기록 전부에 달린 사진의 바이너리를 지운다. 여행 soft delete 에 딸려 간다.
-     * 네이티브 SQL 로 두는 이유는 [deleteByRecordId] 와 같다.
-     */
+    /** 여행의 모든 기록에 달린 사진의 바이너리를 지운다. 네이티브 SQL 인 이유는 [deleteByRecordId] 와 같다. */
     @Modifying(flushAutomatically = true)
     @Query(
         value = """

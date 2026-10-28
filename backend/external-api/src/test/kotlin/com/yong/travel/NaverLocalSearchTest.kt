@@ -14,13 +14,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-/**
- * 지역 검색 응답 변환 검증. 실제 API 대신 JDK HttpServer 로 네이버의 동작을 흉내 낸다 —
- * Accept 에 JSON 이 없으면 JSON 본문에 text/plain 을 붙여 보낸다.
- *
- * 클라이언트는 운영과 같은 설정(NaverSearchClientConfig)으로 만든다. 설정에서 Accept 가 빠지면
- * 응답 변환이 실패해 모든 테스트가 깨진다.
- */
+/** 지역 검색 응답 변환을 확인한다. 실제 API 대신 같은 동작을 하는 로컬 서버를 쓴다. */
 class NaverLocalSearchTest {
 
     private lateinit var server: HttpServer
@@ -87,8 +81,7 @@ class NaverLocalSearchTest {
 
     companion object {
         /**
-         * 실제 응답 표본을 줄인 것. 두 번째는 좌표가 숫자가 아니고, 세 번째는 첫 항목과 주소만 같은 다른 가게,
-         * 네 번째는 강조 태그만 다른 첫 항목의 중복이다.
+         * 실제 응답을 줄인 표본. 좌표가 잘못된 항목, 주소만 같은 다른 가게, 강조 태그만 다른 중복을 담았다.
          */
         private val SAMPLE = """
             {

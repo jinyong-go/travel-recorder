@@ -7,7 +7,6 @@
   width: min(420px, 100%);
 }
 
-/* .modal-panel 은 확인 모달 기준으로 가운데 정렬이다. 라벨이 달린 입력 폼은 왼쪽으로 되돌린다. */
 .group-form {
   display: flex;
   flex-direction: column;
@@ -31,7 +30,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* 이름·배지·인원이 한 줄, 메모가 있으면 flex-basis 100% 로 둘째 줄에 놓인다. */
 .group-card-link {
   display: flex;
   flex-wrap: wrap;
@@ -79,7 +77,7 @@
   white-space: nowrap;
 }
 
-/* 그룹 목록에서 초대함으로 보내는 알림 줄. 목록 자체는 여기서 그리지 않는다. */
+/* 받은 초대 알림 줄 */
 .invite-notice {
   display: flex;
   align-items: center;

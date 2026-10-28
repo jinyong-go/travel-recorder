@@ -28,14 +28,14 @@
   color: var(--border);
 }
 
-/* 채워지는 부분만 잘라서 덮어 그린다 (0.5점은 절반만 채워짐) */
+/* 별의 채워진 부분 */
 .star-fill {
   overflow: hidden;
   white-space: nowrap;
   color: var(--accent-strong);
 }
 
-/* 별 좌/우 절반을 덮는 투명 클릭 영역 */
+/* 별 좌우 절반의 클릭 영역 */
 .star-half {
   position: absolute;
   top: 0;

@@ -23,13 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 /**
- * 네이버 OAuth 가 준비되기 전까지 쓰는 임시 로그인 API.
- *
- * OAuth 복구 시 이 파일과 `LocalLoginConfig` 를 들어내면 된다. 요청 DTO 를 `*Requests.kt` 가
- * 아니라 여기에 둔 것도 같은 이유다 — 임시 코드를 한 파일에 모아 둔다.
- *
- * `LocalLoginConfig` 와 같은 프로파일 조건을 건다. 조건이 어긋나면 주입할
- * `AuthenticationManager` 가 없어 기동이 실패한다.
+ * 네이버 OAuth 를 대신하는 임시 로그인 API.
+ * 나중에 쉽게 걷어 내도록 요청 DTO 도 이 파일에 둔다.
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -41,10 +36,10 @@ class LocalLoginController(
     private val csrfTokenRepository: CsrfTokenRepository,
 ) {
 
-    /** 세션 쿠키 인증이므로 인증 결과를 세션에 직접 넣는다. */
+    /** 인증 결과를 세션에 저장한다. */
     private val securityContextRepository = HttpSessionSecurityContextRepository()
 
-    /** 임시 로그인 요청. 고정 계정의 아이디와 비밀번호다. */
+    /** 고정 계정의 아이디와 비밀번호. */
     data class LocalLoginRequest(
         @field:NotBlank
         val username: String,
@@ -54,10 +49,8 @@ class LocalLoginController(
     )
 
     /**
-     * 아이디·비밀번호로 로그인하고 세션을 발급한다.
-     *
-     * 실패 사유(없는 계정 / 틀린 비밀번호)를 구분하지 않고 모두 `401 UNAUTHENTICATED` 로 답한다.
-     * 구분해 주면 아이디 존재 여부가 드러난다.
+     * 아이디와 비밀번호로 로그인한다.
+     * 아이디가 있는지 드러나지 않도록 실패 사유를 구분하지 않는다.
      */
     @PostMapping("/login")
     fun login(
@@ -74,18 +67,14 @@ class LocalLoginController(
         }
         val userId = (authentication.principal as LoginUser).userId
 
-        // 세션보다 먼저 남긴다. 기록이 실패하면 세션이 발급되지 않아 이력 없는 로그인이 생기지 않는다.
-        // remoteAddr 은 프록시 헤더 해석이 켜져 있어 프록시 뒤에서도 원 클라이언트 주소다.
+        // 이력 없는 로그인이 생기지 않도록 세션보다 먼저 남긴다.
         loginHistoryService.record(userId, httpRequest.remoteAddr, httpRequest.getHeader(HttpHeaders.USER_AGENT))
 
-        // 인증 전후로 같은 세션 id·CSRF 토큰이 이어지지 않게 바꾼다.
-        // Spring Security 의 세션 고정 방지와 토큰 교체는 자체 로그인 필터에서만 돌고, 컨트롤러가
-        // 직접 인증하는 이 경로는 건너뛴다. 새 토큰은 다음 세션 조회에서 발급된다.
+        // 직접 인증하면 세션 고정 방지가 돌지 않으므로 세션 id 와 CSRF 토큰을 직접 바꾼다.
         httpRequest.getSession(false)?.let { httpRequest.changeSessionId() }
         csrfTokenRepository.saveToken(null, httpRequest, httpResponse)
 
-        // SecurityContextHolder 만 채우면 그 요청 안에서만 유효하다. 다음 요청에서도 로그인
-        // 상태로 남으려면 세션에 저장해야 한다.
+        // 다음 요청에도 로그인 상태가 이어지도록 세션에 저장한다.
         val context = SecurityContextHolder.createEmptyContext()
         context.authentication = authentication
         SecurityContextHolder.setContext(context)

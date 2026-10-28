@@ -1,4 +1,4 @@
-/* 랜딩 — 왼쪽 정렬. 헤더와 같은 좌우 여백을 써서 로고와 제목이 한 줄 위에 선다. */
+/* 랜딩 */
 .landing-page {
   flex: 1;
   padding: clamp(24px, 8vh, 88px) clamp(16px, 4vw, 48px) 64px;
@@ -37,7 +37,6 @@
   margin-top: 12px;
 }
 
-/* 첫 화면의 주 동작이라 공통 버튼보다 한 단계 크게 둔다. */
 .landing-cta .btn-primary,
 .landing-cta .btn-secondary {
   padding: 14px 22px;
@@ -91,7 +90,6 @@
   gap: 4px;
 }
 
-/* 여행 이름은 사용자가 지은 이름이라 본문과 다른 서체로 둔다. */
 .landing-trip-name {
   margin: 8px 0 0;
   font-family: var(--serif);
@@ -111,7 +109,6 @@
   inset: 0;
 }
 
-/* 테두리는 카드 전체(::after)에 그린다. 링크 글자에도 그리면 이중으로 보인다. */
 .landing-trip-link:focus-visible {
   outline: none;
 }
@@ -122,7 +119,6 @@
   border-radius: var(--radius-md);
 }
 
-/* 카드를 띄우지 않고 이름에 밑줄을 그어 누를 수 있음을 알린다. */
 .landing-trip:hover .landing-trip-link {
   text-decoration: underline;
   text-underline-offset: 3px;

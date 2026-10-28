@@ -21,7 +21,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
 
-/** 생성 요청이 `201 Created` 와 만들어진 리소스를 돌려주는지 확인한다 — 여행·기록·그룹 생성과 사진 업로드. */
+/** 생성 요청이 201 과 만들어진 리소스를 돌려주는지 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -68,7 +68,7 @@ class CreatedStatusTest {
         return JsonPath.read<Number>(body, "$.id").toLong()
     }
 
-    /** 컨트롤러가 principal 을 `LoginUser` 로 받으므로 임시 로그인과 같은 타입을 세션 대신 직접 넣는다. */
+    /** 로그인한 사용자로 요청하도록 principal 을 직접 넣는다. */
     private fun loggedInAs(userId: Long) = authentication(
         UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", userId), null, emptyList()),
     )
@@ -85,7 +85,7 @@ class CreatedStatusTest {
     )
 
     private companion object {
-        /** 서버가 파일 앞부분의 시그니처를 확인하므로 JPEG 시그니처로 시작해야 한다. */
+        /** 서버가 파일 내용을 확인하므로 JPEG 시그니처로 시작한다. */
         val JPEG_HEAD = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte())
     }
 }

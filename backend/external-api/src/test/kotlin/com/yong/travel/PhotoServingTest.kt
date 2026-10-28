@@ -32,14 +32,7 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * DB 에 저장한 사진 바이너리의 서빙 검증.
- *
- * 응답의 `url` 을 그대로 요청해 올린 바이트가 그대로 나오는지, 사진을 지우면 바이너리도 함께
- * 사라지는지(ON DELETE CASCADE), 기록·여행을 지우면 사진 행은 남고 바이너리만 사라지는지 확인한다.
- * 서빙도 소속 여행의 공개 범위를 따르므로, 못 보는 사진이 없는 사진과 같은 404 인지와 공유 해제가
- * 즉시 사진까지 막는지도 고정한다.
- */
+/** 사진 파일 응답, 삭제 시 바이너리 정리, 공개 범위에 따른 차단을 확인한다. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -75,8 +68,7 @@ class PhotoServingTest {
         val owner = newUser()
         val recordId = newRecord(newTrip(owner), owner)
         val photo = photoService.upload(recordId, owner, listOf(jpeg(JPEG_HEAD + byteArrayOf(9)))).single()
-        // 업로드와 삭제는 실제로 별도 요청이다. 같은 컨텍스트에 바이너리 엔티티가 남아 있으면
-        // 지워진 사진을 참조한 채 flush 되므로 요청 경계를 흉내 낸다.
+        // 업로드와 삭제를 별도 요청처럼 다루도록 영속성 컨텍스트를 비운다.
         flush()
 
         photoService.delete(recordId, photo.id, owner)
@@ -189,7 +181,7 @@ class PhotoServingTest {
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 
-    /** 컨트롤러가 principal 을 `LoginUser` 로 받으므로 임시 로그인과 같은 타입을 세션 대신 직접 넣는다. */
+    /** 로그인한 사용자로 요청하도록 principal 을 직접 넣는다. */
     private fun loggedInAs(userId: Long) = authentication(
         UsernamePasswordAuthenticationToken(LoginUserDetails("tester", "", userId), null, emptyList()),
     )
@@ -253,7 +245,7 @@ class PhotoServingTest {
     ).id
 
     private companion object {
-        /** 서버가 파일 앞부분의 시그니처를 확인하므로 JPEG 시그니처로 시작해야 한다. */
+        /** 서버가 파일 내용을 확인하므로 JPEG 시그니처로 시작한다. */
         val JPEG_HEAD = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte())
     }
 }
