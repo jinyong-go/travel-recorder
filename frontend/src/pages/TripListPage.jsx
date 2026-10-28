@@ -44,7 +44,6 @@ export default function TripListPage() {
   // 화면은 1부터, API 는 0부터 센다
   const apiPage = page - 1
   const loadTrips = useCallback(() => fetchTrips(scope, sortKey, apiPage), [scope, sortKey, apiPage])
-  // 로그인 확인 후에 읽는다. updateParams 보다 위에 둬야 React Compiler 최적화가 유지된다.
   const { data: result, status: listStatus, reload } = useResource(loadTrips, authStatus !== AUTH_STATUS.LOADING)
 
   const updateParams = (next) => {
