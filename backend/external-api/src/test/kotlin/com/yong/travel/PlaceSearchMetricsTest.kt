@@ -1,7 +1,7 @@
 package com.yong.travel
 
 import com.yong.travel.common.error.ApiException
-import com.yong.travel.search.client.NaverLocalSearchClient
+import com.yong.travel.place.client.NaverLocalSearchClient
 import io.micrometer.core.instrument.MeterRegistry
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

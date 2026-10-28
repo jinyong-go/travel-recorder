@@ -116,7 +116,7 @@ external-api/
 │  │  ├─ persistence/GroupEntity.kt, GroupMemberEntity.kt, GroupInviteEntity.kt, InviteHistoryEntity.kt
 │  │  ├─ domain/InviteOutcome.kt
 │  │  └─ service·presentation
-│  ├─ search/                      # NAVER API HUB 지역 검색 연동
+│  ├─ place/                       # NAVER API HUB 지역 검색 연동
 │  │  ├─ client/NaverLocalSearchClient.kt
 │  │  ├─ service/PlaceSearchService.kt      # 중복 제거·좌표 변환·페이징
 │  │  └─ presentation/PlaceSearchController.kt  # GET /api/places/search (저장 단위가 아니라 외부 조회)

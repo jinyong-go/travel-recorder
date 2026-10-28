@@ -1,10 +1,10 @@
-package com.yong.travel.search.service
+package com.yong.travel.place.service
 
 import com.yong.travel.common.domain.PageResult
 import com.yong.travel.common.util.trimToNull
-import com.yong.travel.search.client.NaverLocalSearchClient
-import com.yong.travel.search.client.NaverLocalSearchItem
-import com.yong.travel.search.domain.PlaceCandidate
+import com.yong.travel.place.client.NaverLocalSearchClient
+import com.yong.travel.place.client.NaverLocalSearchItem
+import com.yong.travel.place.domain.PlaceCandidate
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.util.HtmlUtils

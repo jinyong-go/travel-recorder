@@ -1,9 +1,9 @@
-package com.yong.travel.search.presentation
+package com.yong.travel.place.presentation
 
 import com.yong.travel.auth.security.LoginUser
 import com.yong.travel.common.presentation.PageResponse
 import com.yong.travel.common.web.requireLogin
-import com.yong.travel.search.service.PlaceSearchService
+import com.yong.travel.place.service.PlaceSearchService
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping

@@ -1,6 +1,6 @@
-package com.yong.travel.search.presentation
+package com.yong.travel.place.presentation
 
-import com.yong.travel.search.domain.PlaceCandidate
+import com.yong.travel.place.domain.PlaceCandidate
 
 /** 장소 검색 후보 한 건. 기록 등록 폼을 채우는 데 쓴다. */
 data class PlaceSearchResultResponse(

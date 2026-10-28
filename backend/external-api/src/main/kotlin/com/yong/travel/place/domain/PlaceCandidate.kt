@@ -1,4 +1,4 @@
-package com.yong.travel.search.domain
+package com.yong.travel.place.domain
 
 /**
  * 장소 검색 후보 한 건. 네이버 지역 검색 오픈API 응답을 이 서비스가 쓰는 모양으로 옮긴 것이다.

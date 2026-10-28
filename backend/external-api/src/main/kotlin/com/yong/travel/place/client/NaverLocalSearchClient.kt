@@ -1,4 +1,4 @@
-package com.yong.travel.search.client
+package com.yong.travel.place.client
 
 import com.yong.travel.common.error.ApiException
 import com.yong.travel.common.error.ErrorCode

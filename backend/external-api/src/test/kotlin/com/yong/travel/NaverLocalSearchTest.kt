@@ -1,10 +1,10 @@
 package com.yong.travel
 
 import com.sun.net.httpserver.HttpServer
-import com.yong.travel.search.client.NaverLocalSearchClient
-import com.yong.travel.search.config.NaverSearchClientConfig
-import com.yong.travel.search.config.NaverSearchProperties
-import com.yong.travel.search.service.PlaceSearchService
+import com.yong.travel.place.client.NaverLocalSearchClient
+import com.yong.travel.place.config.NaverSearchClientConfig
+import com.yong.travel.place.config.NaverSearchProperties
+import com.yong.travel.place.service.PlaceSearchService
 import io.micrometer.observation.ObservationRegistry
 import java.net.InetSocketAddress
 import kotlin.test.assertEquals

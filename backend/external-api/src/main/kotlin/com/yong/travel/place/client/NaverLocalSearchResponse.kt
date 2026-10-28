@@ -1,4 +1,4 @@
-package com.yong.travel.search.client
+package com.yong.travel.place.client
 
 /**
  * NAVER API HUB 지역 검색 원본 응답.

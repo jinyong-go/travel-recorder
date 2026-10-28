@@ -1,4 +1,4 @@
-package com.yong.travel.search.config
+package com.yong.travel.place.config
 
 import io.micrometer.observation.ObservationRegistry
 import org.springframework.context.annotation.Bean
