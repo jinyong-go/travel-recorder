@@ -44,6 +44,7 @@
 | [`reference.md`](./docs/reference.md) | 설계 결정의 근거, 유사 서비스 조사 |
 | [`architecture.md`](./docs/architecture.md) | 시스템 구성, 기술 선택 이유, 실행 환경 |
 | [`naver-maps-sdk.md`](./docs/naver-maps-sdk.md) | 네이버 지도 SDK 로드·키·인증 실패 규격 |
+| [`flow-sequence.md`](./docs/flow-sequence.md) | 주요 기능의 현재 구현 기준 호출 순서 |
 
 - 같은 규칙은 한 문서에만 적고 나머지는 참조한다. 공통 명세에는 구현 수단을 쓰지 않는다.
 
