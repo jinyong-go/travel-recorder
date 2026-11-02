@@ -4,6 +4,9 @@ import { hasNaverMapClientId, naverMapsSdkUrl } from '../config/mapSettings.js'
 /** SDK 를 한 번만 불러오도록 공유하는 로드 Promise */
 let loadPromise = null
 
+let authFailed = false
+const authFailureListeners = new Set()
+
 const loadSdk = () => {
   if (loadPromise) return loadPromise
 
@@ -11,6 +14,11 @@ const loadSdk = () => {
     if (window.naver?.maps) {
       resolve()
       return
+    }
+    // 키나 등록된 서비스 URL 이 맞지 않으면 SDK 가 로드된 뒤 이 전역 함수를 부른다
+    window.navermap_authFailure = () => {
+      authFailed = true
+      authFailureListeners.forEach((listener) => listener())
     }
     const script = document.createElement('script')
     script.src = naverMapsSdkUrl
@@ -31,6 +39,7 @@ const loadSdk = () => {
 export default function useNaverMapsSdk() {
   const [status, setStatus] = useState(() => {
     if (!hasNaverMapClientId) return 'disabled'
+    if (authFailed) return 'error'
     return window.naver?.maps ? 'ready' : 'loading'
   })
 
@@ -42,6 +51,15 @@ export default function useNaverMapsSdk() {
       .catch(() => !cancelled && setStatus('error'))
     return () => {
       cancelled = true
+    }
+  }, [status])
+
+  useEffect(() => {
+    if (status === 'disabled' || status === 'error') return
+    const onAuthFailure = () => setStatus('error')
+    authFailureListeners.add(onAuthFailure)
+    return () => {
+      authFailureListeners.delete(onAuthFailure)
     }
   }, [status])
 

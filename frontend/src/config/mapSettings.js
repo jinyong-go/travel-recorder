@@ -14,7 +14,7 @@ export const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID ?? ''
 export const hasNaverMapClientId = Boolean(naverMapClientId)
 
 /** 네이버 지도 SDK 주소 */
-export const naverMapsSdkUrl = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${encodeURIComponent(naverMapClientId)}&submodules=geocoder`
+export const naverMapsSdkUrl = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`
 
 export const getStoredMapMode = () => readStorage(STORAGE_KEY)
 
