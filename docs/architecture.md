@@ -1,7 +1,8 @@
 # 아키텍처 구성도
 
 서비스를 이루는 서버·DB·외부 서비스와 그것이 어떤 환경에서 실행되는지를 정리한다.
-규칙·정책은 [specification.md](./specification.md)와 모듈 명세가 기준이고, 실행 방법은 각 README 에 있다.
+규칙·정책은 [specification.md](./specification.md)와 모듈 명세, 외부 서비스 연동 규격은 §5 의 연동 명세가
+기준이고, 실행 방법은 각 README 에 있다.
 
 ## 1. 전체 구성
 
@@ -128,10 +129,6 @@ flowchart TB
 - **배치는 compose 에 없다.** 필요할 때 Gradle 또는 jar 로 실행해 같은 DB 에 붙는다. API 이미지에도
   배치 소스는 들어가지 않는다.
 - 비밀값은 루트 `.env` 에 두고, 없으면 기본값으로 뜬다.
-- 변형 실행
-  - 앱만: `docker compose up db api web`
-  - 프론트엔드 HMR: `docker compose up db api` + `npm run dev` (5173 이 `web` 과 겹친다)
-  - API 를 IDE 로: `docker compose up db` + `./gradlew :external-api:bootRun` — 이때는 Prometheus 수집 대상이 아니다
 
 ## 4. 실행 환경별 구성
 
@@ -153,28 +150,8 @@ API 서버와 배치는 Spring 프로파일로 환경을 구분한다.
 
 ## 5. 외부 서비스
 
-| 서비스 | 호출 주체 | 용도 |
-|---|---|---|
-| Naver Maps JS SDK | 브라우저 | 지도 표시 |
-| NAVER API HUB 지역 검색 | API 서버 | 장소 검색 |
-| 네이버 로그인 OAuth | API 서버 | 로그인 (예정) |
-
-### 5.1 장소 검색 흐름
-
-```mermaid
-sequenceDiagram
-    participant B as 브라우저
-    participant A as API 서버
-    participant N as NAVER API HUB
-    B->>A: GET /api/places/search?keyword&page (로그인 필요)
-    A->>N: 지역 검색 (Accept: application/json, 인증 헤더)
-    N-->>A: 최대 5건 (mapx·mapy 정수 좌표, 강조 태그 포함 이름)
-    A-->>B: 장소 후보 한 페이지 (좌표 환산·태그 제거·중복 제거 후)
-    Note over B: 기준 위치로 거리 계산·정렬은 브라우저가 한다
-```
-
-- 검색 한 번에 외부 API 를 **한 번** 부른다. 원본이 검색어당 5건까지만 주므로 결과도 최대 5건이다.
-  후보를 늘리는 검색어 변형 호출은 아직 없다 (설계 전제는 [명세 §4.2](./specification.md)).
-- 기준 위치는 서버로 보내지 않는다. 거리순 정렬은 받은 페이지 안에서만 이뤄진다.
-- 키는 API 서버에만 있다. 키가 없거나 호출이 실패하면 `PLACE_SEARCH_UNAVAILABLE` 로 실패를 알린다.
-- 외부 호출은 `http.client.requests` 지표로 남고, 검색어는 지표 라벨에 남기지 않는다.
+| 서비스 | 호출 주체 | 용도 | 연동 명세 |
+|---|---|---|---|
+| Naver Maps JS SDK | 브라우저 | 지도 표시 | [naver-maps-sdk.md](./naver-maps-sdk.md) |
+| NAVER API HUB 지역 검색 | API 서버 | 장소 검색 | [백엔드 명세 §1.3](./backend-specification.md) |
+| 네이버 로그인 OAuth | API 서버 | 로그인 (예정) | [백엔드 명세 §2.1](./backend-specification.md) |

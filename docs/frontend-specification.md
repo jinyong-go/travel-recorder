@@ -595,17 +595,15 @@ API의 `scope` 파라미터로 그대로 전달된다 (API 명세 §3.1).
   이어 붙인다. 이력은 지워지지 않아 계정이 오래될수록 길어진다.
 
 ### 5.9 지도 연동 (네이버 지도)
-- 위치는 **네이버 지도(NAVER Maps) JavaScript SDK v3**로 표시한다.
-- 네이버 지도는 단순 임베드 URL(`<iframe src=...>`)을 제공하지 않으므로, NCP Client ID로 SDK
-  스크립트(`https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=...`)를 로드하고
-  `naver.maps.Map` 인스턴스를 컨테이너에 렌더링한다.
+- 위치는 **네이버 지도(NAVER Maps) JavaScript SDK v3**로 표시한다. 네이버 지도는 단순 임베드
+  URL(`<iframe src=...>`)을 제공하지 않으므로 SDK 로 지도를 컨테이너에 렌더링한다. 로드·키·인증 실패
+  규격은 [네이버 지도 SDK 연동](./naver-maps-sdk.md) 을 따른다.
 - "지도" 버튼 클릭 시:
   - Client ID가 설정된 경우: 모달 내 지도에 마커를 표시한다.
   - Client ID가 없는 경우: 새 창으로 네이버 지도 검색 결과(`https://map.naver.com/p/search/...`)를 연다.
 - 지도 모달은 오버레이 클릭 또는 닫기(X)로 닫히며, 하단에 "새 창에서 네이버 지도로 열기" 링크를 둔다.
 - 설정 메뉴에서 표시 방식(SDK 임베드/새 창)을 선택할 수 있다.
-- 주소↔좌표 변환은 네이버 지도 API v3의 Geocoder 서브모듈을 사용한다.
-- 환경변수는 `VITE_NAVER_MAP_CLIENT_ID` 를 사용한다.
+- SDK 를 불러오지 못했거나 인증에 실패하면 지도 자리에 오류 문구를 표시한다.
 
 ### 5.10 내 정보 (`/me`)
 - 로그인 사용자 본인의 **이름·프로필 사진·이메일**을 읽기 전용으로 보여준다. 값은 부팅 시 받아 둔

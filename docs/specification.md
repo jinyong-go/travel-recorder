@@ -497,7 +497,7 @@
 |---|---|---|---|
 | 네이버 로그인 (OAuth 2.0) | developers.naver.com | 로그인·회원 식별 | 백엔드 전용 |
 | NAVER API HUB – 지역(Local) 검색 | ncloud.com (NCP) | 등록용 장소 검색의 실제 구현체 | **백엔드 전용** (브라우저 노출 금지) |
-| NCP Maps (JS SDK, Geocoder) | ncloud.com | 지도 표시·주소↔좌표 변환 | 프론트엔드 Client ID |
+| NCP Maps (JS SDK) | ncloud.com | 지도 표시 | 프론트엔드 Client ID |
 
 세 가지는 **서로 다른 애플리케이션 등록과 키 발급**이 각각 선행되어야 한다.
 키워드 기반 장소 검색은 NCP Maps 단독으로 제공되지 않으므로 NAVER API HUB 의 지역 검색이 반드시 필요하다.
