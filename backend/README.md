@@ -292,7 +292,7 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 
 | 키 | 기본값 | 설명 |
 |---|---|---|
-| `app.cors.allowed-origins` | `http://localhost:5173` (local) | CORS 허용 오리진 (프론트엔드 dev 서버) |
+| `app.cors.allowed-origins` | `http://localhost:5173,http://localhost:5174` (local) | CORS 허용 오리진 (사용자 웹·관리자 웹 dev 서버) |
 | `app.upload.max-photo-size` | `5MB` | 서비스 레벨 사진 크기 검증 값 |
 | `app.upload.allowed-content-types` | `image/jpeg,image/png,image/webp` | 업로드 허용 MIME 타입 |
 | `spring.servlet.multipart.max-file-size` | `5MB` | 사진 1장의 최대 크기 |
@@ -359,8 +359,8 @@ docker run --rm -v "$PWD/external-api/src/main/resources/db/migration:/flyway/sq
 
 ## 프론트엔드 연동
 
-- 프론트엔드는 같은 저장소의 `frontend/` (React + Vite), dev 서버 기본 포트 **5173**
-- CORS 허용 오리진에 `http://localhost:5173`이 설정되어 있어 기본 포트로 실행하면 별도 프록시 불필요
+- 프론트엔드는 같은 저장소의 `frontend/user/`(사용자 웹, dev 서버 **5173**)와 `frontend/admin/`(관리자 웹, **5174**) (React + Vite)
+- local 프로파일 CORS 허용 오리진에 두 포트가 설정되어 있어 기본 포트로 실행하면 별도 프록시 불필요
 - 세션 쿠키 인증이라 API 호출 시 `credentials: 'include'` 필요
 - CSRF 보호 활성화. 토큰 쿠키가 HttpOnly라 SPA가 직접 읽지 못하므로, `GET /api/auth/session`
   응답의 `csrfToken`을 상태 변경 요청(`POST`/`PUT`/`PATCH`/`DELETE`)의 `X-XSRF-TOKEN` 헤더로 전송

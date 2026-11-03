@@ -1,6 +1,6 @@
 # AGENTS.md
 
-저장소 전체에 적용되는 작업 규칙이다. 모듈 규칙과 검증 명령은 `backend/AGENTS.md`·`frontend/AGENTS.md` 에 있다.
+저장소 전체에 적용되는 작업 규칙이다. 모듈 규칙과 검증 명령은 `backend/AGENTS.md`·`frontend/AGENTS.md`(사용자 웹·관리자 웹 공통) 에 있다.
 
 ## 1. 경계
 
@@ -40,7 +40,8 @@
 | [`specification.md`](./docs/specification.md) | 서비스 개념·규칙, 공개 범위 정책, 모듈 간 계약 |
 | [`backend-specification.md`](./docs/backend-specification.md) | 엔티티·테이블, 인가, 저장소 |
 | [`api-specification.md`](./docs/api-specification.md) | REST API, 요청·응답, 오류 코드 |
-| [`frontend-specification.md`](./docs/frontend-specification.md) | 화면, 폼·모달 동작, 문구, 접근성 |
+| [`frontend-specification.md`](./docs/frontend-specification.md) | 사용자 웹의 화면, 폼·모달 동작, 문구, 접근성 |
+| [`admin-specification.md`](./docs/admin-specification.md) | 관리자 웹의 화면과 동작, 백엔드 연동 전 정할 것 |
 | [`reference.md`](./docs/reference.md) | 설계 결정의 근거, 유사 서비스 조사 |
 | [`architecture.md`](./docs/architecture.md) | 시스템 구성, 기술 선택 이유, 실행 환경 |
 | [`naver-maps-sdk.md`](./docs/naver-maps-sdk.md) | 네이버 지도 SDK 로드·키·인증 실패 규격 |

@@ -1,0 +1,23 @@
+.users-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.users-search-input {
+  flex: 1;
+  max-width: 360px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.users-count {
+  margin-bottom: 8px;
+}
+
+.users-more {
+  display: block;
+  margin: 16px auto 0;
+}

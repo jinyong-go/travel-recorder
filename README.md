@@ -19,28 +19,32 @@
 | 모듈 | 기술 | 문서 |
 |---|---|---|
 | [`backend/`](./backend) | Kotlin 2.3 / Spring Boot 4.1 / JPA / PostgreSQL + PostGIS / Flyway | [README](./backend/README.md) · [명세](./docs/backend-specification.md) · [API](./docs/api-specification.md) |
-| [`frontend/`](./frontend) | React 19 / Vite / react-router | [README](./frontend/README.md) · [명세](./docs/frontend-specification.md) |
+| [`frontend/user/`](./frontend/user) | React 19 / Vite / react-router — 사용자 웹 | [README](./frontend/user/README.md) · [명세](./docs/frontend-specification.md) |
+| [`frontend/admin/`](./frontend/admin) | React 19 / Vite / react-router — 관리자 웹 (목업 초안) | [README](./frontend/admin/README.md) · [명세](./docs/admin-specification.md) |
 
 모듈 README는 실행 방법·환경 변수·디렉터리 구조, 모듈 명세는 요구사항과 설계 결정을 다룸.
 
 ## 빠르게 실행하기
 
-Docker (Compose 2.24 이상) 필요. 저장소 루트에서 한 번에 기동. 프론트엔드는 http://localhost:5173, 백엔드는 8080 포트 사용.
-백엔드 CORS에 `http://localhost:5173`이 허용되어 있어 별도 프록시 설정 불필요.
+Docker (Compose 2.24 이상) 필요. 저장소 루트에서 한 번에 기동. 사용자 웹은 http://localhost:5173, 관리자 웹은 http://localhost:5174, 백엔드는 8080 포트 사용.
+백엔드 CORS에 두 주소가 허용되어 있어 별도 프록시 설정 불필요.
 
 ```bash
-docker compose up    # PostgreSQL + API 서버(local 프로파일) + 프론트엔드(nginx) + Prometheus·Grafana
+docker compose up    # PostgreSQL + API 서버(local 프로파일) + 사용자 웹·관리자 웹(nginx) + Prometheus·Grafana
 ```
 
 프론트엔드를 개발 서버(HMR)로 돌리려면 백엔드만 compose로 띄우고 프론트엔드는 따로 기동.
-compose의 `web`과 5173 포트가 겹치므로 `web`은 함께 띄우지 않음.
+compose의 `web`(5173)·`admin`(5174)과 포트가 겹치므로 개발 서버로 띄우는 앱은 compose로 함께 띄우지 않음.
 
 ```bash
 # 터미널 1 — 백엔드 (PostgreSQL + API 서버)
 docker compose up db api
 
-# 터미널 2 — 프론트엔드
-cd frontend && npm install && npm run dev
+# 터미널 2 — 사용자 웹
+cd frontend/user && npm install && npm run dev
+
+# 터미널 3 — 관리자 웹 (필요할 때)
+cd frontend/admin && npm install && npm run dev
 ```
 
 - **배치**는 compose에 포함하지 않음. 잡 하나를 돌리고 끝나는 프로그램이라 필요할 때 Gradle로 직접 실행

@@ -9,9 +9,11 @@
 ```mermaid
 flowchart LR
     user([사용자 브라우저])
+    operator([운영자 브라우저])
 
     subgraph app["애플리케이션"]
-        web["프론트엔드<br/>React SPA 정적 파일"]
+        web["사용자 웹<br/>React SPA 정적 파일"]
+        admin["관리자 웹<br/>React SPA 정적 파일 (목업)"]
         api["API 서버<br/>Spring Boot (external-api)"]
         batch["배치<br/>Spring Batch · 잡 단위 실행"]
     end
@@ -30,6 +32,7 @@ flowchart LR
     end
 
     user -- "정적 파일 요청" --> web
+    operator -- "정적 파일 요청" --> admin
     user -- "REST API · 세션 쿠키" --> api
     user -- "지도 SDK" --> maps
     api -- "JDBC" --> db
@@ -42,7 +45,8 @@ flowchart LR
 
 | 구성 요소 | 기술 | 역할 |
 |---|---|---|
-| 프론트엔드 | React 19 · Vite, nginx 로 서빙 | 빌드된 정적 파일. 서버 로직 없음 |
+| 사용자 웹 | React 19 · Vite, nginx 로 서빙 | 빌드된 정적 파일. 서버 로직 없음 |
+| 관리자 웹 | React 19 · Vite, nginx 로 서빙 | 사용자 웹과 따로 빌드·배포하는 정적 파일. 아직 API 를 부르지 않고 목업 데이터로 동작 |
 | API 서버 | Kotlin 2.3 · Spring Boot 4.1 · Java 17 | 프론트엔드가 부르는 유일한 서버. 인증·인가·데이터 처리 |
 | 배치 | Spring Batch 6 | 로그인 이력 일별 집계·보관 기간 경과분 삭제. 상시 프로세스가 아니라 잡 하나를 돌리고 종료 |
 | DB | PostgreSQL 17 + PostGIS 3.5 | 단일 DB. 사진 바이너리도 여기 저장. 스키마는 API 서버의 Flyway 마이그레이션이 관리 |
@@ -92,6 +96,7 @@ flowchart TB
 
     subgraph compose["docker compose — 기본 네트워크"]
         web["web<br/>nginx:1.27-alpine<br/>5173 → 80"]
+        admin["admin<br/>nginx:1.27-alpine<br/>5174 → 80"]
         api["api<br/>eclipse-temurin:17-jre<br/>8080 공개 · 8081 내부"]
         db[("db<br/>postgis/postgis:17-3.5<br/>5432")]
         prom["prometheus<br/>prom/prometheus:v3.5.0<br/>9090"]
@@ -107,6 +112,7 @@ flowchart TB
     env[".env<br/>네이버 키 · DB·Grafana 비밀번호"]
 
     host -- ":5173" --> web
+    host -- ":5174" --> admin
     host -- ":8080" --> api
     host -- ":9090 / :3000" --> prom & graf
     api -- "db:5432 (healthy 후 기동)" --> db
@@ -122,7 +128,8 @@ flowchart TB
 |---|---|---|---|
 | `db` | `postgis/postgis:17-3.5` | 5432 | `db-data` 볼륨. TCP `pg_isready` 헬스체크 |
 | `api` | `./backend` 빌드 (JDK 로 빌드 → JRE 실행 이미지) | 8080 | `local` 프로파일. db 헬스체크 통과 후 기동, Actuator 헬스체크 |
-| `web` | `./frontend` 빌드 (Node 로 빌드 → nginx 실행 이미지) | 5173 | 지도 Client ID 는 빌드 인자로 번들에 포함 |
+| `web` | `./frontend/user` 빌드 (Node 로 빌드 → nginx 실행 이미지) | 5173 | 지도 Client ID 는 빌드 인자로 번들에 포함 |
+| `admin` | `./frontend/admin` 빌드 (`web` 과 같은 구성) | 5174 | 목업 데이터로 동작해 `api` 에 의존하지 않는다 |
 | `prometheus` | `prom/prometheus:v3.5.0` | 9090 | compose 의 `api` 만 수집 |
 | `grafana` | `grafana/grafana:12.1.0` | 3000 | 데이터 소스·대시보드 자동 등록 |
 
@@ -145,7 +152,7 @@ API 서버와 배치는 Spring 프로파일로 환경을 구분한다.
 - API 서버는 TLS 를 종료하는 리버스 프록시 뒤에 두는 배포를 고려해 프록시 헤더(`X-Forwarded-*`)를
   신뢰하도록 설정되어 있다.
 - **dev·prod 의 서버 인프라는 저장소에 정의되어 있지 않다.** 산출물은 API 서버 jar(또는 Docker 이미지),
-  배치 jar, 프론트엔드 정적 파일(`dist/`)이며, 정적 파일은 임의의 정적 호스팅에 올릴 수 있다.
+  배치 jar, 사용자 웹·관리자 웹 정적 파일(각 `dist/`)이며, 정적 파일은 임의의 정적 호스팅에 올릴 수 있다.
   배치는 외부 스케줄러(cron 등)가 매일 잡 이름을 넘겨 실행하고 종료 코드로 실패를 판단하는 구조다.
 
 ## 5. 외부 서비스
