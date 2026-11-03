@@ -17,9 +17,19 @@ interface TripShareRepository : JpaRepository<TripShareEntity, Long> {
     @Query("delete from TripShareEntity s where s.trip.id = :tripId")
     fun deleteByTripId(@Param("tripId") tripId: Long): Int
 
-    /** 그룹에 걸린 공유를 모두 읽는다. */
-    fun findByGroupId(groupId: Long): List<TripShareEntity>
+    /** 그룹에 걸린 공유를 모두 지운다. */
+    @Modifying(flushAutomatically = true)
+    @Query("delete from TripShareEntity s where s.group.id = :groupId")
+    fun deleteByGroupId(@Param("groupId") groupId: Long): Int
 
-    /** 사용자가 그룹에 건 공유를 읽는다. */
-    fun findByGroupIdAndTripOwnerId(groupId: Long, ownerId: Long): List<TripShareEntity>
+    /**
+     * 사용자가 그룹에 건 공유를 지운다.
+     * 여행은 속한 그룹에만 공유할 수 있으므로 그룹을 나가면 공유도 끝나야 한다.
+     */
+    @Modifying(flushAutomatically = true)
+    @Query(
+        "delete from TripShareEntity s where s.group.id = :groupId " +
+            "and s.trip.id in (select t.id from TripEntity t where t.owner.id = :ownerId)",
+    )
+    fun deleteByGroupIdAndTripOwnerId(@Param("groupId") groupId: Long, @Param("ownerId") ownerId: Long): Int
 }

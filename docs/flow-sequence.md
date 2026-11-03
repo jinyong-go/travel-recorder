@@ -95,7 +95,6 @@ sequenceDiagram
         end
         A->>D: 여행 공유 저장
     end
-    A->>D: 공개 범위 이력 저장 (OWNER_CHANGE)
     A-->>B: 201 여행
     Note over B: 여행 상세로 이동
 ```
@@ -202,7 +201,6 @@ sequenceDiagram
             A->>D: 그룹 소속 확인 (실패 시 404 GROUP_NOT_FOUND)
             A->>D: 여행 공유 저장
         end
-        A->>D: 공개 범위 이력 저장 (OWNER_CHANGE, 값이 같아도 저장)
         A-->>B: 여행
     end
 ```
@@ -244,7 +242,6 @@ sequenceDiagram
     else
         A->>D: 그룹 저장 (소유자 = 요청자)
         A->>D: 소유자를 첫 멤버로 저장
-        A->>D: 멤버 이력 저장 (JOINED)
         A-->>B: 201 그룹
         Note over B: 그룹 목록 다시 조회
     end
@@ -303,7 +300,7 @@ sequenceDiagram
     else 참여 그룹 상한 도달
         A-->>I: 409 GROUP_LIMIT_EXCEEDED (초대 유지)
     else
-        A->>D: 멤버 저장 · 멤버 이력 저장 (JOINED)
+        A->>D: 멤버 저장
         A->>D: 초대 이력 저장 (ACCEPTED) · 초대 삭제
         A-->>I: 204
         Note over I: 대기·이력 다시 조회 후 그룹 상세로 이동
@@ -330,21 +327,21 @@ sequenceDiagram
     alt 소유자 또는 비멤버
         A-->>B: 403 FORBIDDEN
     else
-        A->>D: 멤버 삭제 · 멤버 이력 저장 (LEFT)
-        A->>D: 내가 이 그룹에 건 공유 삭제 · 공개 범위 이력 저장 (OWNER_LEFT)
+        A->>D: 멤버 삭제
+        A->>D: 내가 이 그룹에 건 공유 삭제
         A-->>B: 204
     end
 
     B->>A: DELETE /api/groups/{groupId}/members/{userId}
     A->>D: 소유자 확인 (403) · 대상 확인 (소유자 지목 400 / 비멤버 404 MEMBER_NOT_FOUND)
-    A->>D: 멤버 삭제 · 멤버 이력 저장 (REMOVED)
-    A->>D: 대상이 이 그룹에 건 공유 삭제 · 공개 범위 이력 저장 (OWNER_REMOVED)
+    A->>D: 멤버 삭제
+    A->>D: 대상이 이 그룹에 건 공유 삭제
     A-->>B: 204
 
     B->>A: DELETE /api/groups/{groupId}
     A->>D: 소유자 확인 (404 / 403)
-    A->>D: 이 그룹의 공유 전부 삭제 · 공개 범위 이력 저장 (GROUP_DELETED)
-    A->>D: 멤버 이력 저장 (GROUP_DELETED) · 대기 초대 이력 저장 (GROUP_DELETED)
+    A->>D: 이 그룹의 공유 전부 삭제
+    A->>D: 대기 초대 이력 저장 (GROUP_DELETED)
     A->>D: 초대 · 멤버 · 그룹 삭제 (여행은 유지)
     A-->>B: 204
 ```

@@ -42,7 +42,6 @@ class TripService(
     private val groupService: GroupService,
     private val photoRepository: PhotoRepository,
     private val photoDatabaseService: PhotoDatabaseService,
-    private val visibilityHistoryService: TripVisibilityHistoryService,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -238,7 +237,6 @@ class TripService(
             emptyList()
         }
         tripShareRepository.saveAll(groups.map { TripShareEntity(trip = trip, group = it) })
-        visibilityHistoryService.recordOwnerChange(trip, visibility, groups.mapNotNull { it.id })
     }
 
     /** 요청자가 볼 수 있는 여행을 읽는다. */

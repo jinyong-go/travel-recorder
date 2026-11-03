@@ -9,19 +9,15 @@ import com.yong.travel.common.persistence.listPageRequest
 import com.yong.travel.common.persistence.toPageResult
 import com.yong.travel.common.util.trimToNull
 import com.yong.travel.group.domain.Group
-import com.yong.travel.group.domain.GroupMemberEvent
 import com.yong.travel.group.domain.InviteOutcome
 import com.yong.travel.group.persistence.GroupEntity
 import com.yong.travel.group.persistence.GroupInviteRepository
 import com.yong.travel.group.persistence.GroupMemberEntity
-import com.yong.travel.group.persistence.GroupMemberHistoryEntity
-import com.yong.travel.group.persistence.GroupMemberHistoryRepository
 import com.yong.travel.group.persistence.GroupMemberRepository
 import com.yong.travel.group.persistence.GroupRepository
 import com.yong.travel.group.persistence.InviteHistoryEntity
 import com.yong.travel.group.persistence.InviteHistoryRepository
-import com.yong.travel.trip.domain.TripVisibilityChangeCause
-import com.yong.travel.trip.service.TripVisibilityHistoryService
+import com.yong.travel.trip.persistence.TripShareRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -34,8 +30,7 @@ class GroupService(
     private val groupMemberRepository: GroupMemberRepository,
     private val groupInviteRepository: GroupInviteRepository,
     private val inviteHistoryRepository: InviteHistoryRepository,
-    private val memberHistoryRepository: GroupMemberHistoryRepository,
-    private val tripVisibilityHistoryService: TripVisibilityHistoryService,
+    private val tripShareRepository: TripShareRepository,
     private val userRepository: UserRepository,
 ) {
 
@@ -90,7 +85,6 @@ class GroupService(
         )
         // 인원 계산과 권한 판정을 같은 방식으로 하도록 소유자도 멤버로 넣는다.
         val ownerMember = groupMemberRepository.save(GroupMemberEntity(group = group, user = owner))
-        memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, owner, GroupMemberEvent.JOINED))
         log.debug("그룹 생성 groupId={} ownerId={}", group.id, userId)
 
         return group.toDomain(listOf(ownerMember.toDomain()))
@@ -116,7 +110,7 @@ class GroupService(
 
     /**
      * 그룹을 멤버·대기 초대·여행 공유와 함께 지운다. 소유자만 할 수 있다.
-     * 여행은 지우지 않고, 지워지는 멤버십·초대·공유는 이력으로 남긴다.
+     * 여행은 지우지 않고, 지워지는 대기 초대는 초대 이력으로 남긴다.
      *
      * @throws ApiException `GROUP_NOT_FOUND` — 그룹이 없을 때
      * @throws ApiException `FORBIDDEN` — 소유자가 아닐 때
@@ -126,11 +120,7 @@ class GroupService(
         val group = findGroup(groupId)
         requireOwner(group, userId)
 
-        val revokedShares = tripVisibilityHistoryService.revokeGroupShares(groupId)
-        val members = groupMemberRepository.findWithUserByGroupIdIn(listOf(groupId))
-        memberHistoryRepository.saveAll(
-            members.map { GroupMemberHistoryEntity.of(group, it.user, GroupMemberEvent.GROUP_DELETED) },
-        )
+        val revokedShares = tripShareRepository.deleteByGroupId(groupId)
         val pending = groupInviteRepository.findByGroupId(groupId)
         inviteHistoryRepository.saveAll(pending.map { InviteHistoryEntity.from(it, InviteOutcome.GROUP_DELETED) })
         groupInviteRepository.deleteByGroupId(groupId)
@@ -160,10 +150,7 @@ class GroupService(
         val member = groupMemberRepository.findByGroupIdAndUserId(groupId, targetUserId)
             ?: throw ApiException(ErrorCode.MEMBER_NOT_FOUND)
         groupMemberRepository.delete(member)
-        memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, member.user, GroupMemberEvent.REMOVED))
-        val revokedShares = tripVisibilityHistoryService.revokeOwnerShares(
-            groupId, targetUserId, TripVisibilityChangeCause.OWNER_REMOVED,
-        )
+        val revokedShares = tripShareRepository.deleteByGroupIdAndTripOwnerId(groupId, targetUserId)
         log.debug(
             "그룹 멤버 제외 groupId={} targetUserId={} requesterId={} revokedShares={}",
             groupId, targetUserId, requesterId, revokedShares,
@@ -189,10 +176,7 @@ class GroupService(
                 throw ApiException(ErrorCode.FORBIDDEN, "그룹 멤버가 아닙니다.")
             }
         groupMemberRepository.delete(member)
-        memberHistoryRepository.save(GroupMemberHistoryEntity.of(group, member.user, GroupMemberEvent.LEFT))
-        val revokedShares = tripVisibilityHistoryService.revokeOwnerShares(
-            groupId, userId, TripVisibilityChangeCause.OWNER_LEFT,
-        )
+        val revokedShares = tripShareRepository.deleteByGroupIdAndTripOwnerId(groupId, userId)
         log.debug("그룹 탈퇴 groupId={} userId={} revokedShares={}", groupId, userId, revokedShares)
     }
 

@@ -265,15 +265,6 @@ InviteHistory                   // 끝난 초대의 기록 (공통 명세 §3.7)
   resolvedAt: Instant           // 끝난 시각
   // unique 제약을 두지 않는다 — 같은 상대에게 다시 초대해 다시 끝나면 항목이 하나 더 쌓인다
 
-GroupMemberHistory              // 멤버가 되거나 멤버가 아니게 된 기록 (공통 명세 §3.11). append-only
-  id: Long (PK)
-  groupId: Long                 // FK 를 걸지 않는다 — InviteHistory 와 같은 이유
-  groupName: String             // 사건 시점의 그룹명 스냅샷
-  user: User (FK)               // 대상 멤버
-  event: GroupMemberEvent       // JOINED | LEFT | REMOVED | GROUP_DELETED
-  occurredAt: Instant
-  // 행위자 컬럼을 두지 않는다 — 사건마다 행위자가 하나로 정해진다 (제외·그룹 삭제는 소유자, 나머지는 본인)
-
 LoginHistory                    // 성공한 로그인의 기록 (공통 명세 §3.10). append-only
   id: Long (PK)
   user: User (FK)               // 로그인한 계정
@@ -295,15 +286,6 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   trip: Trip (FK)
   group: Group (FK)
   // unique(trip_id, group_id)
-
-TripVisibilityHistory           // 여행 공개 범위가 바뀐 뒤의 상태 기록 (공통 명세 §3.11). append-only
-  id: Long (PK)
-  trip: Trip (FK)               // 여행은 물리 삭제되지 않으므로 FK 를 건다
-  visibility: TripVisibility    // 바뀐 뒤의 공개 범위
-  groupIds: List<Long>          // 바뀐 뒤의 공유 그룹 id (BIGINT[]). FK 없음. GROUP 이 아니면 빈 배열
-  cause: TripVisibilityChangeCause  // OWNER_CHANGE | GROUP_DELETED | OWNER_LEFT | OWNER_REMOVED
-  changedAt: Instant
-  // 변경 전 값 컬럼을 두지 않는다 — 같은 여행의 직전 행이 답한다
 ```
 
 `Trip.coverPhoto` 와 `Photo.record` 는 `Trip → TripRecord → Photo → Trip` 순환 참조를 만든다.
@@ -396,31 +378,6 @@ TripVisibilityHistory           // 여행 공개 범위가 바뀐 뒤의 상태 
   끝난 것이 아니다 (API 명세 §2.7.7).
 - `Tag` 는 이름 중복 없이 재사용되며, 존재하지 않는 태그명이 등록 요청에 포함되면 서버가 생성한다.
 
-**권한 변경 이력**
-
-- 테이블명은 `trip_visibility_history`, `group_member_history` 다.
-- **이력은 권한을 바꾸는 모든 경로에서, 바꾸는 것과 같은 트랜잭션 안에 남긴다.** 이력 저장이
-  실패하면 변경도 롤백된다. 경로는 다음과 같으며, 한 곳만 빠뜨려도 이력이 조용히 빈다.
-
-  | 경로 | `TripVisibilityHistory` | `GroupMemberHistory` |
-  |---|---|---|
-  | 여행 생성 | 그 여행 1건 (`OWNER_CHANGE`) | — |
-  | 공개 범위 변경 | 그 여행 1건 (`OWNER_CHANGE`). 값이 그대로여도 남긴다 | — |
-  | 그룹 생성 | — | 소유자 `JOINED` |
-  | 초대 수락 | — | 수락한 사람 `JOINED` |
-  | 그룹 탈퇴 | 나간 사람이 그 그룹에 공유해 둔 여행마다 (`OWNER_LEFT`) | 나간 사람 `LEFT` |
-  | 멤버 제외 | 제외된 사람이 그 그룹에 공유해 둔 여행마다 (`OWNER_REMOVED`) | 제외된 사람 `REMOVED` |
-  | 그룹 삭제 | 그 그룹에 공유돼 있던 여행마다 (`GROUP_DELETED`) | 남아 있던 멤버 전원(소유자 포함) `GROUP_DELETED` |
-
-- 소유자가 직접 바꾸지 않은 경로(그룹 삭제·탈퇴·제외)의 행은 **그 그룹을 뺀 나머지 공유 그룹**을
-  담는다. `visibility` 는 `GROUP` 그대로다.
-- `groupIds` 는 오름차순으로 저장한다. 같은 상태가 항상 같은 값으로 적혀야 행끼리 비교할 수 있다.
-- **공유 그룹을 자식 테이블이 아니라 배열 컬럼에 둔다.** 행 하나가 한 시점의 상태 전체이고, 그룹
-  id 하나로 이력을 찾는 조회가 없다. 그룹이 지워져도 남아야 하므로 어느 쪽이든 FK 는 걸 수 없다.
-- `group_member_history.group_name` 은 `share_group.name` 과 같은 30자다.
-- **조회 경로가 없어 인덱스를 두지 않는다.** 조회 기능(공통 명세 §7.3)을 넣을 때 그 조회에 맞춰
-  추가한다.
-
 **로그인 이력**
 
 - 테이블명은 `login_history` 다.
@@ -469,7 +426,7 @@ TripVisibilityHistory           // 여행 공개 범위가 바뀐 뒤의 상태 
   애플리케이션이 지우는 시점에 해제한다 (§3).
 - **`Group`, `GroupMember`, `GroupInvite`, `TripShare` 는 물리 삭제한다.** 공유 해제와
   그룹 탈퇴는 즉시 조회 권한을 없애야 하는 동작이라, 남아 있는 행이 권한 판정에 끼어들 여지를
-  만들지 않는다. 바뀐 사실은 권한 판정이 읽지 않는 이력 테이블에 남긴다 (§3.1).
+  만들지 않는다.
 - **초대는 수락·거절·철회·그룹 삭제 어느 쪽으로 끝나든 `group_invite` 행을 지우고, 같은 트랜잭션에서
   `InviteHistory` 를 남긴다** (공통 명세 §3.7). 상태 컬럼을 달아 같은 행에 두지 않는 이유는
   `unique(group_id, invitee_id)` 때문이다 — 끝난 초대가 그 자리에 남아 있으면 같은 상대를
@@ -488,12 +445,9 @@ TripVisibilityHistory           // 여행 공개 범위가 바뀐 뒤의 상태 
   - 보관 기간 값은 배치 설정(`app.login-history.retention-days`)에 있다.
 - **`LoginDailyStats` 는 지우지 않는다.** 누구의 로그인인지 남지 않는 합계라 보관 기간을 두지 않는다
   (공통 명세 §3.10).
-- **`TripVisibilityHistory`, `GroupMemberHistory` 는 지우지 않는다.** 보관 기간을 두지 않는다
-  (공통 명세 §3.11).
 - 그룹 삭제 시 그 그룹의 `GroupMember`, `GroupInvite`, `TripShare` 행을 함께 지운다.
   이때 **대기 중이던 초대는 `GROUP_DELETED` 로 이력에 남긴다** — 받은 사람 쪽에서 보면
-  초대가 이유 없이 사라지는 일이라 그 이유를 남겨 둘 자리가 필요하다. 멤버와 공유 행도 지우기 전에
-  권한 변경 이력으로 남긴다 (§3.1).
+  초대가 이유 없이 사라지는 일이라 그 이유를 남겨 둘 자리가 필요하다.
   그 그룹으로만 공유되던 여행은 실질적으로 비공개가 되며, 여행과 기록 자체는 삭제되지 않는다.
 - `updatedAt` 은 마지막 수정 시각이며 soft delete 도 수정으로 보아 함께 갱신된다.
 
