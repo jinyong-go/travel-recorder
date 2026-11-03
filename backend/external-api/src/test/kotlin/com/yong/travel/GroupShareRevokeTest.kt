@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 /**
  * 그룹을 나가거나 그룹이 지워지면 여행 공유가 풀리는지 확인한다.
@@ -83,6 +84,24 @@ class GroupShareRevokeTest {
         assertEquals(listOf(otherGroupId), tripService.get(tripId, owner).sharedGroups?.map { it.id })
         assertEquals(emptyList(), tripService.get(membersTripId, member).sharedGroups?.map { it.id })
         assertNotFound { tripService.get(membersTripId, owner) }
+    }
+
+    @Test
+    fun `그룹을 지우면 행은 삭제 시각과 함께 남고 그룹은 404 이며 멤버는 지워진다`() {
+        val owner = newUser()
+        val member = newUser()
+        val groupId = newGroup(owner, member)
+
+        groupService.delete(groupId, owner)
+        flush()
+
+        val deletedAt = entityManager
+            .createNativeQuery("select deleted_at from share_group where id = :id")
+            .setParameter("id", groupId)
+            .singleResult
+        assertNotNull(deletedAt)
+        assertEquals(ErrorCode.GROUP_NOT_FOUND, assertThrows<ApiException> { groupService.get(groupId, owner) }.errorCode)
+        assertEquals(0, groupService.list(member, 0).totalElements)
     }
 
     private fun assertNotFound(block: () -> Unit) {

@@ -236,6 +236,7 @@ Group                           // 조회 전용 공유 대상 목록 (테이블
   name: String                  // 그룹 이름
   memo: String?                 // 그룹 설명. 소유자와 멤버 모두에게 보인다
   createdAt: Instant
+  deletedAt: Instant?           // soft delete (§3.2)
 
 GroupMember
   id: Long (PK)
@@ -274,12 +275,42 @@ LoginHistory                    // 성공한 로그인의 기록 (공통 명세 
   // 로그인 수단 컬럼을 두지 않는다 — 계정당 수단이 하나라 user.provider 와 항상 같다
   // 결과 컬럼을 두지 않는다 — 성공만 기록한다
 
-LoginDailyStats                 // 하루 단위 로그인 합계 (공통 명세 §3.10). 배치만 쓴다
+// 서비스 통계 (공통 명세 §3.11). 엔티티 없이 배치만 쓴다. 모두 aggregatedAt(마지막으로 집계한 시각)을 갖는다.
+// 사용자를 가리키는 컬럼을 두지 않는다 — 누구의 것인지 남지 않아야 기한 없이 보관할 수 있다.
+
+LoginDailyStats                 // login_daily_stats
   statDate: LocalDate (PK)      // 한국 시간 기준 날짜
   loginCount: Long              // 그날의 로그인 횟수
   uniqueUserCount: Long         // 그날 로그인한 사용자 수
-  aggregatedAt: Instant         // 마지막으로 집계한 시각
-  // 사용자 컬럼을 두지 않는다 — 누구의 로그인인지 남지 않아야 기한 없이 보관할 수 있다
+
+LoginPeriodStats                // login_period_stats
+  periodType: String (PK)       // WEEK | MONTH
+  periodStart: LocalDate (PK)   // 주는 그 주 월요일, 월은 그달 1일
+  uniqueUserCount: Long         // 그 기간에 로그인한 사용자 수
+
+UserDailyStats                  // user_daily_stats
+  statDate: LocalDate (PK)
+  newCount: Long                // 그날 가입한 수
+
+TripDailyStats                  // trip_daily_stats
+  statDate: LocalDate (PK)
+  createdCount: Long
+  deletedCount: Long
+
+RecordDailyStats                // record_daily_stats
+  statDate: LocalDate (PK)
+  createdCount: Long
+  deletedCount: Long            // 여행 삭제로 함께 삭제된 기록 포함
+
+GroupDailyStats                 // group_daily_stats
+  statDate: LocalDate (PK)
+  createdCount: Long
+  deletedCount: Long
+  memberCount: Long             // 집계 시점 값. 원본(group_member)이 물리 삭제라 다시 구할 수 없다
+  inviteSentCount: Long
+  inviteAcceptedCount: Long
+  inviteRejectedCount: Long
+  inviteRevokedCount: Long
 
 TripShare                       // trip.visibility=GROUP 일 때만 사용
   id: Long (PK)
@@ -354,7 +385,7 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - **정원 판정은 수락 시점에만 한다.** 대기 중인 `GroupInvite` 는 정원에 포함되지 않으므로,
   정원이 찬 뒤의 수락은 `409 GROUP_MEMBER_LIMIT_EXCEEDED` 로 거부된다. 이때 **초대 행은 지우지
   않는다** — 자리가 나면 같은 초대로 다시 수락할 수 있어야 한다 (공통 명세 §3.7).
-- **사용자당 그룹 수 상한**(공통 명세 §3.6)은 그룹 생성 시 소유 그룹 수(`share_group.owner_id`)로,
+- **사용자당 그룹 수 상한**(공통 명세 §3.6)은 그룹 생성 시 삭제되지 않은 소유 그룹 수(`share_group.owner_id`)로,
   초대 수락 시 소유하지 않은 멤버 행 수로 판정한다. 초과 시 둘 다 `409 GROUP_LIMIT_EXCEEDED` 이며,
   수락이 거부되면 정원 초과와 같이 초대 행과 이력을 건드리지 않는다. **잠금은 걸지 않는다** —
   동시 요청으로 한 건 넘칠 수 있으나, 상한의 목적이 목록 크기를 묶는 것이라 정원처럼 정확히
@@ -371,8 +402,8 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - **`InviteHistory` 는 초대 행을 지우는 모든 경로에서, 지우는 것과 같은 트랜잭션 안에 남긴다.**
   경로는 넷이다 — 수락·거절·취소(철회)·그룹 삭제. 한 곳만 빠뜨려도 이력이 조용히 비고,
   그런 누락은 조회 시점에 드러나지 않는다.
-- **`InviteHistory.groupId` 에는 외래키를 걸지 않는다.** 그룹 삭제 시 이력까지 함께 지워지거나
-  삭제가 막히면 이력을 남기는 의미가 없기 때문이다. 대신 `groupName` 스냅샷을 함께 저장해,
+- **`InviteHistory.groupId` 에는 외래키를 걸지 않는다.** 그룹을 물리 삭제하던 때 이력까지 함께
+  지워지거나 삭제가 막히지 않도록 정한 것이며, 그룹이 soft delete 로 바뀐 지금은 걸 수 있다. 대신 `groupName` 스냅샷을 함께 저장해,
   그룹이 사라진 뒤에도 무엇에 대한 초대였는지 답할 수 있게 한다 (공통 명세 §3.7).
 - **정원 초과로 수락이 거부된 경우는 이력을 남기지 않는다.** 초대 행이 그대로 남아 있으므로
   끝난 것이 아니다 (API 명세 §2.7.7).
@@ -387,22 +418,33 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - 보관 기간 정리(§3.2)는 시각만으로 지울 행을 찾으므로 `login_history(logged_in_at)` 인덱스를 따로 둔다.
   위 인덱스는 `user_id` 가 선두라 이 조건에 쓰이지 않는다. 일별 통계 집계도 같은 인덱스를 쓴다.
 
-**로그인 통계**
+**서비스 통계**
 
-- 테이블명은 `login_daily_stats` 이고 PK 는 `stat_date` 다. 날짜당 한 행이다.
-- 엔티티가 없다. `external-api` 는 이 테이블을 읽지도 쓰지도 않으며, `batch` 의
-  `loginDailyStatsJob` 만 SQL 로 쓴다. DDL 은 스키마의 단일 출처인 `external-api` 의 Flyway 마이그레이션에 둔다.
-- **집계 대상 날짜는 잡 파라미터 `targetDate`(`yyyy-MM-dd`)** 이며, 없으면 한국 시간 기준 **어제**다.
-  범위는 그 날짜의 한국 시간 0시 이상, 다음 날 0시 미만이다.
-- **같은 날짜를 다시 집계하면 덮어쓴다.** `INSERT … ON CONFLICT (stat_date) DO UPDATE` 한 문장이다.
-- **다음 날짜는 거부하고 잡을 실패로 끝낸다.** 오늘 이후(아직 끝나지 않은 날)와, 원본 이력의 보관
-  기간이 이미 지났을 수 있는 날짜(오늘 − 보관 기간 이전)다. 후자를 집계하면 원본이 지워진 만큼
-  실제 값이 작게 덮인다.
+- 테이블은 `login_daily_stats`, `login_period_stats`, `user_daily_stats`, `trip_daily_stats`,
+  `record_daily_stats`, `group_daily_stats` 다. 이름은 `<대상>_daily_stats` 로 맞추고, 일별이 아닌 것만
+  단위를 이름에 쓴다. PK 는 `stat_date`(기간 통계는 `period_type, period_start`)이며 날짜당 한 행이다.
+- 엔티티가 없다. `external-api` 는 이 테이블들을 읽지도 쓰지도 않으며, `batch` 의 `dailyStatsJob` 만
+  SQL 로 쓴다. DDL 은 스키마의 단일 출처인 `external-api` 의 Flyway 마이그레이션에 둔다.
+- **`dailyStatsJob` 은 파라미터 없이 한국 시간 기준 어제 하루만 집계한다.** 범위는 어제 한국 시간 0시 이상,
+  오늘 0시 미만이다. 대상마다 스텝 하나를 둔다 — 로그인 일별 → 로그인 기간 → 사용자 → 여행 → 기록 → 그룹.
+- **로그인 기간 스텝은 어제가 일요일이면 그 주(월~일)를, 그달 말일이면 그 달을 집계한다.** 둘 다 아니면
+  아무것도 쓰지 않는다. `period_type` 은 `WEEK` / `MONTH` 이며 `CHECK` 제약으로 막는다.
+- **같은 날 다시 돌리면 덮어쓴다.** 테이블마다 `INSERT … ON CONFLICT … DO UPDATE` 한 문장이다.
+  지난 날짜를 지정하는 수단은 두지 않는다 (공통 명세 §3.11).
+- 생성 수는 `created_at`, 삭제 수는 `deleted_at` 이 그날 범위에 드는 행이다. 배치는 엔티티를 거치지
+  않으므로 삭제된 행도 그대로 읽힌다.
+- 그룹 스텝의 값:
+  - `member_count` — 집계 시점에 `deleted_at IS NULL` 인 그룹의 `group_member` 행 수. 다른 값과 달리 어제의
+    범위가 아니라 실행 시각의 값이다.
+  - `invite_sent_count` — `invited_at`(`invite_history`)과 `created_at`(`group_invite`)이 그날인 행의 합.
+    끝난 초대는 이력으로, 대기 중인 초대는 초대 행으로 남아 있기 때문이다.
+  - `invite_accepted_count` · `invite_rejected_count` · `invite_revoked_count` — `invite_history.resolved_at` 이
+    그날이고 `outcome` 이 각각 `ACCEPTED` / `REJECTED` / `REVOKED` 인 행 수. `GROUP_DELETED` 는 세지 않는다.
 - 실행 순서: 매일 통계 잡을 먼저, 정리 잡(§3.2)을 다음에 돌린다. 어제 날짜는 보관 기간 안이라
   순서가 바뀌어도 값이 틀리지는 않지만, 통계가 원본보다 늦게 만들어질 일이 없게 맞춘다.
 
 ### 3.2 삭제 정책 (soft delete)
-`Trip` 과 `TripRecord` 는 물리 삭제하지 않고 `deletedAt` 에 삭제 시각을 기록한다. 통계·이력
+`Trip`, `TripRecord`, `Group` 은 물리 삭제하지 않고 `deletedAt` 에 삭제 시각을 기록한다. 통계·이력
 보존과 오삭제 복구를 위해서다.
 
 - **살아 있는 행의 기준은 `deletedAt IS NULL` 하나뿐이다.** `isDeleted` / `deleteYn` 같은 별도
@@ -424,9 +466,11 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 - `Photo` 는 바이너리(`PhotoData`)를 함께 지워야 하므로 soft delete 대상이 아니며 물리 삭제한다.
   삭제된 사진을 커버로 쓰던 여행은 `cover_photo_id` 가 `NULL` 이 된다. DB 제약이 아니라
   애플리케이션이 지우는 시점에 해제한다 (§3).
-- **`Group`, `GroupMember`, `GroupInvite`, `TripShare` 는 물리 삭제한다.** 공유 해제와
+- **`GroupMember`, `GroupInvite`, `TripShare` 는 물리 삭제한다.** 공유 해제와
   그룹 탈퇴는 즉시 조회 권한을 없애야 하는 동작이라, 남아 있는 행이 권한 판정에 끼어들 여지를
-  만들지 않는다.
+  만들지 않는다. `Group` 만 soft delete 하는 것은 그룹 생성·삭제 수를 통계(공통 명세 §3.11)로 다시 셀 수
+  있게 하기 위해서이며, 삭제된 그룹에는 멤버도 공유도 남지 않으므로 권한 판정에 끼어들지 않는다.
+- 삭제된 그룹은 소유 그룹 수 상한(§3.1)에 세지 않고, 초대 이력에서는 사라진 그룹으로 취급한다.
 - **초대는 수락·거절·철회·그룹 삭제 어느 쪽으로 끝나든 `group_invite` 행을 지우고, 같은 트랜잭션에서
   `InviteHistory` 를 남긴다** (공통 명세 §3.7). 상태 컬럼을 달아 같은 행에 두지 않는 이유는
   `unique(group_id, invitee_id)` 때문이다 — 끝난 초대가 그 자리에 남아 있으면 같은 상대를
@@ -443,9 +487,9 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   - 같은 날 두 번 돌려도 결과가 같아 재시작 정보가 필요 없다. 그래서 배치 메타데이터 테이블
     (`BATCH_*`) 없이 도는 저장소(`ResourcelessJobRepository`)를 쓴다.
   - 보관 기간 값은 배치 설정(`app.login-history.retention-days`)에 있다.
-- **`LoginDailyStats` 는 지우지 않는다.** 누구의 로그인인지 남지 않는 합계라 보관 기간을 두지 않는다
-  (공통 명세 §3.10).
-- 그룹 삭제 시 그 그룹의 `GroupMember`, `GroupInvite`, `TripShare` 행을 함께 지운다.
+- **서비스 통계 테이블(§3.1)은 지우지 않는다.** 누구의 것인지 남지 않는 합계라 보관 기간을 두지 않는다
+  (공통 명세 §3.11).
+- 그룹 삭제 시 그룹은 soft delete 하고, 그 그룹의 `GroupMember`, `GroupInvite`, `TripShare` 행은 지운다.
   이때 **대기 중이던 초대는 `GROUP_DELETED` 로 이력에 남긴다** — 받은 사람 쪽에서 보면
   초대가 이유 없이 사라지는 일이라 그 이유를 남겨 둘 자리가 필요하다.
   그 그룹으로만 공유되던 여행은 실질적으로 비공개가 되며, 여행과 기록 자체는 삭제되지 않는다.

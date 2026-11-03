@@ -120,12 +120,13 @@ class GroupService(
         val group = findGroup(groupId)
         requireOwner(group, userId)
 
+        // 초대 일괄 삭제가 영속성 컨텍스트를 비우므로 그보다 먼저 표시해 함께 반영되게 한다.
+        group.softDelete()
         val revokedShares = tripShareRepository.deleteByGroupId(groupId)
         val pending = groupInviteRepository.findByGroupId(groupId)
         inviteHistoryRepository.saveAll(pending.map { InviteHistoryEntity.from(it, InviteOutcome.GROUP_DELETED) })
         groupInviteRepository.deleteByGroupId(groupId)
         groupMemberRepository.deleteByGroupId(groupId)
-        groupRepository.delete(group)
         log.debug(
             "그룹 삭제 groupId={} ownerId={} pendingInvites={} revokedShares={}",
             groupId, userId, pending.size, revokedShares,

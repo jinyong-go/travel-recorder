@@ -47,6 +47,15 @@ class GroupLimitTest {
     }
 
     @Test
+    fun `삭제한 그룹은 소유 상한에 세지 않는다`() {
+        val owner = newUser()
+        val groupIds = List(GroupEntity.OWNED_GROUP_LIMIT) { groupService.create(owner, "그룹$it", null).id }
+
+        groupService.delete(requireNotNull(groupIds.first()), owner)
+        groupService.create(owner, "다시", null)
+    }
+
+    @Test
     fun `참여 그룹은 50개까지 수락할 수 있고 넘치면 초대가 남고 이력도 생기지 않는다`() {
         val user = newUser()
         repeat(GroupEntity.JOINED_GROUP_LIMIT) { joinNewGroup(user, "그룹$it") }

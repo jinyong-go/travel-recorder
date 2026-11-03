@@ -10,6 +10,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 
 /**
@@ -18,6 +19,7 @@ import java.time.Instant
  */
 @Entity
 @Table(name = "share_group")
+@SQLRestriction("deleted_at is null")
 class GroupEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
@@ -38,6 +40,15 @@ class GroupEntity(
     @Column(nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()
         protected set
+
+    /** 삭제 시각. 삭제된 그룹은 조회에서 빠진다. */
+    var deletedAt: Instant? = null
+        protected set
+
+    /** 그룹을 삭제 상태로 바꾼다. 멤버·초대·공유는 따로 지워야 한다. */
+    fun softDelete() {
+        if (deletedAt == null) deletedAt = Instant.now()
+    }
 
     companion object {
         /** 소유자를 포함한 그룹당 최대 인원. */

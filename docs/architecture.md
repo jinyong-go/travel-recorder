@@ -48,7 +48,7 @@ flowchart LR
 | 사용자 웹 | React 19 · Vite, nginx 로 서빙 | 빌드된 정적 파일. 서버 로직 없음 |
 | 관리자 웹 | React 19 · Vite, nginx 로 서빙 | 사용자 웹과 따로 빌드·배포하는 정적 파일. 아직 API 를 부르지 않고 목업 데이터로 동작 |
 | API 서버 | Kotlin 2.3 · Spring Boot 4.1 · Java 17 | 프론트엔드가 부르는 유일한 서버. 인증·인가·데이터 처리 |
-| 배치 | Spring Batch 6 | 로그인 이력 일별 집계·보관 기간 경과분 삭제. 상시 프로세스가 아니라 잡 하나를 돌리고 종료 |
+| 배치 | Spring Batch 6 | 서비스 통계 일별 집계·로그인 이력 보관 기간 경과분 삭제. 상시 프로세스가 아니라 잡 하나를 돌리고 종료 |
 | DB | PostgreSQL 17 + PostGIS 3.5 | 단일 DB. 사진 바이너리도 여기 저장. 스키마는 API 서버의 Flyway 마이그레이션이 관리 |
 | 모니터링 | Prometheus · Grafana | API 서버 관리 포트의 메트릭을 수집·시각화 |
 
