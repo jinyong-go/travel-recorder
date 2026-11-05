@@ -14,9 +14,11 @@
 | Method | Path | 설명 | 인증 |
 |---|---|---|:---:|
 | POST | `/api/auth/login` | 임시 로그인 (§2.1.1) | - |
-| GET | `/oauth2/authorization/naver` | 네이버 로그인 시작 (§2.1.2) | - |
+| GET | `/oauth2/authorization/{provider}` | OAuth 로그인 시작 (§2.1.2) | - |
 | GET | `/api/auth/session` | 세션 상태 조회 (§2.1.3) | - |
+| POST | `/api/auth/signup` | 가입 완료 (§2.1.7) | 가입 대기 |
 | GET | `/api/auth/me` | 내 정보 조회 (§2.1.4) | 필요 |
+| PATCH | `/api/auth/me` | 닉네임 변경 (§2.1.8) | 필요 |
 | GET | `/api/auth/me/login-history` | 로그인 이력 조회 (§2.1.5) | 필요 |
 | POST | `/api/auth/logout` | 로그아웃 (§2.1.6) | 필요 |
 
@@ -26,23 +28,48 @@
 
 - **임시** 인메모리 로그인이다. `local`·`dev` 전용이다 (백엔드 명세 §2.1).
 
-#### 2.1.2 네이버 로그인 시작
+#### 2.1.2 OAuth 로그인 시작
 
-`GET /oauth2/authorization/naver`
+`GET /oauth2/authorization/{provider}`
 
-- 네이버 로그인으로 리다이렉트한다. **현재 비활성**이다 (백엔드 명세 §2.1).
+- 제공자 로그인으로 리다이렉트한다. `provider` 는 등록된 제공자 이름(`naver` 등)이다.
+  **현재 비활성**이다 (백엔드 명세 §2.1).
+- API 가 아니라 브라우저 전체 페이지 이동으로 부른다. 결과도 JSON 이 아니라 프론트엔드 주소로의
+  리다이렉트다.
+
+| 결과 | 리다이렉트 대상 |
+|---|---|
+| 가입한 사용자 | 로그인 상태로 돌아갈 주소 |
+| 처음 온 사용자 | 가입 화면. 로그인 상태가 아니며 세션에 가입 대기만 있다 |
+| 실패 (동의 거부·제공자 오류) | 로그인 화면 + `?error=oauth_failed` |
 
 #### 2.1.3 세션 상태 조회
 
 `GET /api/auth/session`
 
-- 클라이언트 부팅용이다. `{ authenticated, csrfToken }` 을 반환하며 비로그인도 `200` 이다 (백엔드 명세 §5).
+- 클라이언트 부팅용이다. 비로그인도 `200` 이다 (백엔드 명세 §5).
+- `signupPending` 은 세션에 유효한 가입 대기가 있을 때만 값이 있고, 그 밖에는 `null` 이다.
+  가입 화면의 닉네임 기본값과 사진 미리보기에 쓴다. 로그인 상태면 언제나 `null` 이다.
+- `suggestedName` 은 서버가 만든 임의 닉네임이다 (백엔드 명세 §2.1). 제공자의 이름이 아니다.
+
+```json
+{
+  "authenticated": false,
+  "csrfToken": "…",
+  "signupPending": { "provider": "naver", "suggestedName": "여행자_482193", "profileImageUrl": "https://..." }
+}
+```
 
 #### 2.1.4 내 정보 조회
 
 `GET /api/auth/me`
 
 - 현재 로그인 사용자 정보를 반환한다. 비로그인 시 `401` 이다.
+- `provider` 는 본인에게만 내려준다 (공통 명세 §3.1). 다른 사용자 정보에는 담지 않는다.
+
+```json
+{ "id": 7, "name": "여행자", "profileImageUrl": "https://...", "provider": "naver" }
+```
 
 #### 2.1.5 로그인 이력 조회
 
@@ -72,6 +99,37 @@
 `POST /api/auth/logout`
 
 - 세션을 무효화한다.
+
+#### 2.1.7 가입 완료
+
+`POST /api/auth/signup`
+
+```json
+{ "name": "여행자" }
+```
+
+- 가입 대기 상태에서 닉네임을 정해 계정을 만들고 로그인시킨다. 응답은 `201` 과 §2.1.4 의 본인
+  정보이며, 새 세션 쿠키가 함께 나간다 (백엔드 명세 §2.1).
+- 닉네임 규칙은 공통 명세 §3.1, 검증 순서는 백엔드 명세 §3.1 이다.
+
+| 실패 | 상태 | code |
+|---|---|---|
+| 가입 대기가 없거나 만료됨 (10분) | 401 | `SIGNUP_EXPIRED` |
+| 닉네임 형식 위반·금지어 | 400 | `VALIDATION_ERROR` |
+| 이미 쓰이는 닉네임 | 409 | `NAME_TAKEN` |
+
+- 실패해도 `SIGNUP_EXPIRED` 가 아니면 가입 대기는 남는다. 닉네임만 고쳐 다시 보내면 된다.
+
+#### 2.1.8 닉네임 변경
+
+`PATCH /api/auth/me`
+
+```json
+{ "name": "새닉네임" }
+```
+
+- 본인의 닉네임을 바꾸고 §2.1.4 의 본인 정보를 반환한다. 바꿀 수 있는 것은 `name` 하나뿐이다.
+- 실패는 §2.1.7 과 같다 (`SIGNUP_EXPIRED` 제외, 비로그인은 `401 UNAUTHENTICATED`).
 
 ### 2.2 여행
 
@@ -832,6 +890,7 @@ GET /api/records?scope=MINE&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 경로·쿼리 파라미터 타입 불일치, 필수 파라미터(`scope` 등) 누락, 본문 파싱 실패 | 400 | `VALIDATION_ERROR` |
 | 허용되지 않는 파일 형식/용량 초과 (멀티파트 단계 초과 포함) | 400 | `INVALID_FILE` |
 | 비로그인 사용자의 보호된 API 접근 | 401 | `UNAUTHENTICATED` |
+| 가입 대기 없이 가입 요청, 가입 대기 만료 | 401 | `SIGNUP_EXPIRED` |
 | 권한 없는 수정/삭제 시도 (열람은 가능한 경우), 멤버가 아닌 그룹의 조회·탈퇴 | 403 | `FORBIDDEN` |
 | 존재하지 않거나 **열람 권한이 없는** 여행, 기록 등록·이동의 대상이 내 여행이 아님 (백엔드 명세 §2.2.2) | 404 | `TRIP_NOT_FOUND` |
 | 존재하지 않거나 **열람 권한이 없는** 기록 | 404 | `RECORD_NOT_FOUND` |
@@ -847,6 +906,7 @@ GET /api/records?scope=MINE&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 그룹 정원(5명) 초과 | 409 | `GROUP_MEMBER_LIMIT_EXCEEDED` |
 | 사용자당 그룹 수 상한(소유 50·참여 50) 초과 | 409 | `GROUP_LIMIT_EXCEEDED` |
 | 이미 멤버인 사용자를 초대 | 409 | `ALREADY_MEMBER` |
+| 다른 사용자가 쓰는 닉네임으로 가입·변경 | 409 | `NAME_TAKEN` |
 | 그 밖의 DB 제약 위반 (동시 요청 경합 등) | 409 | `CONFLICT` |
 | 지역 검색 API 호출 실패/한도 초과 | 502 | `PLACE_SEARCH_UNAVAILABLE` |
 | 그 밖의 처리되지 않은 예외 | 500 | `INTERNAL_ERROR` |

@@ -25,7 +25,7 @@
 - 스키마는 Flyway 마이그레이션으로 관리한다. `local`·`dev`·`test` 는 기동 시 적용하고, `prod` 는
   애플리케이션이 DDL 을 실행하지 않도록 끄고 배포 절차에서 적용한다. 모든 프로파일이 `ddl-auto: validate`
   라 엔티티와 스키마가 어긋나면 기동 시점에 실패한다.
-- OAuth2 클라이언트는 **네이버만 등록되어 있다** (§2.1).
+- OAuth2 클라이언트는 **네이버만 등록되어 있다.** 제공자를 더하는 방법은 §2.1 에 있다.
 
 > 여행 계층과 인가 정책(§2.2)은 구현되어 있다. 남은 차이는 §6.1에 있다.
 
@@ -54,37 +54,86 @@
 
 ### 2.1 로그인
 
-> **현재 구현은 임시 인메모리 로그인이다.** 네이버 OAuth 는 실제 키와 콜백 도메인이 갖춰지기
-> 전까지 비활성 상태이며, 아래 네이버 관련 내용은 복구 대상 명세로 남겨 둔다 (§6.1).
+> **현재 구현은 임시 인메모리 로그인이다.** OAuth 로그인은 실제 키와 콜백 도메인이 갖춰지기
+> 전까지 비활성 상태이며, 아래 OAuth·가입 내용은 구현 대상 명세다 (§6.1).
 >
 > - 로그인: `POST /api/auth/login` — JSON `{ "username", "password" }`. 성공 시 세션 쿠키를
 >   발급하고 `MeResponse` 를 반환하며, 실패는 `401 UNAUTHENTICATED` 다 (API 명세 §3.3 의 공통 오류 형식).
 > - 계정은 `local`·`dev` 프로파일에서만 등록되는 고정 3개(`user1`~`user3`, 비밀번호
 >   `password`)다. 고정 비밀번호 계정을 운영 환경에 열지 않기 위해 프로파일을 제한한다.
-> - 이 계정들은 기동 시 `users` 에 `provider = "local"`, `provider_id = username` 으로
->   upsert 된다. 초대는 이메일로 상대를 찾으므로(API 명세 §2.7.2), 상대가 한 번도 로그인하지 않아도
->   행이 있어야 한다.
+>   OAuth 로그인을 구현한 뒤에도 개발·테스트용으로 남긴다.
+> - 이 계정들은 기동 시 `users` 에 `provider = "local"`, `provider_id = username`,
+>   `name = username` 으로 upsert 된다. 가입 절차를 거치지 않는다.
 > - 로그인 수단이 둘이 되면서 principal 구현 타입도 둘이다. 컨트롤러는 수단이 아니라
 >   `LoginUser`(사용자 PK 만 노출하는 인터페이스)에 의존한다.
 
-- 로그인 수단은 **네이버 OAuth 2.0 하나만** 지원한다.
-- Spring Security OAuth2 Client 의 Authorization Code 플로우를 사용한다.
-  - 로그인 시작: `GET /oauth2/authorization/naver`
-  - 콜백: `GET /login/oauth2/code/naver` (Spring Security 기본 처리)
-- 네이버는 사용자 프로필을 최상위 `response` 객체로 감싸 반환하므로, `UserService`
-  (`OAuth2UserService` 구현체)가 이를 평탄화한다. 사용자 식별자는 `response.id` 다.
-- 네이버 애플리케이션 설정에서 이메일 주소·이름(별명)·프로필 사진을 "필수"로 활성화해야 한다.
+**제공자**
+
+- Spring Security OAuth2 Client 의 Authorization Code 플로우를 쓴다. 제공자 이름은 클라이언트
+  등록 id(`registrationId`)이며, 그대로 `users.provider` 값이 된다.
+  - 로그인 시작: `GET /oauth2/authorization/{provider}`
+  - 콜백: `GET /login/oauth2/code/{provider}` (Spring Security 기본 처리)
+- **제공자 응답을 공통 프로필로 바꾸는 곳은 `OAuthProvider` enum 하나다.** 항목마다 제공자 응답에서
+  `OAuthProfile(provider, providerId, profileImageUrl)` 를 꺼내는 규칙을 갖는다.
+  등록되지 않은 `registrationId` 로 들어온 로그인은 실패시킨다.
+
+  | 제공자 | providerId | profileImageUrl | 비고 |
+  |---|---|---|---|
+  | `naver` | `response.id` | `response.profile_image` | 프로필이 `response` 로 감싸여 온다 |
+  | `google` (추가 시) | `sub` | `picture` | OIDC. `OidcUserService` 경로로 들어온다 |
+  | `kakao` (추가 시) | `id` | `kakao_account.profile.profile_image_url` | `id` 가 숫자라 문자열로 바꾼다 |
+
+- OAuth2 경로(`OAuth2UserService`)와 OIDC 경로(`OidcUserService`) 모두 공통 프로필로 바꾼 뒤 같은
+  계정 조회로 넘긴다. 어느 경로로 들어왔는지에 따라 계정 처리가 달라지지 않는다.
+- **제공자를 더하는 일은 `application.yml` 의 클라이언트 등록과 `OAuthProvider` 항목 추가뿐이다.**
+  스키마는 바뀌지 않는다.
+- 제공자에게 요청하는 범위(scope)는 식별자·프로필 사진을 받는 최소한으로 둔다. **이메일·이름은
+  요청하지 않는다** (공통 명세 §3.1). 네이버는 애플리케이션 설정에서 프로필 사진만 켠다. Google 은
+  식별자(`sub`)가 `openid` 범위로 오므로 `openid`·`profile` 만 요청한다 — `profile` 을 빼면 사진이
+  오지 않는다. 응답에 이름이 함께 오더라도 꺼내지 않는다.
+- 제공자 식별자는 문자열로 저장한다. 제공자 응답에 식별자가 없으면 로그인을 실패시킨다.
+
+**콜백 이후 — 기존 사용자와 새 사용자**
+
+- 콜백에서 `provider + providerId` 로 `User` 를 찾는다.
+- **있으면 로그인시킨다.** `profileImageUrl` 을 제공자 값으로 갱신하고, `name` 은 건드리지 않는다.
+  로그인 이력을 남기고 프론트엔드의 돌아갈 주소로 보낸다.
+- **없으면 계정을 만들지 않고 로그인시키지도 않는다.** 성공 처리(`AuthenticationSuccessHandler`)가
+  인증 정보를 SecurityContext 와 세션에서 지우고, 공통 프로필과 **제안 닉네임**을 세션 속성
+  **"가입 대기"** 로 남긴 뒤 프론트엔드의 가입 화면으로 보낸다.
+  - 제안 닉네임은 `여행자_` 뒤에 임의의 숫자 6자리(`000000`~`999999`)를 붙여 만든다. 이미 쓰이는
+    값이면 다시 뽑되 다섯 번까지만 뽑는다. 다섯 번 모두 겹치면 마지막 값을 그대로 제안한다 — 가입
+    요청에서 `409` 로 걸러진다. 가입 대기를 만들 때 한 번 정해 두고 바꾸지 않는다.
+  - 제안 닉네임이 비어 있는지 미리 보는 것은 편의일 뿐이다. 가입 요청 사이에 남이 먼저 쓰면
+    가입 요청이 `409 NAME_TAKEN` 이 되며, 사용자가 고쳐서 다시 보낸다.
+  - 가입 대기는 **만든 지 10분이 지나면 무효**다. 만든 시각을 함께 저장해 쓸 때 판정한다.
+  - 가입 대기는 세션당 하나다. 다시 OAuth 로그인을 시작하면 이전 가입 대기를 버린다.
+- **가입: `POST /api/auth/signup`** — 요청의 `name` 을 검증하고(§3.1), 가입 대기의 프로필로 `User` 를
+  만든 뒤 로그인시킨다. 로그인 이력을 남기고 `MeResponse` 를 반환한다.
+  - 가입 대기가 없거나 만료되었으면 `401 SIGNUP_EXPIRED` 다. 로그인 자체를 다시 해야 하는 상황이라
+    `401` 이다.
+  - 같은 `provider + providerId` 의 `User` 가 이미 있으면(다른 탭에서 먼저 가입한 경우) 새로 만들지
+    않고 그 계정으로 로그인시킨다. 유니크 제약 위반을 오류로 돌려주지 않는다.
+  - 성공하면 가입 대기를 지운다. 실패(닉네임 검증·중복)하면 가입 대기를 남겨 다시 시도할 수 있게 한다.
+  - 로그인 처리(세션 id 교체·CSRF 토큰 폐기)는 임시 로그인과 같은 코드를 쓴다 (§5).
+- **닉네임 변경: `PATCH /api/auth/me`** — 본인의 `name` 만 바꾼다. 검증은 가입과 같다 (§3.1).
+
+**공통**
+
 - 로그인 성공 시 세션 쿠키(`JSESSIONID`)를 발급한다. 프론트엔드는 이후 요청에
   `credentials: 'include'` 로 쿠키를 포함한다.
-- 최초 로그인 계정은 `User` 로 자동 가입(upsert)하며, 이후 `provider("naver") + providerId` 로 매칭한다.
 - 로그아웃: `POST /api/auth/logout` — 세션을 무효화한다.
+- OAuth 실패(동의 거부·제공자 오류·등록되지 않은 제공자)는 프론트엔드 로그인 화면으로
+  `?error=oauth_failed` 를 붙여 보낸다. 사유를 더 나누지 않는다.
 
 **로그인 이력 기록** (공통 명세 §3.10)
 
 - **로그인에 성공한 지점에서만 기록한다.** 인증 실패 경로에는 기록 코드를 두지 않는다.
   - 로컬 로그인(`POST /api/auth/login`): 인증 성공 뒤, 세션을 발급하기 전에 기록한다. 기록이
     실패하면 세션을 발급하지 않으며, 오류 응답은 API 명세 §3.3 의 공통 규칙을 따른다.
-  - 네이버 OAuth(복구 시): 로그인 성공 처리에서 기록한다. 기록이 실패하면 로그인도 실패로 처리한다.
+  - OAuth 기존 사용자: 콜백의 성공 처리에서 기록한다. 기록이 실패하면 로그인도 실패로 처리한다.
+  - 가입(`POST /api/auth/signup`): `User` 생성과 같은 트랜잭션에서 기록한다. 기록이 실패하면
+    계정도 만들어지지 않는다. 가입 대기만 만든 콜백은 기록하지 않는다.
 - 접속 IP 는 `HttpServletRequest.remoteAddr` 다. 프록시 헤더 해석(§5)이 켜져 있어 프록시 뒤에서도
   원 클라이언트 주소가 된다. `X-Forwarded-For` 를 직접 읽지 않는다 — 신뢰할 프록시 판정이 이미
   Tomcat 에 있다.
@@ -107,6 +156,8 @@
 | `GET /api/tags` | 볼 수 있는 기록의 태그만 나온다 (API 명세 §2.8.1) |
 | `GET /api/files/**` | 사진 서빙. 소속 여행의 판정을 거친다 (API 명세 §2.5.3) |
 | `GET /api/auth/session`, `POST /api/auth/login` | 로그인 전 부팅·로그인 자체 |
+| `GET /oauth2/authorization/**`, `GET /login/oauth2/code/**` | OAuth 로그인 시작·콜백 |
+| `POST /api/auth/signup` | 가입 대기는 로그인 전 상태다. 가입 대기가 있는지는 컨트롤러가 판정한다 (§2.1) |
 | 관리 포트의 `health`·`prometheus` | 수집기·상태 확인은 로그인하지 않는다. 외부 차단은 관리 포트 비공개가 맡는다 (§5) |
 
 - 필터에서 막힌 요청도 `401 UNAUTHENTICATED` 를 API 명세 §3.3 의 오류 형식으로 받는다. 비로그인 요청은
@@ -169,11 +220,10 @@ canEdit(record) := requester == record.trip.owner
 ```
 User
   id: Long (PK)
-  provider: String              // "naver" (고정)
-  providerId: String            // 네이버 회원번호 (response.id)
-  email: String
-  name: String
-  profileImageUrl: String?
+  provider: String              // OAuth registrationId ("naver" 등), 임시 로그인은 "local"
+  providerId: String            // 제공자 안의 사용자 식별자 (§2.1 표)
+  name: String                  // 닉네임. 사용자가 정하며 제공자 값으로 덮어쓰지 않는다
+  profileImageUrl: String?      // 로그인할 때마다 제공자 값으로 갱신
   createdAt: Instant
 
 Trip                            // 여행 — 여행 기록의 상위 그룹이자 공유의 단위
@@ -329,6 +379,20 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 `ON DELETE SET NULL` 로 대신할 수 있다.
 
 ### 3.1 제약 조건
+
+**사용자**
+
+- `(provider, provider_id)` 는 유니크다. 계정 하나에 외부 계정 하나라는 규칙(공통 명세 §3.1)을
+  DB 가 보장한다.
+- `User.name`(닉네임)의 형식·금지어 규칙은 공통 명세 §3.1 이다. 검증 순서는 다음과 같다.
+  1. 앞뒤 공백을 지우고 유니코드 NFC 로 정규화한다. 저장도 이 값으로 한다.
+  2. 형식(길이·허용 문자)을 어기면 `400 VALIDATION_ERROR` 다.
+  3. 금지어와 대소문자 무시로 일치하면 `400 VALIDATION_ERROR` 다. 금지어 목록은 코드 한 곳에 둔다.
+  4. 다른 사용자가 쓰는 닉네임과 대소문자 무시로 같으면 `409 NAME_TAKEN` 이다.
+- **유일성은 DB 가 판정한다.** `lower(name)` 에 유니크 인덱스를 두고, 미리 조회해 보는 검사는
+  빠른 실패용일 뿐이다. 동시에 같은 닉네임으로 가입·변경하면 제약 위반이 나며, 이것도
+  `409 NAME_TAKEN` 으로 바꾼다.
+- 본인의 현재 닉네임과 같은 값(대소문자만 다른 경우 포함)으로 바꾸는 것은 허용한다.
 
 **여행**
 
@@ -540,8 +604,9 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   본문의 토큰은 응답마다 다른 값으로 가린다(XOR 마스킹) — 압축된 응답 크기로 토큰을 추측하는
   공격(BREACH)의 단서를 없앤다.
 - **로그인 시 세션 id 를 바꾸고, 로그인·로그아웃 시 CSRF 토큰 쿠키를 비운다** (공통 명세 §6.1).
-  새 토큰은 다음 `GET /api/auth/session` 에서 발급된다. 로그인을 컨트롤러가 직접 처리하므로
-  Spring Security 의 세션 고정 방지·토큰 교체가 자동으로 돌지 않는다.
+  새 토큰은 다음 `GET /api/auth/session` 에서 발급된다. 임시 로그인과 가입은 컨트롤러가 직접
+  로그인시키므로 Spring Security 의 세션 고정 방지·토큰 교체가 자동으로 돌지 않는다. OAuth 기존
+  사용자의 로그인은 Spring Security 가 처리하지만 같은 결과가 되도록 맞춘다.
 - CORS 허용 오리진은 프론트엔드 개발 서버(Vite, 기본 `http://localhost:5173`)이며 자격 증명
   포함 요청을 허용한다. **허용 오리진은 정확한 값의 목록으로만 준다.** 와일드카드 패턴이나
   요청 `Origin` 을 되돌려 주는 설정을 쓰면, 아무 사이트나 `GET /api/auth/session` 응답을 읽어
@@ -606,10 +671,16 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
 [공통 명세 §7](./specification.md) 에 있다. 여기서는 **백엔드가 해야 할 일**만 둔다.
 
 ### 6.1 구현 잔여 작업
-- **네이버 OAuth 로그인을 복구한다** (§2.1). 임시 인메모리 로그인으로 대체된 상태이며,
-  되돌릴 지점은 셋이다 — `SecurityConfig` 의 주석 처리된 `oauth2Login` 블록, `local`·`dev`
-  전용인 `LocalLoginConfig`·`LocalLoginController`(들어내면 된다), 그리고 프론트엔드의 로그인
-  화면(frontend §10.2). `UserService` 와 `application.yml` 의 네이버 등록 정보는 손대지 않았다.
+- **OAuth 로그인과 가입 절차를 구현한다** (§2.1). 지금은 임시 인메모리 로그인만 동작한다.
+  - `SecurityConfig` 의 주석 처리된 `oauth2Login` 블록을 되살리고, 성공 처리에 기존 사용자 로그인과
+    가입 대기 분기를 둔다. OIDC 경로(`oidcUserService`)도 등록한다.
+  - `UserService` 의 네이버 분기를 `OAuthProvider` 로 옮기고, 계정을 만들거나 이름·이메일을
+    덮어쓰는 지금의 동작을 걷어낸다.
+  - `POST /api/auth/signup`, `PATCH /api/auth/me` 를 추가한다.
+  - 마이그레이션: `users.email` 컬럼과 `uk_users_email` 제약을 지우고, `lower(name)` 유니크 인덱스를
+    더한다. 이미 있는 행의 `name` 이 겹치면 인덱스를 만들 수 없으므로 적용 전에 확인한다.
+  - `local`·`dev` 전용 임시 로그인(`LocalLoginConfig`·`LocalLoginController`)은 남긴다.
+  - 프론트엔드의 로그인·가입 화면(frontend §10.2).
 - **`trips.cover_photo_id` 의 외래키를 복원할 수 있다** (§3). 마이그레이션 도구가 없어 생긴 제약이었고
   Flyway 를 도입해 풀렸다. 복원하면 사진 삭제 경로의 커버 해제를 `ON DELETE SET NULL` 이 대신한다.
   기록 삭제·소속 여행 변경 경로는 사진 행이 남으므로 애플리케이션의 해제가 계속 필요하다.
@@ -617,6 +688,10 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   적용할 수 없다. 운영 DB 는 확장(`postgis`, `pg_trgm`) 생성 권한을 갖춘 뒤 배포 절차에서 적용한다.
 - **태그 API(`/api/tags`)는 구현되어 있으나 호출하는 화면이 없다.** 현재 등록 요청은 항상 빈
   태그 목록으로 들어온다 (frontend §10).
+- **서비스 통계 배치를 구현한다** (§3.1 "서비스 통계"). 지금은 `loginDailyStatsJob` 이 로그인 일별 합계만
+  남긴다. 남은 일은 셋이다 — 통계 테이블 다섯 개(`login_period_stats`, `user_daily_stats`,
+  `trip_daily_stats`, `record_daily_stats`, `group_daily_stats`)를 추가하는 마이그레이션(V5),
+  기존 잡을 흡수하고 `targetDate` 를 없앤 `dailyStatsJob`, `backend/README.md` 의 잡 실행 예시 갱신.
 
 ### 6.2 알려진 한계
 - **막힌 사진이 브라우저 캐시에는 최대 1시간 남는다.** 사진 응답은 1시간 캐시되도록(`private`) 내려가므로,
