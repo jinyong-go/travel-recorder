@@ -620,7 +620,7 @@ class RecordVisibilityTest {
 
     private fun changeTripVisibility(tripId: Long, visibility: TripVisibility) {
         val trip = tripRepository.findById(tripId).orElseThrow()
-        trip.visibility = visibility
+        trip.changeVisibility(visibility)
         tripRepository.saveAndFlush(trip)
     }
 

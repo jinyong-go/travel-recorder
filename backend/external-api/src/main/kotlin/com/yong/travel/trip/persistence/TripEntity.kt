@@ -2,6 +2,7 @@ package com.yong.travel.trip.persistence
 
 import com.yong.travel.auth.persistence.UserEntity
 import com.yong.travel.photo.persistence.PhotoEntity
+import com.yong.travel.trip.domain.TripUpdateCommand
 import com.yong.travel.trip.domain.TripVisibility
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -28,34 +29,53 @@ import java.util.UUID
 @Table(name = "trips")
 @SQLRestriction("deleted_at is null")
 class TripEntity(
+    owner: UserEntity,
+    name: String,
+    startDate: LocalDate,
+    endDate: LocalDate,
+    headcount: Int,
+    budget: Long? = null,
+    memo: String? = null,
+    visibility: TripVisibility = TripVisibility.PRIVATE,
+) {
+    /** 소유자. 바뀌지 않는다. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
-    var owner: UserEntity,
+    var owner: UserEntity = owner
+        protected set
 
+    /** 앞뒤 공백을 지워 저장한다. */
     @Column(nullable = false, length = 50)
-    var name: String,
+    var name: String = name.trim()
+        protected set
 
     @Column(nullable = false)
-    var startDate: LocalDate,
+    var startDate: LocalDate = startDate
+        protected set
 
     /** 시작일과 같으면 당일치기다. 여행 중에도 등록하므로 미래 날짜를 허용한다. */
     @Column(nullable = false)
-    var endDate: LocalDate,
+    var endDate: LocalDate = endDate
+        protected set
 
     /** 본인을 포함한 인원. 공유 그룹과는 상관없다. */
     @Column(nullable = false)
-    var headcount: Int,
+    var headcount: Int = headcount
+        protected set
 
     /** 원 단위. null 은 정보 없음이고 0 과 다르다. */
-    var budget: Long? = null,
+    var budget: Long? = budget
+        protected set
 
     @Column(length = 1000)
-    var memo: String? = null,
+    var memo: String? = memo
+        protected set
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var visibility: TripVisibility = TripVisibility.PRIVATE,
-) {
+    var visibility: TripVisibility = visibility
+        protected set
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -68,6 +88,7 @@ class TripEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cover_photo_id")
     var coverPhoto: PhotoEntity? = null
+        protected set
 
     @Column(nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()
@@ -86,6 +107,26 @@ class TripEntity(
     @PreUpdate
     fun onUpdate() {
         updatedAt = Instant.now()
+    }
+
+    /** 기본 정보를 바꾼다. 공개 범위는 [changeVisibility] 로 바꾼다. */
+    fun update(command: TripUpdateCommand) {
+        name = command.name.trim()
+        startDate = command.startDate
+        endDate = command.endDate
+        headcount = command.headcount
+        budget = command.budget
+        memo = command.memo
+    }
+
+    /** 공개 범위를 바꾼다. 공유 그룹은 따로 맞춰야 한다. */
+    fun changeVisibility(visibility: TripVisibility) {
+        this.visibility = visibility
+    }
+
+    /** 커버 사진을 지정한다. null 이면 해제한다. */
+    fun changeCover(photo: PhotoEntity?) {
+        coverPhoto = photo
     }
 
     /** 여행을 삭제 상태로 바꾼다. 기록은 따로 지워야 한다. */

@@ -96,7 +96,7 @@ class TripService(
         val trip = tripRepository.save(
             TripEntity(
                 owner = owner,
-                name = command.name.trim(),
+                name = command.name,
                 startDate = command.startDate,
                 endDate = command.endDate,
                 headcount = command.headcount,
@@ -119,13 +119,7 @@ class TripService(
     @Transactional
     fun update(tripId: Long, ownerId: Long, command: TripUpdateCommand): Trip {
         val trip = findEditableTrip(tripId, ownerId)
-
-        trip.name = command.name.trim()
-        trip.startDate = command.startDate
-        trip.endDate = command.endDate
-        trip.headcount = command.headcount
-        trip.budget = command.budget
-        trip.memo = command.memo
+        trip.update(command)
 
         // 응답에 수정 시각이 담기도록 바로 flush 한다.
         val saved = tripRepository.saveAndFlush(trip)
@@ -151,7 +145,7 @@ class TripService(
         val trip = findEditableTrip(tripId, ownerId)
 
         val previous = trip.visibility
-        trip.visibility = visibility
+        trip.changeVisibility(visibility)
         applyShares(trip, visibility, groupIds, ownerId)
         val saved = tripRepository.saveAndFlush(trip)
         log.debug("여행 공개 범위 변경 tripId={} ownerId={} from={} to={}", tripId, ownerId, previous, visibility)
@@ -174,10 +168,11 @@ class TripService(
     ): Trip {
         val trip = findEditableTrip(tripId, ownerId)
 
-        trip.coverPhoto = photoId?.let {
+        val photo = photoId?.let {
             // 다른 여행의 사진인지 없는 사진인지 드러나지 않게 같은 오류로 답한다.
             photoRepository.findByIdAndTripId(it, tripId) ?: throw ApiException(ErrorCode.PHOTO_NOT_FOUND)
         }
+        trip.changeCover(photo)
         val saved = tripRepository.saveAndFlush(trip)
         log.debug("여행 커버 변경 tripId={} ownerId={} photoId={}", tripId, ownerId, photoId)
         return detailOf(saved, ownerId)
