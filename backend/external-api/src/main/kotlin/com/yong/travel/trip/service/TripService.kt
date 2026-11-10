@@ -8,7 +8,7 @@ import com.yong.travel.common.error.ErrorCode
 import com.yong.travel.common.persistence.listPageRequest
 import com.yong.travel.common.persistence.toPageResult
 import com.yong.travel.group.domain.GroupRef
-import com.yong.travel.group.service.GroupService
+import com.yong.travel.group.persistence.GroupMemberRepository
 import com.yong.travel.photo.persistence.PhotoRepository
 import com.yong.travel.photo.storage.PhotoDatabaseService
 import com.yong.travel.trip.domain.Trip
@@ -39,7 +39,7 @@ class TripService(
     private val tripShareRepository: TripShareRepository,
     private val recordRepository: TripRecordRepository,
     private val userRepository: UserRepository,
-    private val groupService: GroupService,
+    private val groupMemberRepository: GroupMemberRepository,
     private val photoRepository: PhotoRepository,
     private val photoDatabaseService: PhotoDatabaseService,
 ) {
@@ -105,7 +105,7 @@ class TripService(
                 visibility = command.visibility,
             ),
         )
-        applyShares(trip, command.visibility, command.groupIds, ownerId)
+        if (command.visibility == TripVisibility.GROUP) addShareGroups(trip, command.groupIds, ownerId)
         log.debug("여행 생성 tripId={} ownerId={} visibility={}", trip.id, ownerId, trip.visibility)
         return detailOf(trip, ownerId)
     }
@@ -219,22 +219,38 @@ class TripService(
     fun findOwnedTrip(tripId: Long, userId: Long): TripEntity =
         findTrip(tripId, userId, TripSpecifications.ownedBy(userId))
 
-    /**
-     * 공유 그룹을 통째로 바꾸고 이력을 남긴다. GROUP 이 아니면 공유를 모두 지운다.
-     */
+    /** 공유 그룹을 통째로 바꾼다. GROUP 이 아니면 공유를 모두 지운다. */
     private fun applyShares(
         trip: TripEntity,
         visibility: TripVisibility,
         groupIds: List<Long>,
         ownerId: Long,
     ) {
-        val tripId = requireNotNull(trip.id)
-        tripShareRepository.deleteByTripId(tripId)
+        tripShareRepository.deleteByTripId(requireNotNull(trip.id))
+        if (visibility == TripVisibility.GROUP) addShareGroups(trip, groupIds, ownerId)
+    }
 
-        val groups = if (visibility == TripVisibility.GROUP) {
-            groupService.requireAccessibleGroups(groupIds, ownerId)
-        } else {
-            emptyList()
+    /**
+     * 여행을 그룹들에 공유한다. 요청자가 속한 그룹에만 공유할 수 있다.
+     *
+     * @throws ApiException `GROUP_NOT_FOUND` — 속하지 않은 그룹이 섞였을 때
+     */
+    private fun addShareGroups(
+        trip: TripEntity,
+        groupIds: List<Long>,
+        ownerId: Long,
+    ) {
+        val distinct = groupIds.distinct()
+        if (distinct.isEmpty()) return
+
+        val groups = groupMemberRepository.findGroupsByIdInAndUserId(distinct, ownerId)
+        // 남의 그룹이 있는지 드러나지 않도록 속하지 않은 그룹은 없는 그룹과 같은 404 로 답한다.
+        if (groups.size != distinct.size) {
+            log.debug(
+                "공유 대상 그룹 차단 tripId={} ownerId={} requested={} accessible={}",
+                trip.id, ownerId, distinct, groups.map { it.id },
+            )
+            throw ApiException(ErrorCode.GROUP_NOT_FOUND)
         }
         tripShareRepository.saveAll(groups.map { TripShareEntity(trip = trip, group = it) })
     }

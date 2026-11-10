@@ -181,24 +181,6 @@ class GroupService(
         log.debug("그룹 탈퇴 groupId={} userId={} revokedShares={}", groupId, userId, revokedShares)
     }
 
-    /**
-     * 여행을 공유할 그룹에 요청자가 모두 속해 있는지 확인하고 그룹을 돌려준다.
-     *
-     * @throws ApiException `GROUP_NOT_FOUND` — 속하지 않은 그룹이 섞였을 때. 남의 그룹이 있는지 드러나지 않도록 404 로 답한다
-     */
-    fun requireAccessibleGroups(groupIds: Collection<Long>, userId: Long): List<GroupEntity> {
-        val distinct = groupIds.distinct()
-        if (distinct.isEmpty()) return emptyList()
-
-        // 하나라도 빠졌으면 속하지 않은 그룹이 섞인 것이다.
-        val groups = groupMemberRepository.findGroupsByIdInAndUserId(distinct, userId)
-        if (groups.size != distinct.size) {
-            log.debug("공유 대상 그룹 차단 userId={} requested={} accessible={}", userId, distinct, groups.map { it.id })
-            throw ApiException(ErrorCode.GROUP_NOT_FOUND)
-        }
-        return groups
-    }
-
     /** 그룹을 찾는다. 권한은 확인하지 않는다. */
     private fun findGroup(groupId: Long): GroupEntity =
         groupRepository.findById(groupId)
