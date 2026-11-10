@@ -3,6 +3,7 @@ package com.yong.travel.common.error
 import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.dao.OptimisticLockingFailureException
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
@@ -102,6 +103,13 @@ class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException::class)
     fun handleDataIntegrityViolation(e: DataIntegrityViolationException): ResponseEntity<ErrorResponse> {
         log.warn("데이터 무결성 제약 위반", e)
+        return toResponse(ErrorCode.CONFLICT)
+    }
+
+    /** 다른 요청이 먼저 같은 대상을 바꿨을 때. */
+    @ExceptionHandler(OptimisticLockingFailureException::class)
+    fun handleOptimisticLockingFailure(e: OptimisticLockingFailureException): ResponseEntity<ErrorResponse> {
+        log.debug("동시 수정 충돌", e)
         return toResponse(ErrorCode.CONFLICT)
     }
 

@@ -116,9 +116,18 @@ class TripVisibilityTest {
         tripService.changeVisibility(tripId, owner, TripVisibility.PRIVATE, emptyList())
         flush()
 
-        // 다시 GROUP 으로 바꿔도 예전 공유가 되살아나지 않아야 한다.
         assertEquals(0L, count("select count(*) from trip_shares where trip_id = $tripId"))
         assertThrows<ApiException> { tripService.get(tripId, member) }
+
+        // 다시 GROUP 으로 바꿔도 예전 공유가 되살아나지 않아야 한다.
+        tripService.changeVisibility(tripId, owner, TripVisibility.GROUP, emptyList())
+        flush()
+
+        assertEquals(0L, count("select count(*) from trip_shares where trip_id = $tripId"))
+        assertEquals(
+            ErrorCode.TRIP_NOT_FOUND,
+            assertThrows<ApiException> { tripService.get(tripId, member) }.errorCode,
+        )
     }
 
     @Test

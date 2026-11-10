@@ -907,7 +907,7 @@ GET /api/records?scope=MINE&tripId=12&category=FOOD&tag=제주&keyword=카페
 | 사용자당 그룹 수 상한(소유 50·참여 50) 초과 | 409 | `GROUP_LIMIT_EXCEEDED` |
 | 이미 멤버인 사용자를 초대 | 409 | `ALREADY_MEMBER` |
 | 다른 사용자가 쓰는 닉네임으로 가입·변경 | 409 | `NAME_TAKEN` |
-| 그 밖의 DB 제약 위반 (동시 요청 경합 등) | 409 | `CONFLICT` |
+| 그 밖의 DB 제약 위반 (동시 요청 경합 등), 다른 요청이 먼저 같은 여행을 바꾼 경우 | 409 | `CONFLICT` |
 | 지역 검색 API 호출 실패/한도 초과 | 502 | `PLACE_SEARCH_UNAVAILABLE` |
 | 그 밖의 처리되지 않은 예외 | 500 | `INTERNAL_ERROR` |
 

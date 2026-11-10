@@ -237,6 +237,7 @@ Trip                            // 여행 — 여행 기록의 상위 그룹이�
   memo: String?                 // 여행 설명
   coverPhoto: Photo?            // 커버 사진 (하위 기록의 사진 중 하나)
   visibility: TripVisibility    // PRIVATE | GROUP | PUBLIC
+  version: Long                 // 동시 수정 감지
   createdAt: Instant
   updatedAt: Instant
   deletedAt: Instant?           // soft delete (§3.2)
@@ -558,6 +559,8 @@ TripShare                       // trip.visibility=GROUP 일 때만 사용
   초대가 이유 없이 사라지는 일이라 그 이유를 남겨 둘 자리가 필요하다.
   그 그룹으로만 공유되던 여행은 실질적으로 비공개가 되며, 여행과 기록 자체는 삭제되지 않는다.
 - `updatedAt` 은 마지막 수정 시각이며 soft delete 도 수정으로 보아 함께 갱신된다.
+  여행은 공유 그룹만 바꿔도 수정으로 본다 — 공개 범위 변경이 늘 여행 행을 갱신해야 동시 변경이
+  `version` 비교에 걸린다 (API 명세 §3.3 `CONFLICT`).
 
 ## 4. 사진 저장소 설계
 

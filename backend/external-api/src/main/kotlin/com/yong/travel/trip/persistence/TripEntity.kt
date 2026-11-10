@@ -16,6 +16,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 import java.time.LocalDate
@@ -99,6 +100,12 @@ class TripEntity(
     var updatedAt: Instant = createdAt
         protected set
 
+    /** 동시 수정 감지용 버전. */
+    @Version
+    @Column(nullable = false)
+    var version: Long = 0
+        protected set
+
     /** 삭제 시각. 삭제된 행은 조회에서 빠진다. */
     var deletedAt: Instant? = null
         protected set
@@ -119,9 +126,11 @@ class TripEntity(
         memo = command.memo
     }
 
-    /** 공개 범위를 바꾼다. 공유 그룹은 따로 맞춰야 한다. */
+    /** 공개 범위를 바꾼다. 공유 그룹은 따로 맞춰야 하며, 공유 그룹만 바뀌어도 수정으로 본다. */
     fun changeVisibility(visibility: TripVisibility) {
         this.visibility = visibility
+        // 공유만 바뀌면 이 행이 그대로라 버전 비교가 일어나지 않으므로 수정 시각을 직접 바꾼다.
+        updatedAt = Instant.now()
     }
 
     /** 커버 사진을 지정한다. null 이면 해제한다. */
